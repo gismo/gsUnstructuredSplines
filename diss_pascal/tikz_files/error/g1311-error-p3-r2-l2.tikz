@@ -1,0 +1,139 @@
+\begin{tikzpicture}%
+\begin{axis}[xmode=log,ymode=log,height=6cm,mark options={solid},xlabel={Mesh size $h$},ylabel={Error},ylabel style={yshift=-0.4cm},xlabel style={yshift=0.2cm},width=1\textwidth]%
+\addplot[mark=diamond*,color=green,line width=1pt,solid] coordinates {%
+(0.25,0.0076847300926885919042)%
+(0.125,0.0006172493088360429467)%
+(0.0625,7.1638485657827451485e-05)%
+};%
+%
+%
+\addplot[mark=square*,color=blue,line width=1pt,solid] coordinates {%
+(0.25,0.30670646014641700372)%
+(0.125,0.02446780053589524967)%
+(0.0625,0.0024487144568688468463)%
+};%
+%
+%
+\addplot[mark=triangle*,color=red,line width=1pt,solid] coordinates {%
+(0.25,21.08154237392697894)%
+(0.125,3.2350055696688859719)%
+(0.0625,0.6273547228650989682)%
+};%
+%
+%
+\addplot[mark=diamond*,color=green,line width=1pt,solid] coordinates {%
+(0.25,0.0076847300926885919042)%
+(0.125,0.0006172493088360429467)%
+(0.0625,7.1638485657827451485e-05)%
+};%
+%
+%
+\addplot[yshift=-0.2cm,draw=black,domain={0.125:0.0625},forget plot,samples=100,line width=1pt]{4.6948997960713798622*x^4}node[right, pos=0.75] {\tiny{$h^4$}};%
+%
+%
+\addplot[mark=square*,color=blue,line width=1pt,solid] coordinates {%
+(0.25,0.30670646014641700372)%
+(0.125,0.02446780053589524967)%
+(0.0625,0.0024487144568688468463)%
+};%
+%
+%
+\addplot[yshift=-0.2cm,draw=black,domain={0.125:0.0625},forget plot,samples=100,line width=1pt]{10.029934415334796683*x^3}node[right, pos=0.75] {\tiny{$h^3$}};%
+%
+%
+\addplot[mark=triangle*,color=red,line width=1pt,solid] coordinates {%
+(0.25,21.08154237392697894)%
+(0.125,3.2350055696688859719)%
+(0.0625,0.6273547228650989682)%
+};%
+%
+%
+\addplot[yshift=-0.2cm,draw=black,domain={0.125:0.0625},forget plot,samples=100,line width=1pt]{160.6028090534653359*x^2}node[right, pos=0.75] {\tiny{$h^2$}};%
+%
+%
+\addplot[mark=diamond*,color=green,line width=1pt,solid] coordinates {%
+(0.25,0.0076847300926885919042)%
+(0.125,0.0006172493088360429467)%
+(0.0625,7.1638485657827451485e-05)%
+};%
+%
+%
+\addplot[mark=square*,color=blue,line width=1pt,solid] coordinates {%
+(0.25,0.30670646014641700372)%
+(0.125,0.02446780053589524967)%
+(0.0625,0.0024487144568688468463)%
+};%
+%
+%
+\addplot[mark=triangle*,color=red,line width=1pt,solid] coordinates {%
+(0.25,21.08154237392697894)%
+(0.125,3.2350055696688859719)%
+(0.0625,0.6273547228650989682)%
+};%
+%
+%
+\addplot[mark=diamond*,color=green,line width=1pt,dashed] coordinates {%
+(0.25,0.03773487133380489661)%
+(0.125,0.0002489531796477461147)%
+(0.0625,2.309823801332162849e-05)%
+};%
+%
+%
+\addplot[mark=square*,color=blue,line width=1pt,dashed] coordinates {%
+(0.25,0.7946862450828174884)%
+(0.125,0.015084699022081629952)%
+(0.0625,0.0017633870174231700521)%
+};%
+%
+%
+\addplot[mark=triangle*,color=red,line width=1pt,dashed] coordinates {%
+(0.25,36.65216127220872977)%
+(0.125,1.9667573014908910078)%
+(0.0625,0.5153703705301716509)%
+};%
+%
+%
+\addplot[mark=diamond*,color=green,line width=1pt,dashed] coordinates {%
+(0.25,0.03773487133380489661)%
+(0.125,0.0002489531796477461147)%
+(0.0625,2.309823801332162849e-05)%
+};%
+%
+%
+\addplot[mark=square*,color=blue,line width=1pt,dashed] coordinates {%
+(0.25,0.7946862450828174884)%
+(0.125,0.015084699022081629952)%
+(0.0625,0.0017633870174231700521)%
+};%
+%
+%
+\addplot[mark=triangle*,color=red,line width=1pt,dashed] coordinates {%
+(0.25,36.65216127220872977)%
+(0.125,1.9667573014908910078)%
+(0.0625,0.5153703705301716509)%
+};%
+%
+%
+\addplot[mark=diamond*,color=green,line width=1pt,dashed] coordinates {%
+(0.25,0.03773487133380489661)%
+(0.125,0.0002489531796477461147)%
+(0.0625,2.309823801332162849e-05)%
+};%
+%
+%
+\addplot[mark=square*,color=blue,line width=1pt,dashed] coordinates {%
+(0.25,0.7946862450828174884)%
+(0.125,0.015084699022081629952)%
+(0.0625,0.0017633870174231700521)%
+};%
+%
+%
+\addplot[mark=triangle*,color=red,line width=1pt,dashed] coordinates {%
+(0.25,36.65216127220872977)%
+(0.125,1.9667573014908910078)%
+(0.0625,0.5153703705301716509)%
+};%
+%
+%
+\end{axis}%
+\end{tikzpicture}%

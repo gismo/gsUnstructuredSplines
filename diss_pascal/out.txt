@@ -1,0 +1,8 @@
+G+Smo path: /home/riemann/weinmueller/gismo_mspline_shell/gismo/python_examples/diss_pascal/../../build/lib (change if needed).
+G+Smo path: /home/riemann/weinmueller/gismo_mspline_shell/gismo/python_examples/diss_pascal/../../build/lib (change if needed).
+Traceback (most recent call last):
+  File "/home/riemann/weinmueller/gismo_mspline_shell/gismo/python_examples/diss_pascal/diss_nitsche_example.py", line 32, in <module>
+    from python2latex.python2latex import MyDocument
+  File "/home/riemann/weinmueller/gismo_mspline_shell/gismo/python_examples/diss_pascal/python2latex/python2latex.py", line 5, in <module>
+    from pylatex import Document, NoEscape, Figure, SubFigure, Package, UnsafeCommand
+ModuleNotFoundError: No module named 'pylatex'

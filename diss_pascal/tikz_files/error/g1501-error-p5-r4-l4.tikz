@@ -1,0 +1,67 @@
+\begin{tikzpicture}%
+\begin{axis}[xmode=log,ymode=log,height=6cm,mark options={solid},xlabel={Mesh size $h$},ylabel={Error},ylabel style={yshift=-0.4cm},xlabel style={yshift=0.2cm},width=1\textwidth]%
+\addplot[mark=diamond*,color=green,line width=1pt,solid] coordinates {%
+(0.25,1.0249634259706219552)%
+(0.125,0.073306386954693256164)%
+(0.0625,0.0004018722693019469031)%
+(0.03125,2.8909147025251518516e-06)%
+(0.015625,3.460082183399716888e-08)%
+};%
+%
+%
+\addplot[forget plot,draw=black,line width=1pt,domain={0.03125:0.015625},samples=100,yshift=-0.2cm]{2377.7503710678493043*x^6}node[right, pos=0.75] {\tiny{$h^6$}};%
+%
+%
+\addplot[mark=square*,color=blue,line width=1pt,solid] coordinates {%
+(0.25,16.333344442471108948)%
+(0.125,1.6814293887602089761)%
+(0.0625,0.021664653315129220323)%
+(0.03125,0.00037151190774800690354)%
+(0.015625,9.500785401075973385e-06)%
+};%
+%
+%
+\addplot[forget plot,draw=black,line width=1pt,domain={0.03125:0.015625},samples=100,yshift=-0.2cm]{10201.3906459838872225*x^5}node[right, pos=0.75] {\tiny{$h^5$}};%
+%
+%
+\addplot[mark=triangle*,color=red,line width=1pt,solid] coordinates {%
+(0.25,280.37873317499577297)%
+(0.125,42.376308668780467315)%
+(0.0625,1.2819330245588889117)%
+(0.03125,0.05095330764622141989)%
+(0.015625,0.0027593779132643429797)%
+};%
+%
+%
+\addplot[forget plot,draw=black,line width=1pt,domain={0.03125:0.015625},samples=100,yshift=-0.2cm]{46294.679276465147296*x^4}node[right, pos=0.75] {\tiny{$h^4$}};%
+%
+%
+\addplot[mark=diamond*,color=green,line width=1pt,dashed] coordinates {%
+(0.25,494.6793717236524799)%
+(0.125,0.07269874010758357874)%
+(0.0625,0.00040084412634521778907)%
+(0.03125,2.8908791880200420986e-06)%
+(0.015625,3.460706994673070934e-08)%
+};%
+%
+%
+\addplot[mark=square*,color=blue,line width=1pt,dashed] coordinates {%
+(0.25,4229.007613338920237)%
+(0.125,1.66643837497179792)%
+(0.0625,0.021635542770892121633)%
+(0.03125,0.0003713399592563791803)%
+(0.015625,9.499190343863167074e-06)%
+};%
+%
+%
+\addplot[mark=triangle*,color=red,line width=1pt,dashed] coordinates {%
+(0.25,43998.76227415086032)%
+(0.125,42.750196124386810936)%
+(0.0625,1.2838247132660600691)%
+(0.03125,0.05087051082408314273)%
+(0.015625,0.0027551237084605969922)%
+};%
+%
+%
+\end{axis}%
+\end{tikzpicture}%

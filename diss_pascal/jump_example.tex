@@ -1,0 +1,81 @@
+\documentclass[a4paper,3p,sort&compress]{elsarticle}%
+\usepackage[T1]{fontenc}%
+\usepackage[utf8]{inputenc}%
+\usepackage{lmodern}%
+\usepackage{textcomp}%
+\usepackage{lastpage}%
+\usepackage{subcaption}%
+%
+\usepackage{tikz}%
+\usepackage{pgfplots}%
+\usepgfplotslibrary{external}%
+\tikzexternalize[prefix=tikz_figures/]%
+\newcommand{\inputtikz}[1]{\tikzsetnextfilename{#1}\input{tikz_files/#1.tikz}}%
+\pgfplotsset{every axis/.append style={label style={font=\tiny},tick label style={font=\tiny},axis lines*=left,axis line style={-},}}%
+\pgfplotsset{every add plot/.append style={line width=1pt,}}%
+\usepackage{xcolor}%
+\definecolor{blue}{HTML}{95DBE5}%
+\definecolor{red}{HTML}{078282}%
+\definecolor{green}{HTML}{339E66}%
+%
+\begin{document}%
+\normalsize%
+
+
+\begin{figure}[h!]%
+\centering%
+\begin{subfigure}[b]{0.25\textwidth}%
+\centering%
+\inputtikz{error/g1021-error-p3-r2-l2}%
+\caption{$p=3$, $r=2$}%
+\end{subfigure}%
+\begin{subfigure}[b]{0.25\textwidth}%
+\centering%
+\inputtikz{error/g1121-error-p3-r2-l2}%
+\caption{$p=3$, $r=2$}%
+\end{subfigure}%
+\begin{subfigure}[b]{0.25\textwidth}%
+\centering%
+\inputtikz{error/g1501-error-p3-r2-l2}%
+\caption{$p=3$, $r=2$}%
+\end{subfigure}%
+\begin{subfigure}[b]{0.25\textwidth}%
+\centering%
+\inputtikz{error/g1311-error-p3-r2-l2}%
+\caption{$p=3$, $r=2$}%
+\end{subfigure}%
+\\%
+\caption{Two kittens}%
+\end{figure}
+
+%
+
+
+\begin{figure}[h!]%
+\centering%
+\begin{subfigure}[b]{0.25\textwidth}%
+\centering%
+\inputtikz{error/g1021-error-p4-r3-l2}%
+\caption{$p=4$, $r=3$}%
+\end{subfigure}%
+\begin{subfigure}[b]{0.25\textwidth}%
+\centering%
+\inputtikz{error/g1121-error-p4-r3-l2}%
+\caption{$p=4$, $r=3$}%
+\end{subfigure}%
+\begin{subfigure}[b]{0.25\textwidth}%
+\centering%
+\inputtikz{error/g1501-error-p4-r3-l2}%
+\caption{$p=4$, $r=3$}%
+\end{subfigure}%
+\begin{subfigure}[b]{0.25\textwidth}%
+\centering%
+\inputtikz{error/g1311-error-p4-r3-l2}%
+\caption{$p=4$, $r=3$}%
+\end{subfigure}%
+\\%
+\caption{Two kittens}%
+\end{figure}
+
+%
+\end{document}

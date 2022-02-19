@@ -1,0 +1,86 @@
+#!/usr/bin/python
+
+""""
+    @file diss_library.py
+
+    @brief Compute biharmonic2_example using pygismo
+
+    This file is part of the G+Smo library.
+
+    This Source Code Form is subject to the terms of the Mozilla Public
+    License, v. 2.0. If a copy of the MPL was not distributed with this
+    file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+    Author(s): P. Weinmüller
+"""
+
+import os, sys, subprocess
+
+gismo_path = os.path.join(os.path.dirname(__file__), "../../build/lib")
+print("G+Smo path:", gismo_path, "(change if needed).")
+sys.path.append(gismo_path)
+
+import pygismo as gs
+
+
+def create_biharmonic_bvp(path_geo, loop, deg, reg, path_bvp, method, ptilde=-1, rtilde=-1, penalty_init=-1.0, cond=False):
+    # [!Geometry]
+    mp = gs.core.gsMultiPatch()
+    file = gs.io.gsFileData(path_geo + ".xml")
+    file.getAnyFirst(mp)  # Assume that there exist only one gsMultiPatch
+    mp.computeTopology(1e-4, False)
+    # [!Geometry]
+
+    # [!Right hand side]
+    f = gs.core.gsFunctionExpr("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))", 2)
+    # [!Right hand side]
+
+    # [!Exact solution]
+    ms = gs.core.gsFunctionExpr("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)", 2)
+    # [!Exact solution]
+
+    # [!Boundary]
+    dirichlet = gs.core.gsFunctionExpr("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)", 2)
+    neumann = gs.core.gsFunctionExpr(" -4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
+                                     " -4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)", 2)
+    laplace = gs.core.gsFunctionExpr("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))", 2)
+
+    bcs = gs.pde.gsBoundaryConditions()
+    for bdy in mp.boundaries():
+        #               patch_nr, side, boundary condition, function, unknown, parametric, component
+        bcs.addCondition(bdy, gs.pde.bctype.dirichlet, dirichlet, 0, False, 0)
+        bcs.addCondition(bdy, gs.pde.bctype.laplace, laplace, 0, False, 0)
+
+    # bcs.setGeoMap(mp)
+    # [!Boundary]
+
+    # [!Option list]
+    opt = gs.io.gsOptionList()
+    opt.addSwitch("plot", "Plotting the results.", False)
+    opt.addSwitch("info", "Plotting the results.", False)
+    opt.addSwitch("cond","Estimate condition number (slow!)", cond)
+    opt.addInt("refinementLoop", "Number of Uniform h-refinement loops.", loop)
+    opt.addInt("discreteDegree", "Number of degree elevation steps to perform before solving (Degree 3 == 0).", deg)
+    opt.addInt("discreteRegularity", "Number of degree elevation steps to perform before solving (Degree 3 == 0)", reg)
+    opt.addInt("gluingDataDegree", "Number of degree elevation steps to perform before solving (Degree 3 == 0).", ptilde)
+    opt.addInt("gluingDataRegularity", "Number of degree elevation steps to perform before solving (Degree 3 == 0)", rtilde)
+    opt.addInt("smoothing", "Which method should we use? (0 = Approx C1, 1 = Nitsche, 2 = DPatch)", method.value)
+    opt.addReal("penalty", "Fixed Penalty value for Nitsche's method", penalty_init)
+    # [!Option list]
+
+    # [!Save the data to the XML-file]
+    file = gs.io.gsFileData()
+    file.add(bcs)  # id=0 Boundary
+    file.add(f)  # id=1 Source function
+    file.add(opt)  # id=2 Optionlist
+    file.add(ms)  # id=3 Exact solution
+    file.add(mp)  # id=X Geometry (should be last!)
+    file.save(path_bvp, False)
+    print("Filedata saved: " + path_bvp + ".xml")
+    # [!Save the data to the XML-file]
+
+def biharmonic_example(path_bvp, path_output):
+    # [!Run biharmonic2_example]
+    proc = subprocess.Popen(["../../build/bin/biharmonic2_example", "-o", path_output, "-x", path_bvp])
+    proc.wait()
+    # [!Run biharmonic2_example]

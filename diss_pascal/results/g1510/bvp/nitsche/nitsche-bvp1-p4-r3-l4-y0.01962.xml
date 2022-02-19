@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--This file was created by G+Smo 21.12.0-->
+<xml>
+ <boundaryConditions multipatch="0" id="0">
+  <Function type="FunctionExpr" dim="2" index="0">(cos(4*pi*x)-1)*(cos(4*pi*y)-1)</Function>
+  <Function type="FunctionExpr" dim="2" index="1">-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y)-cos(4*pi*x)-cos(4*pi*y))</Function>
+  <bc type="Dirichlet" function="0" unknown="0">1 4 1 3 1 2 0 3 0 2 0 4</bc>
+  <bc type="Laplace" function="1" unknown="0">1 4 1 3 1 2 0 3 0 2 0 4</bc>
+ </boundaryConditions>
+ <Function dim="2" type="FunctionExpr" id="1">256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y)-cos(4*pi*x)-cos(4*pi*y))</Function>
+ <OptionList id="2">
+  <int label="discreteDegree" desc="Number of degree elevation steps to perform before solving (Degree 3 == 0)." value="4"/>
+  <int label="discreteRegularity" desc="Number of degree elevation steps to perform before solving (Degree 3 == 0)" value="3"/>
+  <int label="gluingDataDegree" desc="Number of degree elevation steps to perform before solving (Degree 3 == 0)." value="-1"/>
+  <int label="gluingDataRegularity" desc="Number of degree elevation steps to perform before solving (Degree 3 == 0)" value="-1"/>
+  <int label="refinementLoop" desc="Number of Uniform h-refinement loops." value="4"/>
+  <int label="smoothing" desc="Which method should we use? (0 = Approx C1, 1 = Nitsche, 2 = DPatch)" value="1"/>
+  <real label="penalty" desc="Fixed Penalty value for Nitsche's method" value="0.01962"/>
+  <bool label="cond" desc="Estimate condition number (slow!)" value="0"/>
+  <bool label="info" desc="Plotting the results." value="0"/>
+  <bool label="plot" desc="Plotting the results." value="0"/>
+ </OptionList>
+ <Function dim="2" type="FunctionExpr" id="3">(cos(4*pi*x)-1)*(cos(4*pi*y)-1)</Function>
+ <Geometry type="TensorNurbs2" id="4">
+  <Basis type="TensorNurbsBasis2">
+   <Basis type="TensorBSplineBasis2">
+    <Basis type="BSplineBasis" index="0">
+     <KnotVector degree="2">0 0 0 1 1 1 </KnotVector>
+    </Basis>
+    <Basis type="BSplineBasis" index="1">
+     <KnotVector degree="2">0 0 0 1 1 1 </KnotVector>
+    </Basis>
+   </Basis>
+   <weights>1 
+0.707106781186548 
+1 
+1 
+1 
+1 
+1 
+1 
+1 
+</weights>
+  </Basis>
+  <coefs geoDim="2">0.3535533905932737 0.3535533905932738 
+0.5 0.2071067811865475 
+0.5 0 
+0.6767766952955425 0.6767766952955425 
+0.7071067811865475 0.3535533905932738 
+0.75 0 
+1 1 
+1 0.5 
+1 0 
+</coefs>
+ </Geometry>
+ <Geometry type="TensorNurbs2" id="5">
+  <Basis type="TensorNurbsBasis2">
+   <Basis type="TensorBSplineBasis2">
+    <Basis type="BSplineBasis" index="0">
+     <KnotVector degree="2">0 0 0 1 1 1 </KnotVector>
+    </Basis>
+    <Basis type="BSplineBasis" index="1">
+     <KnotVector degree="2">0 0 0 1 1 1 </KnotVector>
+    </Basis>
+   </Basis>
+   <weights>1 
+0.707106781186548 
+1 
+1 
+1 
+1 
+1 
+1 
+1 
+</weights>
+  </Basis>
+  <coefs geoDim="2">0.3535533905932738 0.3535533905932737 
+0.2071067811865475 0.5 
+0 0.5 
+0.6767766952955425 0.6767766952955425 
+0.3535533905932738 0.7071067811865475 
+0 0.75 
+1 1 
+0.5 1 
+0 1 
+</coefs>
+ </Geometry>
+ <MultiPatch parDim="2" id="6">
+  <patches type="id_range">4 5</patches>
+  <interfaces>1 1 0 1 0 1 1 1
+</interfaces>
+  <boundary>1 4
+1 3
+1 2
+0 3
+0 2
+0 4
+</boundary>
+ </MultiPatch>
+</xml>
+
