@@ -88,7 +88,7 @@ void setMapperForBiharmonic(gsBoundaryConditions<> & bc, gsMultiBasis<> & dbasis
 void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & dbasis, gsBoundaryConditions<> & bc,
                                            gsMappedBasis<2,real_t> & bb2, const expr::gsFeSpace<real_t> & u)
 {
-    gsDofMapper mapper = u.mapper();
+    const gsDofMapper & mapper = u.mapper();
 
     gsMatrix<index_t> bnd = mapper.findFree(mapper.numPatches()-1);
     gsDofMapper mapperBdy;
@@ -281,7 +281,7 @@ int main(int argc, char *argv[])
     //! [Parse command line]
     bool plot = false;
 
-    index_t smoothing = 0;
+    index_t method = 0;
 
     index_t numRefine  = 3;
     index_t degree = 3;
@@ -292,7 +292,7 @@ int main(int argc, char *argv[])
 
     bool last = false;
     bool info = false;
-    bool neumann = false;
+    bool second = false;
     bool cond = false;
     bool interpolation = false;
 
@@ -305,27 +305,29 @@ int main(int argc, char *argv[])
     index_t geometry = 1000;
 
     gsCmdLine cmd("Tutorial on solving a Biharmonic problem.");
-    cmd.addInt( "s", "smoothing","Smoothing", smoothing );
+    cmd.addInt( "m", "method","The chosen method for the biharmonic problem", method );
 
-    cmd.addInt( "p", "degree","Which discrete degree?", degree );
-    cmd.addInt( "r", "smoothness", "Number of smoothness",  smoothness );
-    cmd.addInt( "l", "numRefine", "Number of refinementLoop",  numRefine );
+    cmd.addSwitch("second", "Compute the second biharmonic problem", second);
 
-    cmd.addInt( "P", "gluingDataDegree","Which degree for gluing data?", gluingDataDegree );
-    cmd.addInt( "R", "gluingDataSmoothness", "Which regularity for gluing data?",  gluingDataSmoothness );
+    cmd.addInt( "p", "degree","The degree of the basis.", degree );
+    cmd.addInt( "r", "smoothness", "The smoothness of the basis.",  smoothness );
+    cmd.addInt( "l", "numRefine", "Number of refinement-loops.",  numRefine );
 
     cmd.addString( "f", "file", "Input geometry file", fn );
     cmd.addInt( "g", "geometry", "Which geometry",  geometry );
 
+    // Parameters for the ApproxC1
+    cmd.addInt( "P", "gluingDataDegree","Which degree for gluing data?", gluingDataDegree );
+    cmd.addInt( "R", "gluingDataSmoothness", "Which regularity for gluing data?",  gluingDataSmoothness );
+    cmd.addSwitch("interpolation","Compute the basis constructions with interpolation!", interpolation);
+    cmd.addSwitch("info", "Getting the information inside of Approximate C1 basis functions", info);
+
+    // Parameters for Nitsche's method
+    cmd.addReal( "y", "penalty", "Fixed Penalty value for Nitsche's method",  penalty_init);
+
     cmd.addSwitch("last", "Solve solely for the last level of h-refinement", last);
     cmd.addSwitch("plot", "Create a ParaView visualization file with the solution", plot);
-    cmd.addSwitch("info", "Getting the information inside of Approximate C1 basis functions", info);
     cmd.addSwitch("cond","Estimate condition number (slow!)", cond);
-    cmd.addSwitch("interpolation","Compute the basis constructions with interpolation!", interpolation);
-
-    cmd.addSwitch("neumann", "Neumann", neumann);
-
-    cmd.addReal( "y", "penalty", "Fixed Penalty value for Nitsche's method",  penalty_init);
 
     cmd.addString("x", "xml", "Use the information from the xml file", xml);
     cmd.addString("o", "output", "Output in xml (for python)", output);
@@ -372,10 +374,11 @@ int main(int argc, char *argv[])
                                      "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)", 2);
 
             bc.addCondition(*bit, condition_type::dirichlet, ms);
-            if (neumann)
-                bc.addCondition(*bit, condition_type::neumann, sol1der);
-            else
+            if (second)
                 bc.addCondition(*bit, condition_type::laplace, laplace);
+            else
+                bc.addCondition(*bit, condition_type::neumann, sol1der);
+
         }
         bc.setGeoMap(mp);
         gsInfo << "Boundary conditions:\n" << bc << "\n";
@@ -423,12 +426,12 @@ int main(int argc, char *argv[])
     //! [Read option list]
     degree = optionList.getInt("degree");
     smoothness = optionList.getInt("smoothness");
-    numRefine = optionList.getInt("refinementLoop");
+    numRefine = optionList.getInt("numRefine");
 
     gluingDataDegree = optionList.getInt("gluingDataDegree");
     gluingDataSmoothness = optionList.getInt("gluingDataSmoothness");
 
-    smoothing = optionList.getInt("smoothing");
+    method = optionList.getInt("method");
 
     penalty_init = optionList.getReal("penalty");
 
@@ -446,8 +449,8 @@ int main(int argc, char *argv[])
     dbasis.setDegree( degree); // preserve smoothness
     //dbasis.degreeElevate(degree- mp.patch(0).degree(0));
 
-    if (smoothing == MethodFlags::DPATCH)
-        mp.degreeElevate(degree- mp.patch(0).degree(0));
+    if (method == MethodFlags::DPATCH)
+        mp.degreeElevate(degree-mp.patch(0).degree(0));
 
 
     // h-refine each basis
@@ -463,7 +466,7 @@ int main(int argc, char *argv[])
     if (dbasis.basis(0).numElements() < 4)
     {
         dbasis.uniformRefine(1, degree-smoothness);
-        if (smoothing == MethodFlags::DPATCH)
+        if (method == MethodFlags::DPATCH)
             mp.uniformRefine(1, degree-smoothness);
     }
 
@@ -489,13 +492,14 @@ int main(int argc, char *argv[])
 
     // Set the discretization space
     gsMappedBasis<2,real_t> bb2;
-    auto u = smoothing == MethodFlags::NITSCHE ? A.getSpace(dbasis) : A.getSpace(bb2);
+    auto u = method == MethodFlags::NITSCHE ? A.getSpace(dbasis) : A.getSpace(bb2);
 
     // The approx. C1 space
     gsApproxC1Spline<2,real_t> approxC1(mp,dbasis);
     approxC1.options().setSwitch("info",info);
     approxC1.options().setSwitch("plot",plot);
     approxC1.options().setSwitch("interpolation",interpolation);
+    approxC1.options().setSwitch("second",second);
     approxC1.options().setInt("gluingDataDegree",gluingDataDegree);
     approxC1.options().setInt("gluingDataSmoothness",gluingDataSmoothness);
 
@@ -521,18 +525,18 @@ int main(int argc, char *argv[])
     gsStopwatch timer;
     for (int r=0; r<=numRefine; ++r)
     {
-        if (smoothing == MethodFlags::APPROXC1)
+        if (method == MethodFlags::APPROXC1)
         {
             dbasis.uniformRefine(1,degree -smoothness);
             meshsize[r] = dbasis.basis(0).getMinCellLength();
             approxC1.update(bb2);
         }
-        else if (smoothing == MethodFlags::NITSCHE)
+        else if (method == MethodFlags::NITSCHE)
         {
             dbasis.uniformRefine(1,degree-smoothness);
             meshsize[r] = dbasis.basis(0).getMinCellLength();
         }
-        else if (smoothing == MethodFlags::DPATCH)
+        else if (method == MethodFlags::DPATCH)
         {
             mp.uniformRefine(1,degree-smoothness);
             dbasis.uniformRefine(1,degree-smoothness);
@@ -546,15 +550,11 @@ int main(int argc, char *argv[])
             mp = dpatch.exportToPatches();
             dbasis = dpatch.localBasis();
             bb2.init(dbasis,global2local);
-            
-            gsFileData<> fd;
-            fd << mp;
-            fd.save("geom");
         }
         gsInfo<< "." <<std::flush; // Approx C1 construction done
 
         // Setup the mapper
-        if (smoothing == MethodFlags::APPROXC1 || smoothing == MethodFlags::DPATCH) // MappedBasis
+        if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH) // MappedBasis
         {
             gsDofMapper map;
             setMapperForBiharmonic(bc, bb2,map);
@@ -563,7 +563,7 @@ int main(int argc, char *argv[])
             u.setupMapper(map);
             gsDirichletNeumannValuesL2Projection(mp, dbasis, bc, bb2, u);
         }
-        else if (smoothing == MethodFlags::NITSCHE) // Nitsche
+        else if (method == MethodFlags::NITSCHE) // Nitsche
         {
             gsDofMapper map;
             setMapperForBiharmonic(bc, dbasis,map);
@@ -589,7 +589,7 @@ int main(int argc, char *argv[])
         //auto g_L = A.getCoeff(laplace, G);
         A.assembleBdr(bc.get("Laplace"), (igrad(u, G) * nv(G)) * g_L.tr() );
 
-        if (smoothing == MethodFlags::NITSCHE)
+        if (method == MethodFlags::NITSCHE)
         {
 
             if (r < 3) // From level 3 and more, the previous EW is used and devided by ḿesh-size (save computation time)
@@ -647,7 +647,6 @@ int main(int argc, char *argv[])
                 );
             }
         }
-
         ma_time += timer.stop();
         gsInfo<< "." <<std::flush;// Assemblying done
 
@@ -669,7 +668,7 @@ int main(int argc, char *argv[])
         h2err[r]= h1err[r] +
                  math::sqrt(ev.integral( ( ihess(u_ex) - ihess(u_sol,G) ).sqNorm() * meas(G) )); // /ev.integral( ihess(f).sqNorm()*meas(G) )
 
-        if (smoothing == MethodFlags::APPROXC1 || smoothing == MethodFlags::DPATCH)
+        if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH)
         {
             gsMatrix<real_t> solFull;
             u_sol.extractFull(solFull);
@@ -680,7 +679,7 @@ int main(int argc, char *argv[])
                                                             igrad(ms_sol.right(), G.right())) *
                                                            nv(G).normalized()).sqNorm() * meas(G)));
         }
-        else if (smoothing == MethodFlags::NITSCHE)
+        else if (method == MethodFlags::NITSCHE)
         {
             gsMultiPatch<> sol_nitsche;
             u_sol.extract(sol_nitsche);
@@ -774,8 +773,9 @@ int main(int argc, char *argv[])
     gsInfo<<"     Norms: "<< err_time   <<"\n";
 
     gsInfo<< "\nMesh-size: " << meshsize.transpose() << "\n";
-    gsInfo<< "\nCondition-number: " << cond_num.transpose() << "\n";
-    if (smoothing == MethodFlags::NITSCHE)
+    if (cond)
+        gsInfo<< "\nCondition-number: " << cond_num.transpose() << "\n";
+    if (method == MethodFlags::NITSCHE)
         gsInfo<< "\nStabilization: " << penalty.transpose() << "\n";
 
     //! [Error and convergence rates]
@@ -803,9 +803,10 @@ int main(int argc, char *argv[])
               <<( IFaceErr.head(numRefine).array() /
                   IFaceErr.tail(numRefine).array() ).log().transpose() / std::log(2.0) <<"\n";
 
-        gsInfo<<   "EoC (Cnum): "<< std::fixed<<std::setprecision(2)
-              <<( cond_num.tail(numRefine).array() /
-                      cond_num.head(numRefine).array() ).log().transpose() / std::log(2.0) <<"\n";
+        if (cond)
+            gsInfo<<   "EoC (Cnum): "<< std::fixed<<std::setprecision(2)
+                  <<( cond_num.tail(numRefine).array() /
+                          cond_num.head(numRefine).array() ).log().transpose() / std::log(2.0) <<"\n";
     }
     //! [Error and convergence rates]
 
@@ -831,7 +832,7 @@ int main(int argc, char *argv[])
     //! [Export data to xml]
     if (!output.empty())
     {
-        index_t cols = smoothing == MethodFlags::NITSCHE ? 7+penalty.cols() : 7;
+        index_t cols = method == MethodFlags::NITSCHE ? 7+penalty.cols() : 7;
         gsMatrix<real_t> error_collection(l2err.rows(), cols);
         error_collection.col(0) = meshsize;
         error_collection.col(1) = dofs;
@@ -840,7 +841,7 @@ int main(int argc, char *argv[])
         error_collection.col(4) = h2err;
         error_collection.col(5) = IFaceErr;
         error_collection.col(6) = cond_num;
-        if (smoothing == MethodFlags::NITSCHE)
+        if (method == MethodFlags::NITSCHE)
             error_collection.block(0,7,penalty.rows(),penalty.cols()) = penalty;
 
         gsFileData<real_t> xml_out;
@@ -849,7 +850,7 @@ int main(int argc, char *argv[])
         xml_out.addString(std::to_string(degree),"Degree");
         xml_out.addString(std::to_string(smoothness),"Regularity");
         xml_out.addString(std::to_string(numRefine),"NumRefine");
-        xml_out.addString(std::to_string(smoothing),"Method");
+        xml_out.addString(std::to_string(method),"Method");
         // Add solution
         // [...]
         xml_out.save(output);

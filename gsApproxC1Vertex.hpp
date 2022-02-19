@@ -110,6 +110,11 @@ void gsApproxC1Vertex<d, T>::checkOrientation(size_t i) {
 template<short_t d,class T>
 void gsApproxC1Vertex<d, T>::computeKernel()
 {
+    // FOR NEUMANN: SOME TESTS:
+    std::vector<patchSide> containingSides;
+    patchCorner pC(m_patchesAroundVertex[0], m_vertexIndices[0]);
+    pC.getContainingSides(d, containingSides);
+    // TEST END
 
     gsMultiPatch<T> mp_vertex;
     for(size_t i = 0; i < m_patchesAroundVertex.size(); i++)
@@ -149,6 +154,9 @@ void gsApproxC1Vertex<d, T>::computeKernel()
 
     index_t dofsCorner = 3;
     if (matrix_det.determinant()*matrix_det.determinant() > 1e-15) // There is (numerically) a kink
+        dofsCorner = 1;
+
+    if (!m_optionList.getSwitch("second")) // == Neumann is included (for all boundary)
         dofsCorner = 1;
 
     if (m_optionList.getSwitch("info"))
