@@ -11,14 +11,14 @@
     Author(s): P. Weinmueller
 */
 
-/*
-    TO DO
- */
-
 #pragma once
 
 #include<gsIO/gsOptionList.h>
+
+#include <gsMSplines/gsMappedBasis.h>
 #include<gsUnstructuredSplines/gsContainerBasisBase.h>
+
+//#include <gsUnstructuredSplines/gsApproxC1Utils.h>
 
 namespace gismo
 {
@@ -46,6 +46,18 @@ public:
 
     void init();
     void compute();
+
+    void update(gsMappedBasis<2,real_t> & bb2)
+    {
+        this->init();
+        this->compute();
+
+        m_matrix = m_matrix.transpose();
+        gsMultiBasis<> dbasis_temp;
+        this->getMultiBasis(dbasis_temp);
+
+        bb2.init(dbasis_temp,m_matrix);
+    }
 
     void defaultOptions();
 

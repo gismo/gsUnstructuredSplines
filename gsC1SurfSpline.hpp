@@ -24,7 +24,7 @@ namespace gismo
         /*
             to do: general
                 m_options.addInt("gluingDataDegree","Polynomial degree of the gluing data space", p-1 );
-                m_options.addInt("gluingDataRegularity","Regularity of the gluing data space",  p-2 );
+                m_options.addInt("gluingDataSmoothness","Regularity of the gluing data space",  p-2 );
                 m_options.addSwitch("info","Print debug information",  false );
                 m_options.addSwitch("plot","Print debug information",  false );
         */
@@ -38,7 +38,7 @@ namespace gismo
         for (size_t np = 0; np < m_patches.nPatches(); np++)
         {
             // gsContainerBasisBase
-            gsContainerBasis<d,T> containerBasis(1, 0); // for 9 subspaces and 4 helper Basis
+            gsContainerBasis<d,T> containerBasis(1); // for 9 subspaces and 4 helper Basis
             m_bases.push_back(containerBasis);
         }
 
@@ -55,8 +55,8 @@ namespace gismo
         // Inner basis
         for (size_t np = 0; np < m_patches.nPatches(); np++)
         {
-            index_t dim_u = m_bases[np].getBasis(0).component(0).size();
-            index_t dim_v = m_bases[np].getBasis(0).component(1).size();
+            index_t dim_u = m_bases[np].piece(0).component(0).size();
+            index_t dim_v = m_bases[np].piece(0).component(1).size();
             row_dofs += (dim_u - 4) * (dim_v - 4);
         }
 
@@ -123,8 +123,8 @@ namespace gismo
         index_t shift_row = 0, shift_col = 0;
         for(size_t np = 0; np < m_patches.nPatches(); ++np)
         {
-            index_t dim_u = m_bases[np].getBasis(0).component(0).size();
-            index_t dim_v = m_bases[np].getBasis(0).component(1).size();
+            index_t dim_u = m_bases[np].piece(0).component(0).size();
+            index_t dim_v = m_bases[np].piece(0).component(1).size();
 
             index_t row_i = 0;
             for (index_t j = 2; j < dim_v-2; ++j)
@@ -155,7 +155,7 @@ namespace gismo
             for (index_t np = 0; np < patch_1; ++np)
                 shift_col += m_bases[np].size();
 
-            end_col += m_bases[patch_1].getBasis(0).size();
+            end_col += m_bases[patch_1].piece(0).size();
             for (size_t ii = 0; ii < basisEdge[0].nPatches(); ++ii)
             {
                 index_t jj = 0;
@@ -169,7 +169,7 @@ namespace gismo
             for (index_t np = 0; np < patch_2; ++np)
                 shift_col += m_bases[np].size();
 
-            end_col += m_bases[patch_2].getBasis(0).size();
+            end_col += m_bases[patch_2].piece(0).size();
 
             for (size_t ii = 0; ii < basisEdge[1].nPatches(); ++ii)
             {
@@ -200,7 +200,7 @@ namespace gismo
             for (index_t np = 0; np < patch_1; ++np)
                 shift_col += m_bases[np].size();
 
-            end_col += m_bases[patch_1].getBasis(0).size();
+            end_col += m_bases[patch_1].piece(0).size();
             for (size_t ii = 0; ii < basisEdge[0].nPatches(); ++ii)
             {
                 index_t jj = 0;
@@ -234,7 +234,7 @@ namespace gismo
                 for (size_t np = 0; np < patchIndex[pInd]; ++np)
                     shift_col += m_bases[np].size();
 
-                end_col += m_bases[patchIndex[pInd]].getBasis(0).size();
+                end_col += m_bases[patchIndex[pInd]].piece(0).size();
                 for (size_t ii = 0; ii < basisVertex[pInd].nPatches(); ++ii)
                 {
                     index_t jj = 0;

@@ -16,6 +16,8 @@
 #include<gsUnstructuredSplines/gsApproxC1Edge.h>
 #include<gsUnstructuredSplines/gsApproxC1Vertex.h>
 
+#include <gsUnstructuredSplines/gsApproxC1Utils.h>
+
 namespace gismo
 {
 
@@ -25,6 +27,7 @@ void gsApproxC1Spline<d,T>::defaultOptions()
     /*
         to do: general
     */
+    gsDebugVar(m_multiBasis.basis(0));
     gsTensorBSplineBasis<d, T> basis = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(0));
     index_t p = basis.degree(0);
 
@@ -35,18 +38,17 @@ void gsApproxC1Spline<d,T>::defaultOptions()
             gsWarn << "Not suitable for different degrees! \n";
     }
 
-    // For the gluing data space
-    m_options.addInt("gluingDataDegree","Polynomial degree of the gluing data space", p-1 );
-    m_options.addInt("gluingDataRegularity","Regularity of the gluing data space",  p-2 );
     m_options.addSwitch("info","Print debug information",  false );
     m_options.addSwitch("plot","Print debug information",  false );
+
+    m_options.addInt("gluingDataDegree","Print debug information",  -1 );
+    m_options.addInt("gluingDataSmoothness","Print debug information",  -1 );
 }
 
 template<short_t d,class T>
 void gsApproxC1Spline<d,T>::init()
 {
-    p_tilde = m_options.getInt("gluingDataDegree");//math::max(m_optionList.getInt("discreteDegree") - 1, 2);
-    r_tilde = m_options.getInt("gluingDataRegularity");//p_tilde - 1;
+    index_t row_dofs = 0;
 
     m_bases.clear();
     m_bases.reserve(m_patches.nPatches()); // For each Patch
@@ -57,10 +59,8 @@ void gsApproxC1Spline<d,T>::init()
         // - Interior space: [0] : inner,
         // - Edge spaces:    [1] : west, [2] : east, [3] : south, [4] : north,
         // - Vertex spaces:  [5] : southwest, [6] : southeast, [7] : northwest, [8] : northeast
-        //
-        // # helperBasisContainer
-        // [0] : basis plus, [1] : basis minus, [2] : basis geo, [3] : basis gluing data
-        gsContainerBasis<d,T> containerBasis(9, 4); // for 9 subspaces and 4 helper Basis
+        // [9] For the initial space, maybe delete later
+        gsContainerBasis<d,T> containerBasis(9); // for 9 subspaces
         m_bases.push_back(containerBasis);
     }
 
@@ -68,12 +68,12 @@ void gsApproxC1Spline<d,T>::init()
     for (size_t np = 0; np < m_patches.nPatches(); np++)
     {
         gsTensorBSplineBasis<d, T> basis_inner = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(np));
+        //m_bases[np].setBasis(9, basis_inner); // Inner
 
         // Construct special space for r = p - 1:
         // The first and the last knot (not 0,1) are repeated +1, e.g.
         // deg 3, r = 2: |||| || | [...] | || ||||
-
-        index_t m,p;
+        /*index_t m,p;
         for (index_t uv = 0; uv < 2; uv++)
         {
             p = basis_inner.degree(uv);
@@ -87,7 +87,12 @@ void gsApproxC1Spline<d,T>::init()
                 if (knot_u != 0.5 && knot_u != 1)
                     basis_inner.insertKnot(1-knot_u,uv,1);
             }
-        }
+        }*/
+        index_t dim_u = basis_inner.component(0).size();
+        index_t dim_v = basis_inner.component(1).size();
+
+        row_dofs += (dim_u - 4) * (dim_v - 4);
+
         m_bases[np].setBasis(0, basis_inner); // Inner
     }
 
@@ -96,81 +101,51 @@ void gsApproxC1Spline<d,T>::init()
     {
         const boundaryInterface & item = m_patches.interfaces()[numInt];
 
-        const index_t side_1 = item.first().side().index();
-        const index_t side_2 = item.second().side().index();
-        const index_t patch_1 = item.first().patch;
-        const index_t patch_2 = item.second().patch;
+        const index_t dir_1 = item.first().side().index() > 2 ? 0 : 1;
+        const index_t dir_2 = item.second().side().index() > 2 ? 0 : 1;
 
-        const index_t dir_1 = side_1 > 2 ? 0 : 1;
-        const index_t dir_2 = side_2 > 2 ? 0 : 1;
-
-        gsBSplineBasis<T> basis_1 = dynamic_cast<gsBSplineBasis<T> &>(m_multiBasis.basis(patch_1).component(dir_1));
-        gsBSplineBasis<T> basis_2 = dynamic_cast<gsBSplineBasis<T> &>(m_multiBasis.basis(patch_2).component(dir_2));
-
-        gsBSplineBasis<T> basis_geo_1 = dynamic_cast<gsBSplineBasis<T> &>(m_multiBasis.basis(patch_1).component(1-dir_1));
-        gsBSplineBasis<T> basis_geo_2 = dynamic_cast<gsBSplineBasis<T> &>(m_multiBasis.basis(patch_2).component(1-dir_2));
-
+        // [!Basis space]
+        gsTensorBSplineBasis<d, T> basis_11 = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(item.first().patch));
+        gsTensorBSplineBasis<d, T> basis_22 = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(item.second().patch));
+/*
+        gsTensorBSplineBasis<d, T> basis;
+        index_t dir;
+        if (basis_11.component(dir_1).numElements() > basis_22.component(dir_2).numElements())
+        {
+            basis = basis_22;
+            dir = dir_2;
+        }
+        else
+        {
+            basis = basis_11;
+            dir = dir_1;
+        }
+        // [!Basis space]
+*/
         // [!Plus Minus space]
-        index_t m, p;
-        p = basis_1.degree();
-        m = basis_1.knots().multiplicityIndex(p+1);
-
-        gsBSplineBasis<T> basis_plus(basis_1);
-        gsBSplineBasis<T> basis_minus(basis_1);
-        if (m != 1)
-            basis_plus.elevateContinuity(1);
-
-        basis_minus.degreeDecrease(1);
-        if (m != 1)
-            basis_minus.reduceContinuity(1);
-
-        m_bases[patch_1].setHelperBasis(side_1-1, 0, basis_plus);
-        m_bases[patch_2].setHelperBasis(side_2-1, 0, basis_plus);
-
-        m_bases[patch_1].setHelperBasis(side_1-1, 1, basis_minus);
-        m_bases[patch_2].setHelperBasis(side_2-1, 1, basis_minus);
+        gsBSplineBasis<T> basis_plus;
+        gsBSplineBasis<T> basis_minus;
+        createPlusSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_plus);
+        createMinusSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_minus);
         // [!Plus Minus space]
 
         // [!Gluing data space]
-        //\tilde{p} = max(p-1,2)
-        //\tilde{r} = \tilde{p}-1
-        if (basis_1.knots().unique() != basis_2.knots().unique())
-            gsInfo << "The patches are not matching!!! \n";
-        gsKnotVector<T> kv_gluingData(basis_1.knots().unique(), p_tilde, r_tilde);
-        gsBSplineBasis<T> basis_gluingData(kv_gluingData); // S(\tilde{p},\tilde{r},h)
-
-        m_bases[patch_1].setHelperBasis(side_1-1, 3, basis_gluingData);
-        m_bases[patch_2].setHelperBasis(side_2-1, 3, basis_gluingData);
+        gsBSplineBasis<T> basis_gluingData;
+        createGluingDataSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_gluingData,
+                              m_options.getInt("gluingDataDegree"), m_options.getInt("gluingDataSmoothness"));
         // [!Gluing data space]
 
         // [!Edge space]
-        gsBSplineBasis<T> basis_edge(basis_1);
-        basis_edge.setDegreePreservingMultiplicity(basis_plus.degree()+basis_gluingData.degree()-1);
+        gsTensorBSplineBasis<d, T> basis_edge_11, basis_edge_22;
+        createEdgeSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_plus, basis_minus, basis_gluingData, basis_edge_11);
+        createEdgeSpace(m_patches.patch(item.second().patch), basis_22, dir_2, basis_plus, basis_minus, basis_gluingData, basis_edge_22);
 
-        index_t r_plus, r_minus, r_gD, r_edge, r;
-        r_plus = basis_plus.degree() - basis_plus.knots().multiplicityIndex(basis_plus.degree()+1); // p+1, since c++ starts at 0
-        r_minus = basis_minus.degree() - basis_minus.knots().multiplicityIndex(basis_minus.degree()+1);
-        r_gD = p_tilde - basis_gluingData.knots().multiplicityIndex(p_tilde+1);
-        r_edge = basis_edge.degree() - basis_edge.knots().multiplicityIndex(basis_edge.degree()+1);
-
-        r = math::min(r_gD, math::min(r_plus, r_minus));
-        if (r_edge > r)
-            basis_edge.reduceContinuity(r_edge - r);
-        else if (r_edge < r)
-            basis_edge.elevateContinuity(r - r_edge);
-
-        gsTensorBSplineBasis<d, T> basis_edge_1(dir_1 == 0 ? basis_edge.knots() : basis_geo_1.knots(),
-                                                dir_1 == 0 ? basis_geo_1.knots() : basis_edge.knots());
-        gsTensorBSplineBasis<d, T> basis_edge_2(dir_2 == 0 ? basis_edge.knots() : basis_geo_2.knots(),
-                                                dir_2 == 0 ? basis_geo_2.knots() : basis_edge.knots());
         // [!Edge space]
+        m_bases[item.first().patch].setBasis(item.first().side().index(), basis_edge_11);
+        m_bases[item.second().patch].setBasis(item.second().side().index(), basis_edge_22);
 
-        m_bases[patch_1].setHelperBasis(side_1-1, 2, basis_geo_1);
-        m_bases[patch_2].setHelperBasis(side_2-1, 2, basis_geo_2);
-
-        m_bases[patch_1].setBasis(side_1, basis_edge_1);
-        m_bases[patch_2].setBasis(side_2, basis_edge_2);
-
+        index_t numDofs = math::max(basis_plus.size() + basis_minus.size() - 10, 0);
+        row_dofs += numDofs; // The same as side_2
     }
 
     // For loop over the Edge to construct the spaces
@@ -178,198 +153,55 @@ void gsApproxC1Spline<d,T>::init()
     {
         const patchSide & bit = m_patches.boundaries()[numBdy];
 
-        index_t patch_1 = bit.patch;
-        index_t side_1 = bit.side().index();
-
         index_t dir_1 = m_patches.boundaries()[numBdy].m_index < 3 ? 1 : 0;
 
-        gsBSplineBasis<T> basis_1 = dynamic_cast<gsBSplineBasis<> &>(m_multiBasis.basis(patch_1).component(dir_1));
-        gsBSplineBasis<T> basis_geo_1 = dynamic_cast<gsBSplineBasis<> &>(m_multiBasis.basis(patch_1).component(1-dir_1));
-
-        // Assume that plus/minus space is the same as the inner space
-        gsKnotVector<T> kv_1 = basis_1.knots();
-
-        gsBSplineBasis<T> patch_basis_1 = dynamic_cast<gsBSplineBasis<> &>(m_patches.patch(patch_1).basis().component(dir_1));
-        gsKnotVector<T> kv_patch_1 = patch_basis_1.knots();
+        gsTensorBSplineBasis<d, T> basis = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(bit.patch));
 
         // [!Plus Minus space]
-        index_t m, p;
-        p = basis_1.degree();
-        m = basis_1.knots().multiplicityIndex(p+1);
-
-        gsBSplineBasis<T> basis_plus(basis_1);
-        gsBSplineBasis<T> basis_minus(basis_1);
-        if (m != 1)
-            basis_plus.elevateContinuity(1);
-
-        basis_minus.degreeDecrease(1);
-        if (m != 1)
-            basis_minus.reduceContinuity(1);
-
-        m_bases[patch_1].setHelperBasis(side_1-1, 0, basis_plus);
-        m_bases[patch_1].setHelperBasis(side_1-1, 1, basis_minus);
+        gsBSplineBasis<T> basis_plus;
+        gsBSplineBasis<T> basis_minus;
+        createPlusSpace(m_patches.patch(bit.patch), basis, dir_1, basis_plus);
+        createMinusSpace(m_patches.patch(bit.patch), basis, dir_1, basis_minus);
         // [!Plus Minus space]
 
-        gsBSplineBasis<T> basis_edge(basis_1);
-        basis_edge.setDegreePreservingMultiplicity(basis_plus.degree());
+        gsTensorBSplineBasis<d, T> basis_edge_11;
+        createEdgeSpace(m_patches.patch(bit.patch), basis, dir_1, basis_plus, basis_minus, basis_edge_11);
 
-        index_t r_plus, r_minus, r_edge, r;
-        r_plus = basis_plus.degree() - basis_plus.knots().multiplicityIndex(basis_plus.degree()+1); // p+1, since c++ starts at 0
-        r_minus = basis_minus.degree() - basis_minus.knots().multiplicityIndex(basis_minus.degree()+1);
-        r_edge = basis_edge.degree() - basis_edge.knots().multiplicityIndex(basis_edge.degree()+1);
+        m_bases[bit.patch].setBasis(bit.side().index(), basis_edge_11);
 
-        r = math::min(r_plus, r_minus);
-        if (r_edge > r)
-            basis_edge.reduceContinuity(r_edge - r);
-        else if (r_edge < r)
-            basis_edge.elevateContinuity(r - r_edge);
-
-        gsTensorBSplineBasis<d, T> basis_edge_1(dir_1 == 0 ? basis_edge.knots() : basis_geo_1.knots(),
-                                                dir_1 == 0 ? basis_geo_1.knots() : basis_edge.knots());
-
-        m_bases[patch_1].setHelperBasis(side_1-1, 2, basis_geo_1);
-        m_bases[patch_1].setBasis(side_1, basis_edge_1);
+        index_t numDofs = math::max(basis_plus.size() + basis_minus.size() - 10, 0);
+        row_dofs += numDofs;
     }
 
     // For loop over the Vertex to construct the spaces
     for (size_t numVer = 0; numVer < m_patches.vertices().size(); numVer++)
     {
         std::vector<patchCorner> allcornerLists = m_patches.vertices()[numVer];
-        std::vector<size_t> patchIndex;
-        std::vector<size_t> vertIndex;
         for (size_t j = 0; j < allcornerLists.size(); j++)
         {
-            patchIndex.push_back(allcornerLists[j].patch);
-            vertIndex.push_back(allcornerLists[j].m_index);
-        }
+            std::vector<patchSide> containingSides;
+            allcornerLists[j].getContainingSides(d, containingSides);
+            bool isInterface_1 = m_patches.isInterface(patchSide(allcornerLists[j].patch, containingSides.at(0).side()));
+            bool isInterface_2 = m_patches.isInterface(patchSide(allcornerLists[j].patch, containingSides.at(1).side()));
 
-        if (patchIndex.size() == 1) // Boundary vertex
-        {
-            index_t patch_1 = patchIndex[0];
-            index_t vertex_1 = vertIndex[0];
-
-            gsTensorBSplineBasis<d, T> basis_vertex_1 = dynamic_cast<gsTensorBSplineBasis<d, real_t> &>(m_multiBasis.basis(patch_1));
-
-            index_t m, p;
-            p = basis_vertex_1.degree(0);
-            m = basis_vertex_1.knots(0).multiplicityIndex(p+1);
-            if (m == 1) // == basis_vertex_1.degree(1)
-                basis_vertex_1.reduceContinuity(1); // In the case for the max. smoothness
-
-            m_bases[patch_1].setBasis(vertex_1+4, basis_vertex_1);
-        }
-        else if (patchIndex.size() > 1)
-        {
-            gsMultiPatch<T> temp_mp;
-            for (size_t j = 0; j < patchIndex.size(); j++)
-                temp_mp.addPatch(m_patches.patch(patchIndex[j]));
-            temp_mp.computeTopology();
-
-            if (patchIndex.size() == temp_mp.interfaces().size()) // Internal vertex
+            if (containingSides.at(0).side() < 3) // If isInterface_1 == v, then switch
             {
-                for (size_t j = 0; j < patchIndex.size(); j++)
-                {
-                    index_t patch_1 = patchIndex[j];
-                    index_t vertex_1 = vertIndex[j];
-
-                    gsTensorBSplineBasis<d, T> basis_vertex_1 = dynamic_cast<gsTensorBSplineBasis<d, real_t> &>(m_multiBasis.basis(
-                            patch_1));
-
-                    basis_vertex_1.degreeElevate(p_tilde-1,0); // Keep smoothness
-                    basis_vertex_1.degreeElevate(p_tilde-1,1);
-
-                    // todo: fix for general regularity
-                    index_t r, p;
-                    p = basis_vertex_1.degree(0);
-                    r = p - basis_vertex_1.knots(0).multiplicityIndex(p+1);
-
-                    //if (m_multiBasis.basis(patch_1).degree(0) - r == 1)
-                    //    basis_vertex_1.reduceContinuity(r-1); // In the case for the max. smoothness
-                    //else if (r > 2)
-                    {
-                        if (r != 1)
-                            basis_vertex_1.reduceContinuity(1); // bcs of minus space
-                        if (r_tilde < r-1)
-                            basis_vertex_1.reduceContinuity(r-r_tilde-1);
-                    }
-
-                    m_bases[patch_1].setBasis(vertex_1+4, basis_vertex_1);
-                }
+                bool isInterface_temp = isInterface_1;
+                isInterface_1 = isInterface_2;
+                isInterface_2 = isInterface_temp;
             }
-            else if (patchIndex.size() > temp_mp.interfaces().size())// Interface-Boundary vertex
-            {
-                for (size_t j = 0; j < patchIndex.size(); j++)
-                {
-                    index_t patch_1 = patchIndex[j];
-                    index_t vertex_1 = vertIndex[j];
 
-                    gsTensorBSplineBasis<d, T> basis_vertex_1 = dynamic_cast<gsTensorBSplineBasis<d, real_t> &>(m_multiBasis.basis(patch_1));
+            gsTensorBSplineBasis<d, T> basis_vertex_11;
+            createVertexSpace(m_patches.patch(allcornerLists[j].patch), m_multiBasis.basis(allcornerLists[j].patch),
+                              isInterface_1, isInterface_2, basis_vertex_11, m_options.getInt("gluingDataDegree"),
+                              m_options.getInt("gluingDataSmoothness"));
 
-                    basis_vertex_1.degreeElevate(p_tilde-1,0); // Keep smoothness
-                    basis_vertex_1.degreeElevate(p_tilde-1,1);
-
-                    // todo: fix for general regularity
-                    index_t r, p;
-                    p = basis_vertex_1.degree(0);
-                    r = p - basis_vertex_1.knots(0).multiplicityIndex(p+1);
-
-                    //if (m_multiBasis.basis(patch_1).degree(0) - r == 1)
-                    //    basis_vertex_1.reduceContinuity(r-1); // In the case for the max. smoothness
-                    //else if (r > 2)
-                    {
-                        if (r != 1)
-                            basis_vertex_1.reduceContinuity(1); // bcs of minus space
-                        if (r_tilde < r-1)
-                            basis_vertex_1.reduceContinuity(r-r_tilde-1);
-                    }
-
-                    m_bases[patch_1].setBasis(vertex_1+4, basis_vertex_1);
-
-                }
-            }
+            m_bases[allcornerLists[j].patch].setBasis(allcornerLists[j].m_index + 4, basis_vertex_11);
         }
-    }
-
-
-    index_t row_dofs = 0;
-    // Inner basis
-    for (size_t np = 0; np < m_patches.nPatches(); np++)
-    {
-        index_t dim_u = m_bases[np].getBasis(0).component(0).size();
-        index_t dim_v = m_bases[np].getBasis(0).component(1).size();
-        row_dofs += (dim_u - 4) * (dim_v - 4);
-    }
-
-    // Interfaces
-    for (size_t numInt = 0; numInt < m_patches.interfaces().size(); numInt++)
-    {
-        const boundaryInterface &item = m_patches.interfaces()[numInt];
-
-        const index_t side_1 = item.first().side().index();
-        const index_t patch_1 = item.first().patch;
-
-        index_t numDofs = math::max(m_bases[patch_1].getHelperBasis(side_1-1, 0).size() + m_bases[patch_1].getHelperBasis(side_1-1, 1).size() - 10, 0);
-        row_dofs += numDofs; // The same as side_2
-    }
-
-    // Boundary Edges
-    for (size_t numBdy = 0; numBdy < m_patches.boundaries().size(); numBdy++)
-    {
-        const patchSide &bit = m_patches.boundaries()[numBdy];
-
-        index_t patch_1 = bit.patch;
-        index_t side_1 = bit.side().index();
-
-        index_t numDofs = math::max(m_bases[patch_1].getHelperBasis(side_1-1, 0).size() + m_bases[patch_1].getHelperBasis(side_1-1, 1).size() - 10, 0);
-        row_dofs += numDofs;
-    }
-
-    // Vertices
-    for (size_t numVer = 0; numVer < m_patches.vertices().size(); numVer++)
         row_dofs += 6;
+    }
 
-
-
+    // Initialise the matrix
     m_matrix.clear();
     index_t dim_col = 0;
     for (size_t i = 0; i < m_bases.size(); i++)
@@ -380,6 +212,27 @@ void gsApproxC1Spline<d,T>::init()
     m_matrix.resize(row_dofs, dim_col);
     const index_t nz = (m_multiBasis.basis(0).degree(0)*2 + 1)*row_dofs; // TODO
     m_matrix.reserve(nz);
+
+
+    if (m_options.getSwitch("info"))
+    {
+        for (size_t i = 0; i < m_bases.size(); i++)
+        {
+            gsInfo << "Patch " << i << ": \n";
+            for (index_t j = 0; j < m_bases[i].nPieces(); j++)
+            {
+                gsInfo << (j == 0 ? "Interior Space: " : ( j < 5 ? "Edge Space: " : "Vertex Space: ") ) << "\n";
+                gsTensorBSplineBasis<d, T> basis = dynamic_cast<const gsTensorBSplineBasis<d, T>&>(m_bases[i].piece(j));
+                std::vector<index_t> vec_1 = basis.knots(0).multiplicities();
+                std::vector<index_t> vec_2 = basis.knots(1).multiplicities();
+                gsAsVector<index_t> mult_1(vec_1);
+                gsAsVector<index_t> mult_2(vec_2);
+                gsInfo << mult_1.transpose() << "\n";
+                gsInfo << mult_2.transpose() << "\n";
+                gsInfo << "----------------------------------\n";
+            }
+        }
+    }
 }   
 
 
@@ -390,8 +243,8 @@ void gsApproxC1Spline<d,T>::compute()
     index_t shift_row = 0, shift_col = 0;
     for(size_t np = 0; np < m_patches.nPatches(); ++np)
     {
-        index_t dim_u = m_bases[np].getBasis(0).component(0).size();
-        index_t dim_v = m_bases[np].getBasis(0).component(1).size();
+        index_t dim_u = m_bases[np].piece(0).component(0).size();
+        index_t dim_v = m_bases[np].piece(0).component(1).size();
 
         index_t row_i = 0;
         for (index_t j = 2; j < dim_v-2; ++j)
@@ -423,9 +276,9 @@ void gsApproxC1Spline<d,T>::compute()
             shift_col += m_bases[np].size();
 
         for (index_t ns = 0; ns < side_1; ++ns)
-            begin_col += m_bases[patch_1].getBasis(ns).size();
+            begin_col += m_bases[patch_1].piece(ns).size();
         for (index_t ns = 0; ns < side_1+1; ++ns)
-            end_col += m_bases[patch_1].getBasis(ns).size();
+            end_col += m_bases[patch_1].piece(ns).size();
 
         for (size_t ii = 0; ii < basisEdge[0].nPatches(); ++ii)
         {
@@ -441,9 +294,9 @@ void gsApproxC1Spline<d,T>::compute()
             shift_col += m_bases[np].size();
 
         for (index_t ns = 0; ns < side_2; ++ns)
-            begin_col += m_bases[patch_2].getBasis(ns).size();
+            begin_col += m_bases[patch_2].piece(ns).size();
         for (index_t ns = 0; ns < side_2+1; ++ns)
-            end_col += m_bases[patch_2].getBasis(ns).size();
+            end_col += m_bases[patch_2].piece(ns).size();
 
         for (size_t ii = 0; ii < basisEdge[1].nPatches(); ++ii)
         {
@@ -472,9 +325,9 @@ void gsApproxC1Spline<d,T>::compute()
             shift_col += m_bases[np].size();
 
         for (index_t ns = 0; ns < side_1; ++ns)
-            begin_col += m_bases[patch_1].getBasis(ns).size();
+            begin_col += m_bases[patch_1].piece(ns).size();
         for (index_t ns = 0; ns < side_1+1; ++ns)
-            end_col += m_bases[patch_1].getBasis(ns).size();
+            end_col += m_bases[patch_1].piece(ns).size();
 
         for (size_t ii = 0; ii < basisEdge[0].nPatches(); ++ii)
         {
@@ -512,9 +365,9 @@ void gsApproxC1Spline<d,T>::compute()
                 shift_col += m_bases[np].size();
 
             for (index_t ns = 0; ns < corner+4; ++ns)
-                begin_col += m_bases[patch_1].getBasis(ns).size();
+                begin_col += m_bases[patch_1].piece(ns).size();
             for (index_t ns = 0; ns < corner+4+1; ++ns)
-                end_col += m_bases[patch_1].getBasis(ns).size();
+                end_col += m_bases[patch_1].piece(ns).size();
 
             for (size_t ii = 0; ii < basisVertex[np].nPatches(); ++ii)
             {

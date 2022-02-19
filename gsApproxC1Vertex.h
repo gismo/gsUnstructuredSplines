@@ -13,6 +13,8 @@
 
 #pragma once
 
+#include <gsUnstructuredSplines/gsApproxC1Utils.h>
+
 #include <gsUnstructuredSplines/gsContainerBasis.h>
 #include <gsUnstructuredSplines/gsPatchReparameterized.h>
 #include <gsUnstructuredSplines/gsApproxGluingData.h>
@@ -69,94 +71,39 @@ public:
             C1AuxPatchContainer auxPatchSingle;
             auxPatchSingle.push_back(m_auxPatches[i]);
 
-            index_t vertex_1 = m_vertexIndices[i];
-            std::vector<index_t> sideContainer;
-            if (auxPatchSingle[0].getOrient() == 0) // not rotated
+            std::vector<patchSide> containingSides;
+            patchCorner pC(m_patchesAroundVertex[i], m_vertexIndices[i]);
+            pC.getContainingSides(d, containingSides);
+
+            if (containingSides.at(0).side() < 3) // If isInterface_1 == v, then switch
             {
-                switch (vertex_1) // corner
-                {
-                    case 1:
-                        sideContainer.push_back(3); // u
-                        sideContainer.push_back(1); // v
-                        break;
-                    case 2:
-                        sideContainer.push_back(3); // u
-                        sideContainer.push_back(2); // v
-                        break;
-                    case 3:
-                        sideContainer.push_back(4); // u
-                        sideContainer.push_back(1); // v
-                        break;
-                    case 4:
-                        sideContainer.push_back(4); // u
-                        sideContainer.push_back(2); // v
-                        break;
-                    default:
-                        gsInfo << "Something went wrong\n";
-                        break;
-                }
-            }
-            else if (auxPatchSingle[0].getOrient() == 1) // rotated
-            {
-                switch (vertex_1) // corner
-                {
-                    case 1:
-                        sideContainer.push_back(1); // u
-                        sideContainer.push_back(3); // v
-                        break;
-                    case 2:
-                        sideContainer.push_back(3); // u
-                        sideContainer.push_back(2); // v
-                        break;
-                    case 3:
-                        sideContainer.push_back(4); // u
-                        sideContainer.push_back(1); // v
-                        break;
-                    case 4:
-                        sideContainer.push_back(2); // u
-                        sideContainer.push_back(4); // v
-                        break;
-                    default:
-                        gsInfo << "Something went wrong\n";
-                        break;
-                }
+                patchSide side_temp = containingSides[0];
+                containingSides[0] = containingSides[1];
+                containingSides[1] = side_temp;
             }
 
-            //gsInfo << "Patch: " << m_patchesAroundVertex[i] << " with index: " << m_vertexIndices[i] << "\n";
-            std::vector<bool> isInterface;
-            isInterface.resize(2);
-            isInterface[0] = m_mp.isInterface(patchSide(m_patchesAroundVertex[i],sideContainer[0]));
-            isInterface[1] = m_mp.isInterface(patchSide(m_patchesAroundVertex[i],sideContainer[1]));
+            std::vector<bool> isInterface(2);
+            isInterface[0] = m_mp.isInterface(patchSide(m_patchesAroundVertex[i], containingSides.at(0).side()));
+            isInterface[1] = m_mp.isInterface(patchSide(m_patchesAroundVertex[i], containingSides.at(1).side()));
 
             // Compute Gluing data
-            gsApproxGluingData<d, T> approxGluingData(auxPatchSingle, m_optionList, sideContainer, isInterface);
+            gsApproxGluingData<d, T> approxGluingData(auxPatchSingle, m_optionList, containingSides, isInterface);
 
             //Problem setup
-            std::vector<gsBSplineBasis<T>> basis_plus;
-            std::vector<gsBSplineBasis<T>> basis_minus;
-            std::vector<gsBSplineBasis<T>> basis_geo;
-
-            std::vector<gsBSpline<T>> alpha;
-            std::vector<gsBSpline<T>> beta;
+            std::vector<gsBSpline<T>> alpha, beta;
+            std::vector<gsBSplineBasis<T>> basis_plus, basis_minus;
 
             std::vector<bool> kindOfEdge;
 
-            basis_plus.resize(2);
-            basis_minus.resize(2);
-            basis_geo.resize(2);
-
-            alpha.resize(2);
-            beta.resize(2);
+            alpha.resize(2); beta.resize(2); basis_plus.resize(2); basis_minus.resize(2);
 
             kindOfEdge.resize(2);
 
-            for (size_t dir = 0; dir < sideContainer.size(); ++dir)
+            gsGeometry<T> & geo = auxPatchSingle[0].getPatchRotated();
+            gsMultiBasis<T> initSpace(auxPatchSingle[0].getBasisRotated().piece(0));
+            for (size_t dir = 0; dir < containingSides.size(); ++dir)
             {
-                index_t localdir = auxPatchSingle[0].getMapIndex(sideContainer[dir]) < 3 ? 1 : 0;
-
-                basis_plus[localdir] = dynamic_cast<gsBSplineBasis<T>&>(auxPatchSingle[0].getBasisRotated().getHelperBasis(sideContainer[dir]-1, 0));
-                basis_minus[localdir] = dynamic_cast<gsBSplineBasis<T>&>(auxPatchSingle[0].getBasisRotated().getHelperBasis(sideContainer[dir]-1, 1));
-                basis_geo[localdir] = dynamic_cast<gsBSplineBasis<T>&>(auxPatchSingle[0].getBasisRotated().getHelperBasis(sideContainer[dir]-1, 2));
+                index_t localdir = auxPatchSingle[0].getMapIndex(containingSides[dir].index()) < 3 ? 1 : 0;
 
                 if (isInterface[localdir])
                 {
@@ -164,57 +111,63 @@ public:
                     beta[dir] = approxGluingData.betaS(dir);
                 }
 
-
                 kindOfEdge[localdir] = isInterface[dir];
+
+                gsBSplineBasis<T> b_plus, b_minus;
+                createPlusSpace(geo, initSpace.basis(0), dir, b_plus);
+                createMinusSpace(geo, initSpace.basis(0), dir, b_minus);
+
+                basis_plus[dir] = b_plus;
+                basis_minus[dir] = b_minus;
             }
-            gsGeometry<T> &geo = auxPatchSingle[0].getPatchRotated();
+
+            gsSparseSolver<real_t>::SimplicialLDLT solver;
+            gsExprAssembler<> A(1, 1);
+
+            // Elements used for numerical integration
+            gsMultiBasis<T> vertexSpace(auxPatchSingle[0].getBasisRotated().piece(m_vertexIndices[i] + 4));
+            A.setIntegrationElements(vertexSpace);
+            gsExprEvaluator<T> ev(A);
+
+            // Set the discretization space
+            auto u = A.getSpace(vertexSpace);
+
+            // Create Mapper
+            gsDofMapper map(vertexSpace);
+            gsMatrix<index_t> act;
+            for (index_t dir = 0; dir < vertexSpace.basis(0).domainDim(); dir++)
+                for (index_t i = 3*vertexSpace.basis(0).degree(dir)+1; i < vertexSpace.basis(0).component(1-dir).size(); i++) // only the first two u/v-columns are Dofs (0/1)
+                {
+                    act = vertexSpace.basis(0).boundaryOffset(dir == 0 ? 3 : 1, i); // WEST
+                    //map.markBoundary(0, act); // Patch 0
+                }
+            map.finalize();
+
+            gsBoundaryConditions<> bc_empty;
+            bc_empty.addCondition(1, condition_type::dirichlet, 0); // Doesn't matter which side
+            u.setupMapper(map);
+
+            gsMatrix<T> & fixedDofs = const_cast<expr::gsFeSpace<T>&>(u).fixedPart();
+            fixedDofs.setZero( u.mapper().boundarySize(), 1 );
+
+            A.initSystem();
+            A.assemble(u * u.tr());
+            solver.compute(A.matrix());
 
             // Create Basis functions
-            gsMultiPatch<> result_1;
-            for (index_t bfID = 0; bfID < 6; bfID++) {
-                gsSparseSolver<real_t>::SimplicialLDLT solver;
-                gsExprAssembler<> A(1, 1);
+            gsMultiPatch<T> result_1;
+            for (index_t bfID = 0; bfID < 6; bfID++)
+            {
+                A.initVector();
 
-                typedef gsExprAssembler<>::variable variable;
-                typedef gsExprAssembler<>::space space;
-                typedef gsExprAssembler<>::solution solution;
-
-                // Elements used for numerical integration
-                gsMultiBasis<T> vertexSpace(auxPatchSingle[0].getBasisRotated().getBasis(m_vertexIndices[i] + 4));
-                A.setIntegrationElements(vertexSpace);
-                gsExprEvaluator<> ev(A);
-
-                // Set the discretization space
-                space u = A.getSpace(vertexSpace);
-
-                // Create Mapper
-                gsDofMapper map(vertexSpace);
-                gsMatrix<index_t> act;
-                for (index_t dir = 0; dir < vertexSpace.basis(0).domainDim(); dir++)
-                    for (index_t i = 2*vertexSpace.basis(0).degree(dir)+1; i < vertexSpace[0].component(dir).size(); i++) // only the first two u/v-columns are Dofs (0/1)
-                    {
-                        act = vertexSpace[0].boundaryOffset(dir == 0 ? 3 : 1, i); // WEST
-                        map.markBoundary(0, act); // Patch 0
-                    }
-                map.finalize();
-
-                gsBoundaryConditions<> bc_empty;
-                bc_empty.addCondition(1, condition_type::dirichlet, 0); // Doesn't matter which side
-                u.setupMapper(map);
-
-                A.initSystem();
-
-                gsVertexBasis<real_t> vertexBasis(geo, basis_plus, basis_minus, basis_geo, alpha, beta, sigma,
-                                                  kindOfEdge, bfID);
+                gsVertexBasis<T> vertexBasis(geo, initSpace.basis(0), alpha, beta, basis_plus, basis_minus, sigma, kindOfEdge, bfID);
                 auto aa = A.getCoeff(vertexBasis);
+                A.assemble(u * aa);
 
-                A.assemble(u * u.tr(), u * aa);
+                gsMatrix<T> solVector = solver.solve(A.rhs());
 
-                solver.compute(A.matrix());
-                gsMatrix<> solVector = solver.solve(A.rhs());
-
-                solution u_sol = A.getSolution(u, solVector);
-                gsMatrix<> sol;
+                auto u_sol = A.getSolution(u, solVector);
+                gsMatrix<T> sol;
                 u_sol.extract(sol);
 
                 //gsDebugVar(sol - result_1.patch(bfID).coefs());
@@ -263,6 +216,8 @@ public:
                     }
             }
             collection.save();
+            //if (m_patchesAroundVertex.size() == 2)
+            //    gsWriteParaview(basisVertexResult[0], "vertex_basis", 20000);
         }
     }
 

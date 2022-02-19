@@ -31,38 +31,11 @@ namespace gismo
         /// Unique pointer for gsContainerBasis
         typedef memory::unique_ptr< gsContainerBasis > uPtr;
 
-        gsContainerBasis(index_t numSubspaces, index_t numHelperBasis = 0)
+        gsContainerBasis(index_t numSubspaces)
         {
-
-            /*
-             * for i
-             *      simple basis
-             *      add basis
-             */
-
             basisContainer.clear();
             for (index_t i = 0; i != numSubspaces; i++)
                 basisContainer.push_back(gsTensorBSplineBasis<d,T>());
-
-/*
-            for (index_t i = 0; i != numSubspaces; i++)
-                basisContainer.addBasis(NULL);
-
-*/
-            std::vector<gsBSplineBasis<T>> temp_basis;
-            temp_basis.clear();
-            for (index_t i = 0; i != 4; i++) // 4 sides
-                temp_basis.push_back(gsBSplineBasis<T>());
-
-            helperBasisContainer.clear();
-            for (index_t i = 0; i != numHelperBasis; i++)
-                helperBasisContainer.push_back(temp_basis);
-
-/*
-            for (index_t i = 0; i != 4; i++)
-                for (index_t j = 0; j != numHelperBasis; j++)
-                    helperBasisContainer[i].addBasis(NULL);
-*/
 
         }
 
@@ -129,15 +102,33 @@ namespace gismo
             return sz;
         }
 
-        void swapAxis()
+        void reverse()
         {
             for (size_t i=0; i< basisContainer.size(); ++i)
             {
-                gsTensorBSplineBasis<d, T> basis_temp = dynamic_cast<gsTensorBSplineBasis<d,T>&>(basisContainer[i]);
-                gsTensorBSplineBasis<d, T> newTensorBasis(basis_temp.knots(1),basis_temp.knots(0));
-                basisContainer[i] = newTensorBasis;
+                if (gsTensorBSplineBasis<d, T> * mb =
+                        dynamic_cast<gsTensorBSplineBasis<d, T> *>(&basisContainer[i]) )
+                {
+                    gsTensorBSplineBasis<d, T> basis_temp = dynamic_cast<gsTensorBSplineBasis<d,T>&>(basisContainer[i]);
+                    gsTensorBSplineBasis<d, T> newTensorBasis(basis_temp.knots(1),basis_temp.knots(0));
+                    basisContainer[i] = newTensorBasis;
+                }
+                /*
+                else if (gsTensorNurbsBasis<d, T> * mb =
+                        dynamic_cast<gsTensorNurbsBasis<d, T> *>(&basisContainer[i]) )
+                {
+                    gsTensorNurbsBasis<d, T> basis_temp = dynamic_cast<gsTensorNurbsBasis<d,T>&>(basisContainer[i]);
+                    basis_temp.swapDirections(1,0);
+                    basisContainer[i] = basis_temp;
+                }
+                */
+                else
+                    gsInfo << "Works for now just with gsTensorBSplineBasis<d, T> \n";
+
             }
         }
+
+        index_t nPieces() const {return basisContainer.size();}
 
         typename gsBasis<T>::domainIter makeDomainIterator(const boxSide & side) const
         {
@@ -174,8 +165,6 @@ namespace gismo
             }
              */
 
-
-            gsInfo << "I AM HERE 2 \n";
             gsDebugVar(s.index());
             // Maybe not working for approx C1 Basis functions
             typename gsBSplineTraits<d-1, T>::Basis* bBasis = new typename gsBSplineTraits<d-1, T>::Basis(*basisContainer[0].boundaryBasis(s));
@@ -282,6 +271,20 @@ namespace gismo
         {
             gsMatrix<int> result;
 
+            // TODO TEST WITH:
+            /*
+            index_t shift = 0;
+            result.resize(0, 1);
+            for (size_t i=0; i< basisContainer.size(); ++i)
+            {
+                gsMatrix<int> result_temp;
+                result_temp = basisContainer[i].boundaryOffset(bside, offset);
+                result_temp.array() += shift;
+                result.conservativeResize(result.rows()+result_temp.rows(), 1);
+                result.bottomRows(result_temp.rows()) = result_temp;
+                shift += basisContainer[i].size();
+            }
+            */
             // Edges
             short_t side_id = bside.index();
             if (basisContainer.size() != 1)
@@ -319,16 +322,6 @@ namespace gismo
                     index_t r_rows = result.rows() + result_temp.rows();
                     result.conservativeResize(r_rows, 1);
                     result.bottomRows(result_temp.rows()) = result_temp;
-/*
-                    if (offset == 1) {
-                        result_temp = basisContainer[corner_id].boundaryOffset(bside, offset);
-                        result_temp.array() += shift;
-
-                        index_t r_rows = result.rows() + result_temp.rows();
-                        result.conservativeResize(r_rows, 1);
-                        result.bottomRows(result_temp.rows()) = result_temp;
-                    }
-*/
                 }
             }
             return result;
@@ -340,13 +333,9 @@ namespace gismo
 
         // basisContainer:
         void setBasis(index_t row, gsTensorBSplineBasis<d,T> basis) { basisContainer[row] = basis; }
-        gsTensorBSplineBasis<d,T> & getBasis(index_t row) { return basisContainer[row]; }
-        // basisContainer END
 
-        // helperBasisContainer:
-        void setHelperBasis(index_t row, index_t col, gsBSplineBasis<T> basis) { helperBasisContainer[row][col] = basis;}
-        gsBSplineBasis<T> & getHelperBasis(index_t row, index_t col) { return helperBasisContainer[row][col]; }
-        // helperBasisContainer END
+        const gsBasis<T> & piece(const index_t k) const { return basisContainer[k]; }
+        // basisContainer END
 
         //std::vector<gsTensorBSplineBasis<d,T>> & getBasisContainer() { return basisContainer; }
 
@@ -355,9 +344,6 @@ namespace gismo
 
         // Collection of the subspaces
         std::vector<gsTensorBSplineBasis<d, T>> basisContainer;
-
-        // Collection of helper spaces
-        std::vector<std::vector<gsBSplineBasis<T>>> helperBasisContainer;
     };
 
 }

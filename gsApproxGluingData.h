@@ -15,7 +15,6 @@
 
 #include <gsUnstructuredSplines/gsApproxC1Utils.h>
 
-
 namespace gismo
 {
 
@@ -38,7 +37,7 @@ public:
 
     gsApproxGluingData(C1AuxPatchContainer const & auxPatchContainer,
                        gsOptionList const & optionList,
-                       std::vector<index_t> sidesContainer,
+                       std::vector<patchSide> sidesContainer,
                        std::vector<bool> isInterface = std::vector<bool>{})
         : m_auxPatches(auxPatchContainer), m_optionList(optionList)
     {
@@ -46,31 +45,31 @@ public:
         betaSContainer.resize(2);
         if (m_auxPatches.size() == 2) // Interface
         {
-            setGlobalGluingData(1,sidesContainer[1], 0); // u
-            setGlobalGluingData(0,sidesContainer[0], 1); // v
+            setGlobalGluingData(1,0); // u
+            setGlobalGluingData(0,1); // v
         }
-        else if (m_auxPatches.size() == 1) // Vertex
+        else if (m_auxPatches.size() == 1 && sidesContainer.size() == 2) // Vertex
         {
             for (size_t dir = 0; dir < sidesContainer.size(); dir++)
             {
-                index_t localSide = auxPatchContainer[0].getMapIndex(sidesContainer[dir]);
+                index_t localSide = auxPatchContainer[0].getMapIndex(sidesContainer[dir].index());
                 //gsInfo << "Global: " << sidesContainer[dir] << " : " << localSide << "\n";
                 index_t localDir = localSide < 3 ? 1 : 0;
                 if(isInterface[dir]) // West
-                    setGlobalGluingData(0, sidesContainer[dir], localDir);
+                    setGlobalGluingData(0, localDir);
                 else
                 {
                     // empty
                 }
             }
         }
-        else
-            gsInfo << "Something went wrong \n";
+        //else
+        //    gsInfo << "I am here \n";
 
     }
 
     // Computed the gluing data globally
-    void setGlobalGluingData(index_t patchID = 0,  index_t side = 1, index_t dir = 1);
+    void setGlobalGluingData(index_t patchID = 0,  index_t dir = 1);
 
     gsBSpline<T> & alphaS(index_t patchID) { return alphaSContainer[patchID]; }
     gsBSpline<T> & betaS(index_t patchID) { return betaSContainer[patchID]; }
@@ -89,40 +88,59 @@ protected:
 
 
 template<short_t d, class T>
-void gsApproxGluingData<d, T>::setGlobalGluingData(index_t patchID, index_t globalSide, index_t dir)
+void gsApproxGluingData<d, T>::setGlobalGluingData(index_t patchID, index_t dir)
 {
+    // Interpolate boundary yes or no //
+    bool interpolate_boundary = false;
+    // Interpolate boundary yes or no //
+
     // ======== Space for gluing data : S^(p_tilde, r_tilde) _k ========
-    gsBSplineBasis<T> bsp_gD = dynamic_cast<gsBSplineBasis<T>&>(m_auxPatches[patchID].getBasisRotated().getHelperBasis(globalSide-1, 3));
+    gsBSplineBasis<T> bsp_gD;
+    createGluingDataSpace(m_auxPatches[patchID].getPatchRotated(), m_auxPatches[patchID].getBasisRotated().piece(0),
+                          dir, bsp_gD, m_optionList.getInt("gluingDataDegree"), m_optionList.getInt("gluingDataSmoothness"));
 
     //! [Problem setup]
     gsSparseSolver<real_t>::LU solver;
-    gsExprAssembler<> A(1,1);
-
-    typedef gsExprAssembler<>::variable    variable;
-    typedef gsExprAssembler<>::space       space;
-    typedef gsExprAssembler<>::solution    solution;
+    gsExprAssembler<T> A(1,1);
 
     // Elements used for numerical integration
     gsMultiBasis<T> BsplineSpace(bsp_gD);
     A.setIntegrationElements(BsplineSpace);
     gsExprEvaluator<> ev(A);
 
-    // Set the discretization space
-    space u = A.getSpace(BsplineSpace);
-
-    gsBoundaryConditions<> bc_empty;
-    u.setup(bc_empty, dirichlet::homogeneous, 0);
-    A.initSystem();
-
     gsAlpha<real_t> alpha(m_auxPatches[patchID].getPatchRotated(), dir);
     auto aa = A.getCoeff(alpha);
 
-    A.assemble(u * u.tr(),u * aa);
+    // Set the discretization space
+    auto u = A.getSpace(BsplineSpace);
+
+    // Create Mapper
+    gsDofMapper map(BsplineSpace);
+    gsMatrix<index_t> act(2,1);
+    act(0,0) = 0;
+    act(1,0) = BsplineSpace[0].size()-1; // First and last
+    if (interpolate_boundary)
+        map.markBoundary(0, act); // Patch 0
+    map.finalize();
+
+    u.setupMapper(map);
+
+    gsMatrix<T> & fixedDofs = const_cast<expr::gsFeSpace<T>&>(u).fixedPart();
+    fixedDofs.setZero( u.mapper().boundarySize(), 1 );
+
+    // For the boundary
+    gsMatrix<> points_bdy(1,2);
+    points_bdy << 0.0, 1.0;
+    if (interpolate_boundary)
+        fixedDofs = alpha.eval(points_bdy).transpose();
+
+    A.initSystem();
+    A.assemble(u * u.tr(), u * aa);
 
     solver.compute( A.matrix() );
     gsMatrix<> solVector = solver.solve(A.rhs());
 
-    solution u_sol = A.getSolution(u, solVector);
+    auto u_sol = A.getSolution(u, solVector);
     gsMatrix<> sol;
     u_sol.extract(sol);
 
@@ -132,14 +150,18 @@ void gsApproxGluingData<d, T>::setGlobalGluingData(index_t patchID, index_t glob
 
     gsBeta<real_t> beta(m_auxPatches[patchID].getPatchRotated(), dir);
     auto bb = A.getCoeff(beta);
-    A.initSystem();
 
-    A.assemble(u * u.tr(),u * bb);
+    // For the boundary
+    if (interpolate_boundary)
+        fixedDofs = beta.eval(points_bdy).transpose();
+
+    A.initSystem();
+    A.assemble(u * u.tr(), u * bb);
 
     solver.compute( A.matrix() );
     solVector = solver.solve(A.rhs());
 
-    solution u_sol2 = A.getSolution(u, solVector);
+    auto u_sol2 = A.getSolution(u, solVector);
     u_sol2.extract(sol);
 
     tilde_temp = bsp_gD.makeGeometry(sol);

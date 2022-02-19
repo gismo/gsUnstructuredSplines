@@ -76,7 +76,7 @@ real_t gsApproxC1Vertex<d, T>::computeSigma(const std::vector<size_t> &vertexInd
     real_t h_geo = 1;
     for(size_t i = 0; i < m_auxPatches.size(); i++)
     {
-        gsTensorBSplineBasis<2, real_t> bsp_temp = dynamic_cast<gsTensorBSplineBasis<d, T>&>(m_auxPatches[0].getBasisRotated().getBasis(vertexIndices[i]+4));
+        const gsTensorBSplineBasis<2, real_t> bsp_temp = dynamic_cast<const gsTensorBSplineBasis<d, T>&>(m_auxPatches[0].getBasisRotated().piece(vertexIndices[i]+4));
 
         real_t p_temp = math::max(bsp_temp.degree(0), bsp_temp.degree(1));
 
@@ -111,12 +111,10 @@ template<short_t d,class T>
 void gsApproxC1Vertex<d, T>::computeKernel()
 {
 
-    // TODO Boundary vertex with valence > 2
     gsMultiPatch<T> mp_vertex;
     for(size_t i = 0; i < m_patchesAroundVertex.size(); i++)
-    {
         mp_vertex.addPatch(m_auxPatches[i].getPatchRotated());
-    }
+
     mp_vertex.computeTopology();
 
     index_t dim_mat = 0;
@@ -152,9 +150,6 @@ void gsApproxC1Vertex<d, T>::computeKernel()
     index_t dofsCorner = 3;
     if (matrix_det.determinant()*matrix_det.determinant() > 1e-15) // There is (numerically) a kink
         dofsCorner = 1;
-
-    //for(size_t np = 0; np < mp_vertex.nPatches(); np++)
-    //    m_bases[m_patchesAroundVertex[np]].setNumDofsVertex(dofsCorner, m_vertexIndices[np]);
 
     if (m_optionList.getSwitch("info"))
         gsInfo << "Det: " << matrix_det.determinant() << "\n";
