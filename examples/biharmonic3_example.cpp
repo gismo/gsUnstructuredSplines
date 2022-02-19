@@ -294,6 +294,8 @@ int main(int argc, char *argv[])
     bool info = false;
     bool neumann = false;
     bool cond = false;
+    bool interpolation = false;
+
     real_t penalty_init = -1.0;
     std::string xml;
     std::string output;
@@ -307,7 +309,7 @@ int main(int argc, char *argv[])
 
     cmd.addInt( "p", "degree","Which discrete degree?", degree );
     cmd.addInt( "r", "smoothness", "Number of smoothness",  smoothness );
-    cmd.addInt( "l", "refinementLoop", "Number of refinementLoop",  numRefine );
+    cmd.addInt( "l", "numRefine", "Number of refinementLoop",  numRefine );
 
     cmd.addInt( "P", "gluingDataDegree","Which degree for gluing data?", gluingDataDegree );
     cmd.addInt( "R", "gluingDataSmoothness", "Which regularity for gluing data?",  gluingDataSmoothness );
@@ -319,6 +321,7 @@ int main(int argc, char *argv[])
     cmd.addSwitch("plot", "Create a ParaView visualization file with the solution", plot);
     cmd.addSwitch("info", "Getting the information inside of Approximate C1 basis functions", info);
     cmd.addSwitch("cond","Estimate condition number (slow!)", cond);
+    cmd.addSwitch("interpolation","Compute the basis constructions with interpolation!", interpolation);
 
     cmd.addSwitch("neumann", "Neumann", neumann);
 
@@ -432,6 +435,7 @@ int main(int argc, char *argv[])
     cond = optionList.getSwitch("cond");
     plot = optionList.getSwitch("plot");
     info = optionList.getSwitch("info");
+    interpolation = optionList.getSwitch("interpolation");
     //! [Read option list]
 
     //! [Refinement]
@@ -491,6 +495,7 @@ int main(int argc, char *argv[])
     gsApproxC1Spline<2,real_t> approxC1(mp,dbasis);
     approxC1.options().setSwitch("info",info);
     approxC1.options().setSwitch("plot",plot);
+    approxC1.options().setSwitch("interpolation",interpolation);
     approxC1.options().setInt("gluingDataDegree",gluingDataDegree);
     approxC1.options().setInt("gluingDataSmoothness",gluingDataSmoothness);
 

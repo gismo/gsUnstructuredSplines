@@ -78,53 +78,75 @@ namespace gismo
 
             u.setupMapper(map);
 
-            gsMatrix<T> & fixedDofs = const_cast<expr::gsFeSpace<T>&>(u).fixedPart();
-            fixedDofs.setZero( u.mapper().boundarySize(), 1 );
+            if (!m_optionList.getSwitch("interpolation"))
+            {
+                gsMatrix <T> &fixedDofs = const_cast<expr::gsFeSpace <T> &>(u).fixedPart();
+                fixedDofs.setZero(u.mapper().boundarySize(), 1);
 
-            A.initSystem();
-            A.assemble(u * u.tr()); // The Matrix is the same for each bf
-            solver.compute(A.matrix());
-            // [!The same setup for each bf!]
-
+                A.initSystem();
+                A.assemble(u * u.tr()); // The Matrix is the same for each bf
+                solver.compute(A.matrix());
+                // [!The same setup for each bf!]
+            }
             index_t n_plus = basis_plus.size();
             index_t n_minus = basis_minus.size();
 
             index_t bfID_init = 3;
             for (index_t bfID = bfID_init; bfID < n_plus - bfID_init; bfID++) // first 3 and last 3 bf are eliminated
             {
-                A.initVector(); // Just the rhs
-
-                gsTraceBasis<real_t> traceBasis(geo, beta, basis_plus, initSpace.basis(0), bdy, bfID, dir);
-                auto aa = A.getCoeff(traceBasis);
-
-                A.assemble(u * aa);
-
-                gsMatrix<T> solVector = solver.solve(A.rhs());
-
-                auto u_sol = A.getSolution(u, solVector);
                 gsMatrix<T> sol;
-                u_sol.extract(sol);
+                gsTraceBasis<real_t> traceBasis(geo, beta, basis_plus, initSpace.basis(0), bdy, bfID, dir);
 
-                result.addPatch(edgeSpace.basis(0).makeGeometry(give(sol)));
+                // Quasi-interpolate
+                if (m_optionList.getSwitch("interpolation"))
+                {
+                    //gsQuasiInterpolate<T>::Schoenberg(edgeSpace.basis(0), traceBasis, sol);
+                    gsMatrix<> anchors = edgeSpace.basis(0).anchors();
+                    gsMatrix<> values = traceBasis.eval(anchors);
+                    result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
+                }
+                else
+                {
+                    A.initVector(); // Just the rhs
+
+                    auto aa = A.getCoeff(traceBasis);
+
+                    A.assemble(u * aa);
+
+                    gsMatrix<T> solVector = solver.solve(A.rhs());
+                    auto u_sol = A.getSolution(u, solVector);
+                    u_sol.extract(sol);
+                    result.addPatch(edgeSpace.basis(0).makeGeometry(give(sol)));
+                }
             }
 
             bfID_init = 2;
             for (index_t bfID = bfID_init; bfID < n_minus - bfID_init; bfID++)  // first 2 and last 2 bf are eliminated
             {
-                A.initVector(); // Just the rhs
-
-                gsNormalDerivBasis<real_t> normalDerivBasis(geo, alpha, basis_minus, initSpace.basis(0), bdy, bfID, dir);
-                auto aa = A.getCoeff(normalDerivBasis);
-
-                A.assemble(u * aa);
-
-                gsMatrix<T> solVector = solver.solve(A.rhs());
-
-                auto u_sol = A.getSolution(u, solVector);
                 gsMatrix<T> sol;
-                u_sol.extract(sol);
+                gsNormalDerivBasis <real_t> normalDerivBasis(geo, alpha, basis_minus, initSpace.basis(0), bdy, bfID,
+                                                             dir);
+                // Quasi-interpolate
+                if (m_optionList.getSwitch("interpolation"))
+                {
+                    //gsQuasiInterpolate<T>::Schoenberg(edgeSpace.basis(0), traceBasis, sol);
+                    gsMatrix<> anchors = edgeSpace.basis(0).anchors();
+                    gsMatrix<> values = normalDerivBasis.eval(anchors);
+                    result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
+                }
+                else
+                {
+                    A.initVector(); // Just the rhs
 
-                result.addPatch(edgeSpace.basis(0).makeGeometry(give(sol)));
+                    auto aa = A.getCoeff(normalDerivBasis);
+
+                    A.assemble(u * aa);
+
+                    gsMatrix <T> solVector = solver.solve(A.rhs());
+                    auto u_sol = A.getSolution(u, solVector);
+                    u_sol.extract(sol);
+                    result.addPatch(edgeSpace.basis(0).makeGeometry(give(sol)));
+                }
             }
 
             // parametrizeBasisBack
