@@ -74,6 +74,10 @@ path_fig = "tikz_figures/" + path_dir
 tikz_list = []
 if compute_mesh:
     for geo in geo_list:
+        # Making new folder if there exist no folder.
+        if not os.path.exists("tikz_figures/" + path_dir):
+            os.makedirs("tikz_figures/" + path_dir)
+
         mp = gs.core.gsMultiPatch()
         file = gs.io.gsFileData(path_geo + geo + ".xml")
         file.getAnyFirst(mp)  # Assume that there exist only one gsMultiPatch

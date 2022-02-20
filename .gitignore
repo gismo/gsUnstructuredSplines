@@ -1,5 +1,10 @@
 # Ignore figures
 /diss_pascal/tikz_figures/*
+!/diss_pascal/tikz_figures/geo/
+/diss_pascal/tikz_figures/geo/*.log
+/diss_pascal/tikz_figures/geo/*.md5
+/diss_pascal/tikz_figures/geo/*.spl
+/diss_pascal/tikz_figures/geo/*.dpth
 
 # Ignore xml files
 /diss_pascal/results/xml_files/*
