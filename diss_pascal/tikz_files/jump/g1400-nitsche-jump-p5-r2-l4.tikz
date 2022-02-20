@@ -1,0 +1,34 @@
+\begin{tikzpicture}%
+\begin{axis}[xmode=log,ymode=log,height=6cm,mark options={solid},xlabel={Mesh size $h$},ylabel={Error},ylabel style={yshift=-0.4cm},xlabel style={yshift=0.2cm},width=1\textwidth]%
+\addplot[mark=square*,color=blue,line width=1pt,solid] coordinates {%
+(0.125,0.9346286065221181)%
+(0.0625,0.02639000424982746)%
+(0.03125,0.001649509069905548)%
+(0.015625,0.0001726556090845334)%
+(0.0078125,2.057545470472042e-05)%
+};%
+%
+%
+\addplot[line width=1pt,samples=100,forget plot,yshift=-0.2cm,domain={0.015625:0.0078125},draw=black]{43.14985598491385*x^3} node[right, pos=0.75] {\tiny{$h3$}};%
+\addplot[mark=square*,color=blue,line width=1pt,dashed] coordinates {%
+(0.125,0.03771469379228038)%
+(0.0625,0.005825306506739557)%
+(0.03125,0.0002110726202449655)%
+(0.015625,1.062090821651766e-05)%
+(0.0078125,6.212543312406759e-07)%
+};%
+%
+%
+\addplot[line width=1pt,samples=100,forget plot,yshift=-0.2cm,domain={0.015625:0.0078125},draw=black]{166.76668969856576*x^4} node[right, pos=0.75] {\tiny{$h4$}};%
+\addplot[mark=square*,color=blue,line width=1pt,dotted] coordinates {%
+(0.125,0.1252318896313814)%
+(0.0625,0.006286681632432471)%
+(0.03125,3.463397663725526e-05)%
+(0.015625,6.134558667385223e-07)%
+(0.0078125,1.75972884367347e-08)%
+};%
+%
+%
+\addplot[line width=1pt,samples=100,forget plot,yshift=-0.2cm,domain={0.015625:0.0078125},draw=black]{604.6382266724356*x^5} node[right, pos=0.75] {\tiny{$h5$}};%
+\end{axis}%
+\end{tikzpicture}%

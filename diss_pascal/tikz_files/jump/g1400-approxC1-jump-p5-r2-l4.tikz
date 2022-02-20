@@ -1,0 +1,44 @@
+\begin{tikzpicture}%
+\begin{axis}[xmode=log,ymode=log,height=6cm,mark options={solid},xlabel={Mesh size $h$},ylabel={Error},ylabel style={yshift=-0.4cm},xlabel style={yshift=0.2cm},width=1\textwidth]%
+\addplot[mark=diamond*,color=green,line width=1pt,solid] coordinates {%
+(0.125,0.2673330469903414)%
+(0.0625,0.04816899478246797)%
+(0.03125,0.0103569839341898)%
+(0.015625,0.002017130674349199)%
+(0.0078125,0.0003956450853540228)%
+};%
+%
+%
+\addplot[line width=1pt,samples=100,forget plot,yshift=-0.2cm,domain={0.015625:0.0078125},draw=black]{6.4822490784403035*x^2} node[right, pos=0.75] {\tiny{$h2$}};%
+\addplot[mark=diamond*,color=green,line width=1pt,dashed] coordinates {%
+(0.125,0.02645475087202348)%
+(0.0625,0.002809373284618376)%
+(0.03125,0.0002911806731336815)%
+(0.015625,3.173128217742059e-05)%
+(0.0078125,3.625555622075853e-06)%
+};%
+%
+%
+\addplot[line width=1pt,samples=100,forget plot,yshift=-0.2cm,domain={0.015625:0.0078125},draw=black]{7.6033412239476235*x^3} node[right, pos=0.75] {\tiny{$h3$}};%
+\addplot[mark=diamond*,color=green,line width=1pt,dotted] coordinates {%
+(0.125,0.007708229040995967)%
+(0.0625,0.0003327279958243155)%
+(0.03125,1.927155172854569e-05)%
+(0.015625,1.065560260861034e-06)%
+(0.0078125,6.568059605762185e-08)%
+};%
+%
+%
+\addplot[line width=1pt,samples=100,forget plot,yshift=-0.2cm,domain={0.015625:0.0078125},draw=black]{17.63100075307952*x^4} node[right, pos=0.75] {\tiny{$h4$}};%
+\addplot[mark=diamond*,color=green,line width=1pt,dashdotted] coordinates {%
+(0.125,0.000591579883779052)%
+(0.0625,7.219748104592752e-05)%
+(0.03125,2.534305892358231e-06)%
+(0.015625,6.827594443071744e-08)%
+(0.0078125,2.091762744594264e-09)%
+};%
+%
+%
+\addplot[line width=1pt,samples=100,forget plot,yshift=-0.2cm,domain={0.015625:0.0078125},draw=black]{71.8724206321883*x^5} node[right, pos=0.75] {\tiny{$h5$}};%
+\end{axis}%
+\end{tikzpicture}%

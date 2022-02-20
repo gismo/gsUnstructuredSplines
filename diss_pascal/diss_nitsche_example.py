@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 """"
-    @file diss_jump_example.py
+    @file diss_nitsche_example.py
 
     @brief Compute biharmonic2_example using pygismo
 
@@ -16,22 +16,16 @@
 
 import os
 import sys
-import glob, errno
 
 import numpy as np
 
-gismo_path = os.path.join(os.path.dirname(__file__), "../../build/lib")
+gismo_path = os.path.join(os.path.dirname(__file__), "../../../build/lib")
 print("G+Smo path:", gismo_path, "(change if needed).")
 sys.path.append(gismo_path)
 
 import pygismo as gs
 
-import diss_library as lib
-
-# Move the following lines to diss_library.py
-from python2latex.python2latex import MyDocument
-from python2latex.python2tikz import MyTikz
-# End move
+import lib.diss_library as lib
 
 from enum import Enum
 
@@ -42,7 +36,22 @@ class Method(Enum):
     DPatch = 2
 
 
-''' ####### USER INPUT ####### '''
+"""
+    To run the diss_geo_example.py, we have the following options:
+    
+    Input: - geo_list:          [list]       a list of geometries which we want to use
+           - path_geo:          [string]     the path where the geometries are stored
+           - caption_list:      [list]       a list of strings for the captions in the figure
+           - numData:           [int]        the number of data-points
+           - ms                 [gismo]      a FunctionExpr which is the exact solution
+           - compute_mesh       [bool]       if we want to compute the mesh
+           - compute_solution   [bool]       if we want to compute the solution
+           
+    Output:- The tikz files are stored in "tikz_files/geo/*"
+           - A pdf and tex file is created with "geo_example.pdf" and "geo_example.tex"
+           
+"""
+""" -------------------------------------------------------------------------------------------------- """
 geo_list = ["g1000", "g1100", "g1400", "g1510"]  # Without .xml extension
 path_geo = "planar/geometries/"
 
@@ -53,19 +62,28 @@ method = Method.Nitsche
 
 compute = False
 
-xml_col = "Xml_nitsche_results.xml"
-
 h = -1
 N = 500
 
 penalty = np.linspace(-10, 20, num=N)
 penalty = np.around(np.power(2, penalty), decimals=5)
-''' ##### USER INPUT END ##### '''
+""" -------------------------------------------------------------------------------------------------- """
+
+path_tikz = "tikz_files/nitsche/"
+path_fig = "tikz_figures/nitsche/"
+xml_col = "results/xml_files/xml_nitsche_results.xml"
 
 max_id = 0
 file_col = gs.io.gsXmlCollection(xml_col)
 if compute:
     for geo in geo_list:
+
+        # Making new folder if there exist no folder.
+        if not os.path.exists("results/" + geo + "/bvp/nitsche/"):
+            os.makedirs("results/" + geo + "/bvp/nitsche/")
+        if not os.path.exists("results/" + geo + "/results/nitsche/"):
+            os.makedirs("results/" + geo + "/results/nitsche/")
+
         for pen in penalty:
             reg = deg - 1
             path_bvp = "results/" + geo + "/bvp/nitsche/" + "nitsche" + "-bvp1-p" + str(deg) + "-r" + str(reg) + \
@@ -144,9 +162,6 @@ else:
         max_id = max_id + 1
 
 file_col.save()
-
-path_tikz = "tikz_files/nitsche/"
-path_fig = "tikz_figures/nitsche/"
 
 file1 = gs.io.gsXmlCollection("")
 file1.load(xml_col)
@@ -230,7 +245,7 @@ for idx, mat_list in enumerate(geo_mat_list):  # idx = geo
                 {'color': 'blue', 'line width': '1pt'},
                 {'color': 'red', 'line width': '1pt'}]
 
-    fig = MyTikz()
+    fig = lib.MyTikz()
     opt_axis = {'xmode': 'log', 'ymode': 'log', 'height': '4.5cm', 'mark options': '{solid}',
                 'xlabel': '{Stability parameter $\eta$}', 'ylabel': '{Error}',
                 'ylabel style': '{yshift=-0.4cm}', 'xlabel style': '{yshift=0.2cm}'}
@@ -281,7 +296,7 @@ for idx, mat_list in enumerate(geo_mat_list):
                 {'color': 'blue', 'line width': '1pt'},
                 {'color': 'red', 'line width': '1pt'}]
 
-    fig = MyTikz()
+    fig = lib.MyTikz()
     opt_axis = {'xmode': 'log', 'ymode': 'log', 'height': '4.5cm', 'mark options': '{solid}',
                 'xlabel': '{Stability parameter $\eta$}', 'ylabel': '{Error}'}
     fig.setOptions(opt_axis)
@@ -294,16 +309,16 @@ for idx, mat_list in enumerate(geo_mat_list):
     list_tikz.append("nitsche/" + name_mat_list2[idx])
 
 caption_list = []
-caption_list.append('Ex. I: $p=4$, $r=3$')
-caption_list.append('Ex. II: $p=4$, $r=3$')
-caption_list.append('Ex. III: $p=4$, $r=3$')
-caption_list.append('Ex. IV: $p=4$, $r=3$')
-caption_list.append('Ex. I: $p=4$, $r=3$')
-caption_list.append('Ex. II: $p=4$, $r=3$')
-caption_list.append('Ex. III: $p=4$, $r=3$')
-caption_list.append('Ex. IV: $p=4$, $r=3$')
+caption_list.append('Ex. I: $p=' + str(deg) + '$, $r=' + str(deg-1) + '$')
+caption_list.append('Ex. II: $p=' + str(deg) + '$, $r=' + str(deg-1) + '$')
+caption_list.append('Ex. III: $p=' + str(deg) + '$, $r=' + str(deg-1) + '$')
+caption_list.append('Ex. IV: $p=' + str(deg) + '$, $r=' + str(deg-1) + '$')
+caption_list.append('Ex. I: $p=' + str(deg) + '$, $r=' + str(deg-1) + '$')
+caption_list.append('Ex. II: $p=' + str(deg) + '$, $r=' + str(deg-1) + '$')
+caption_list.append('Ex. III: $p=' + str(deg) + '$, $r=' + str(deg-1) + '$')
+caption_list.append('Ex. IV: $p=' + str(deg) + '$, $r=' + str(deg-1) + '$')
 
-doc = MyDocument()
+doc = lib.MyDocument()
 doc.addTikzFigure(list_tikz, caption_list, row=4)
 doc.generate_pdf("nitsche_stabilization_example", compiler="pdflatex", compiler_args=["-shell-escape"], clean_tex=False)
-doc.clean_extensions()
+lib.clean_extensions()

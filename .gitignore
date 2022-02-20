@@ -1,0 +1,13 @@
+# Ignore figures
+/diss_pascal/tikz_figures/*
+
+# Ignore xml files
+/diss_pascal/results/xml_files/*
+
+# Ignore pdf and tex
+/diss_pascal/*.tex
+/diss_pascal/*.pdf
+
+# Ignore pycache
+/diss_pascal/lib/__pycache__/*
+/diss_pascal/__pycache__/*

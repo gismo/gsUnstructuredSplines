@@ -1,0 +1,40 @@
+\begin{tikzpicture}%
+\begin{axis}[xmode=log,ymode=log,height=6cm,mark options={solid},xlabel={Mesh size $h$},ylabel={Error},ylabel style={yshift=-0.4cm},xlabel style={yshift=0.2cm},width=1\textwidth]%
+\addplot[mark=diamond*,color=green,line width=1pt,solid] coordinates {%
+(0.25,1.434195792395749e-16)%
+(0.125,1.397150074855488e-16)%
+(0.0625,1.423161731811428e-16)%
+(0.03125,2.644019139800542e-16)%
+(0.015625,6.667960556874326e-16)%
+};%
+%
+%
+\addplot[mark=diamond*,color=green,line width=1pt,dashed] coordinates {%
+(0.25,4.734077113365568e-16)%
+(0.125,2.181168776673198e-16)%
+(0.0625,2.421404240021307e-16)%
+(0.03125,4.427222036639971e-16)%
+(0.015625,8.391421043522185e-16)%
+};%
+%
+%
+\addplot[mark=diamond*,color=green,line width=1pt,dotted] coordinates {%
+(0.25,5.551546662594632e-16)%
+(0.125,7.846503404513313e-16)%
+(0.0625,4.776331106204611e-16)%
+(0.03125,6.191529149591468e-16)%
+(0.015625,1.454997177338429e-15)%
+};%
+%
+%
+\addplot[mark=diamond*,color=green,line width=1pt,dashdotted] coordinates {%
+(0.25,1.223891687481677e-15)%
+(0.125,6.199270681662221e-16)%
+(0.0625,1.049955305617231e-15)%
+(0.03125,1.718937702722823e-15)%
+(0.015625,3.651597480620213e-15)%
+};%
+%
+%
+\end{axis}%
+\end{tikzpicture}%

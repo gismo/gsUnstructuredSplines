@@ -1,0 +1,24 @@
+\begin{tikzpicture}%
+\begin{axis}[hide axis,xmin=0,xmax=1,ymin=0,ymax=0.4,mark options={solid},legend style={draw=white!15!black,legend cell align=left},transpose legend,legend columns=5,legend style={/tikz/every even column/.append style={column sep=0.5cm}}]%
+\addlegendimage{empty legend}%
+\addlegendentry{\hspace{-0.5cm}Jump-error}%
+\addlegendimage{mark=diamond*,color=green,line width=1pt,solid}%
+\addlegendentry{}%
+\addlegendimage{mark=diamond*,color=green,line width=1pt,dashed}%
+\addlegendentry{}%
+\addlegendimage{mark=diamond*,color=green,line width=1pt,dotted}%
+\addlegendentry{}%
+\addlegendimage{mark=diamond*,color=green,line width=1pt,dashdotted}%
+\addlegendentry{}%
+\addlegendimage{empty legend}%
+\addlegendentry{}%
+\addlegendimage{empty legend}%
+\addlegendentry{\hspace{-1.7cm}$\widetilde{p}=1$, $\widetilde{r}=0$}%
+\addlegendimage{empty legend}%
+\addlegendentry{\hspace{-1.7cm}$\widetilde{p}=2$, $\widetilde{r}=1$}%
+\addlegendimage{empty legend}%
+\addlegendentry{\hspace{-1.7cm}$\widetilde{p}=3$, $\widetilde{r}=2$}%
+\addlegendimage{empty legend}%
+\addlegendentry{\hspace{-1.7cm}$\widetilde{p}=4$, $\widetilde{r}=3$}%
+\end{axis}%
+\end{tikzpicture}%
