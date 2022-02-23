@@ -67,12 +67,26 @@ namespace gismo
 
             // Create Mapper
             gsDofMapper map(edgeSpace);
-            gsMatrix<index_t> act;
-            for (index_t i = 2; i < edgeSpace[0].component(1 - dir).size();
-                 i++) // only the first two u/v-columns are Dofs (0/1)
+            if (!m_optionList.getSwitch("interpolation"))
             {
-                act = edgeSpace[0].boundaryOffset(dir == 0 ? 3 : 1, i); // WEST
-                map.markBoundary(0, act); // Patch 0
+                gsMatrix<index_t> act;
+                for (index_t i = 2; i < edgeSpace[0].component(1 - dir).size();
+                     i++) // only the first two u/v-columns are Dofs (0/1)
+                {
+                    act = edgeSpace[0].boundaryOffset(dir == 0 ? 3 : 1, i); // WEST
+                    map.markBoundary(0, act); // Patch 0
+                }
+                map.finalize();
+
+                u.setupMapper(map);
+
+                gsMatrix<T> &fixedDofs = const_cast<expr::gsFeSpace<T> &>(u).fixedPart();
+                fixedDofs.setZero(u.mapper().boundarySize(), 1);
+
+                A.initSystem();
+                A.assemble(u * u.tr()); // The Matrix is the same for each bf
+                solver.compute(A.matrix());
+                // [!The same setup for each bf!]
             }
             map.finalize();
 
@@ -82,6 +96,7 @@ namespace gismo
             {
                 gsMatrix <T> &fixedDofs = const_cast<expr::gsFeSpace <T> &>(u).fixedPart();
                 fixedDofs.setZero(u.mapper().boundarySize(), 1);
+
 
                 A.initSystem();
                 A.assemble(u * u.tr()); // The Matrix is the same for each bf
@@ -94,13 +109,12 @@ namespace gismo
             index_t bfID_init = 3;
             for (index_t bfID = bfID_init; bfID < n_plus - bfID_init; bfID++) // first 3 and last 3 bf are eliminated
             {
-                gsMatrix<T> sol;
                 gsTraceBasis<real_t> traceBasis(geo, beta, basis_plus, initSpace.basis(0), bdy, bfID, dir);
 
-                // Quasi-interpolate
                 if (m_optionList.getSwitch("interpolation"))
                 {
                     //gsQuasiInterpolate<T>::Schoenberg(edgeSpace.basis(0), traceBasis, sol);
+                    //result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
                     gsMatrix<> anchors = edgeSpace.basis(0).anchors();
                     gsMatrix<> values = traceBasis.eval(anchors);
                     result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
@@ -114,8 +128,11 @@ namespace gismo
                     A.assemble(u * aa);
 
                     gsMatrix<T> solVector = solver.solve(A.rhs());
+
                     auto u_sol = A.getSolution(u, solVector);
+                    gsMatrix<T> sol;
                     u_sol.extract(sol);
+
                     result.addPatch(edgeSpace.basis(0).makeGeometry(give(sol)));
                 }
             }
@@ -123,13 +140,12 @@ namespace gismo
             bfID_init = 2;
             for (index_t bfID = bfID_init; bfID < n_minus - bfID_init; bfID++)  // first 2 and last 2 bf are eliminated
             {
-                gsMatrix<T> sol;
-                gsNormalDerivBasis <real_t> normalDerivBasis(geo, alpha, basis_minus, initSpace.basis(0), bdy, bfID,
-                                                             dir);
-                // Quasi-interpolate
+                gsNormalDerivBasis<real_t> normalDerivBasis(geo, alpha, basis_minus, initSpace.basis(0), bdy, bfID,
+                                                            dir);
                 if (m_optionList.getSwitch("interpolation"))
                 {
                     //gsQuasiInterpolate<T>::Schoenberg(edgeSpace.basis(0), traceBasis, sol);
+                    //result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
                     gsMatrix<> anchors = edgeSpace.basis(0).anchors();
                     gsMatrix<> values = normalDerivBasis.eval(anchors);
                     result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
@@ -142,9 +158,12 @@ namespace gismo
 
                     A.assemble(u * aa);
 
-                    gsMatrix <T> solVector = solver.solve(A.rhs());
+                    gsMatrix<T> solVector = solver.solve(A.rhs());
+
                     auto u_sol = A.getSolution(u, solVector);
+                    gsMatrix<T> sol;
                     u_sol.extract(sol);
+
                     result.addPatch(edgeSpace.basis(0).makeGeometry(give(sol)));
                 }
             }

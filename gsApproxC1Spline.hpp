@@ -27,7 +27,6 @@ void gsApproxC1Spline<d,T>::defaultOptions()
     /*
         to do: general
     */
-    gsDebugVar(m_multiBasis.basis(0));
     gsTensorBSplineBasis<d, T> basis = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(0));
     index_t p = basis.degree(0);
 
@@ -40,8 +39,9 @@ void gsApproxC1Spline<d,T>::defaultOptions()
 
     m_options.addSwitch("info","Print debug information",  false );
     m_options.addSwitch("plot","Print debug information",  false );
-    m_options.addSwitch("interpolation","Print debug information",  false );
-    m_options.addSwitch("second","Compute second biharmonic problem.",  false );
+    m_options.addSwitch("interpolation","Compute the basis with interpolation",  false );
+    m_options.addSwitch("second","Compute the second biharmonic problem",  false );
+
     m_options.addInt("gluingDataDegree","Print debug information",  -1 );
     m_options.addInt("gluingDataSmoothness","Print debug information",  -1 );
 }

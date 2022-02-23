@@ -151,6 +151,11 @@ namespace gismo
                        gsMatrix<index_t> & bndThis, gsMatrix<index_t> & bndOther) const;
 */
 
+        gsMatrix<T> support() const
+        {
+            return basisContainer[0].support();
+        }
+
         gsBasis<T>* boundaryBasis_impl(boxSide const & s) const
         {
             /*

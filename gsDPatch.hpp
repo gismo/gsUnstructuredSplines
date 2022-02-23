@@ -705,9 +705,9 @@ namespace gismo
                         c12(patches[side.patch],0) = _indexFromVert(2,corners[i],side,1,0);
                         c21(patches[otherSide.patch],0) = _indexFromVert(2,otherCorner,otherSide,1,0);
 
-                        c11o(patches[side.patch],0) = _indexFromVert(1,corners[i],side,1,-1);
-                        c12o(patches[side.patch],0) = _indexFromVert(2,corners[i],side,1,-1);
-                        c21o(patches[otherSide.patch],0) = _indexFromVert(2,otherCorner,otherSide,1,-1);
+                        c11o(patches[side.patch],0) = _indexFromVert(m_Bbases,1,corners[i],side,1);
+                        c12o(patches[side.patch],0) = _indexFromVert(m_Bbases,2,corners[i],side,1);
+                        c21o(patches[otherSide.patch],0) = _indexFromVert(m_Bbases,2,otherCorner,otherSide,1);
 
                     }
 
