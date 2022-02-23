@@ -816,14 +816,14 @@ int main(int argc, char *argv[])
     if (plot)
     {
         gsInfo<<"Plotting in Paraview...\n";
-        ev.options().setSwitch("plot.elements", true);
+        gsWriteParaview( mp, "geom",1000,true);
+        ev.options().setSwitch("plot.elements", false);
         ev.options().setInt   ("plot.npts"    , 1000);
         ev.writeParaview( u_sol   , G, "solution");
         //ev.writeParaview( u_ex    , G, "solution_ex");
         //ev.writeParaview( grad(s), G, "solution_grad");
         //ev.writeParaview( grad(f), G, "solution_ex_grad");
-        ev.writeParaview( (u_ex-u_sol), G, "error_pointwise");
-        gsWriteParaview( mp, "geom",100,true);
+        //ev.writeParaview( (u_ex-u_sol), G, "error_pointwise");
     }
     else
         gsInfo << "Done. No output created, re-run with --plot to get a ParaView "

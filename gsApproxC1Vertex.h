@@ -134,44 +134,57 @@ public:
 
             // Create Mapper
             gsDofMapper map(vertexSpace);
-            gsMatrix<index_t> act;
-            for (index_t dir = 0; dir < vertexSpace.basis(0).domainDim(); dir++)
-                for (index_t i = 3*vertexSpace.basis(0).degree(dir)+1; i < vertexSpace.basis(0).component(1-dir).size(); i++) // only the first two u/v-columns are Dofs (0/1)
-                {
-                    act = vertexSpace.basis(0).boundaryOffset(dir == 0 ? 3 : 1, i); // WEST
-                    //map.markBoundary(0, act); // Patch 0
-                }
-            map.finalize();
+            if (!m_optionList.getSwitch("interpolation"))
+            {
+                gsMatrix<index_t> act;
+                for (index_t dir = 0; dir < vertexSpace.basis(0).domainDim(); dir++)
+                    for (index_t i = 3 * vertexSpace.basis(0).degree(dir) + 1; i < vertexSpace.basis(0).component(
+                            1 - dir).size(); i++) // only the first two u/v-columns are Dofs (0/1)
+                    {
+                        act = vertexSpace.basis(0).boundaryOffset(dir == 0 ? 3 : 1, i); // WEST
+                        //map.markBoundary(0, act); // Patch 0
+                    }
+                map.finalize();
 
-            gsBoundaryConditions<> bc_empty;
-            bc_empty.addCondition(1, condition_type::dirichlet, 0); // Doesn't matter which side
-            u.setupMapper(map);
+                u.setupMapper(map);
 
-            gsMatrix<T> & fixedDofs = const_cast<expr::gsFeSpace<T>&>(u).fixedPart();
-            fixedDofs.setZero( u.mapper().boundarySize(), 1 );
+                gsMatrix<T> &fixedDofs = const_cast<expr::gsFeSpace<T> &>(u).fixedPart();
+                fixedDofs.setZero(u.mapper().boundarySize(), 1);
 
-            A.initSystem();
-            A.assemble(u * u.tr());
-            solver.compute(A.matrix());
+                A.initSystem();
+                A.assemble(u * u.tr());
+                solver.compute(A.matrix());
+            }
 
             // Create Basis functions
             gsMultiPatch<T> result_1;
             for (index_t bfID = 0; bfID < 6; bfID++)
             {
-                A.initVector();
+                gsVertexBasis<T> vertexBasis(geo, initSpace.basis(0), alpha, beta, basis_plus, basis_minus, sigma,
+                                             kindOfEdge, bfID);
+                if (m_optionList.getSwitch("interpolation"))
+                {
+                    //gsQuasiInterpolate<T>::Schoenberg(edgeSpace.basis(0), traceBasis, sol);
+                    //result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
+                    gsMatrix<> anchors = vertexSpace.basis(0).anchors();
+                    gsMatrix<> values = vertexBasis.eval(anchors);
+                    result_1.addPatch(vertexSpace.basis(0).interpolateAtAnchors(give(values)));
+                }
+                else
+                {
+                    A.initVector();
 
-                gsVertexBasis<T> vertexBasis(geo, initSpace.basis(0), alpha, beta, basis_plus, basis_minus, sigma, kindOfEdge, bfID);
-                auto aa = A.getCoeff(vertexBasis);
-                A.assemble(u * aa);
+                    auto aa = A.getCoeff(vertexBasis);
+                    A.assemble(u * aa);
 
-                gsMatrix<T> solVector = solver.solve(A.rhs());
+                    gsMatrix<T> solVector = solver.solve(A.rhs());
 
-                auto u_sol = A.getSolution(u, solVector);
-                gsMatrix<T> sol;
-                u_sol.extract(sol);
+                    auto u_sol = A.getSolution(u, solVector);
+                    gsMatrix<T> sol;
+                    u_sol.extract(sol);
 
-                //gsDebugVar(sol - result_1.patch(bfID).coefs());
-                result_1.addPatch(vertexSpace.basis(0).makeGeometry(give(sol)));
+                    result_1.addPatch(vertexSpace.basis(0).makeGeometry(give(sol)));
+                }
             }
             //Problem setup end
 
