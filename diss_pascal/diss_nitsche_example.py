@@ -73,8 +73,8 @@ path_tikz = "tikz_files/nitsche/"
 path_fig = "tikz_figures/nitsche/"
 xml_col = "results/xml_files/xml_nitsche_results.xml"
 
-max_id = 0
-file_col = gs.io.gsXmlCollection(xml_col)
+
+file_col = []
 if compute:
     for geo in geo_list:
 
@@ -96,8 +96,7 @@ if compute:
             path_output = path_bvp.replace("bvp/", "results/")
             path_output = path_output + "-result.xml"
             lib.biharmonic_example(path_bvp + ".xml", path_output)
-            file_col.addFile(path_output)
-            max_id = max_id + 1
+            file_col.append(path_output)
         # Approx C1
         ptilde = deg
         rtilde = deg - 1
@@ -109,8 +108,7 @@ if compute:
         path_output = path_bvp.replace("bvp/", "results/")
         path_output = path_output + "-result.xml"
         lib.biharmonic_example(path_bvp + ".xml", path_output)
-        file_col.addFile(path_output)
-        max_id = max_id + 1
+        file_col.append(path_output)
 
         # Nitsche with EW
         pen = -1
@@ -125,8 +123,7 @@ if compute:
         path_output = path_bvp.replace("bvp/", "results/")
         path_output = path_output + "-result.xml"
         lib.biharmonic_example(path_bvp + ".xml", path_output)
-        file_col.addFile(path_output)
-        max_id = max_id + 1
+        file_col.append(path_output)
     print("Finished!")
 else:
     for geo in geo_list:
@@ -136,8 +133,7 @@ else:
                        "-l" + str(loop) + "-y" + str(pen)
             path_output = path_bvp.replace("bvp/", "results/")
             path_output = path_output + "-result.xml"
-            file_col.addFile(path_output)
-            max_id = max_id + 1
+            file_col.append(path_output)
 
         # Approx C1
         ptilde = deg
@@ -147,8 +143,7 @@ else:
                    "-P" + str(ptilde) + "-R" + str(rtilde) + "-l" + str(loop)
         path_output = path_bvp.replace("bvp/", "results/")
         path_output = path_output + "-result.xml"
-        file_col.addFile(path_output)
-        max_id = max_id + 1
+        file_col.append(path_output)
 
         # Nitsche with EW
         pen = -1
@@ -158,19 +153,16 @@ else:
 
         path_output = path_bvp.replace("bvp/", "results/")
         path_output = path_output + "-result.xml"
-        file_col.addFile(path_output)
-        max_id = max_id + 1
+        file_col.append(path_output)
 
-file_col.save()
 
-file1 = gs.io.gsXmlCollection("")
-file1.load(xml_col)
+
 list_dict = []
-for id in range(max_id):
-    my_dict = {"Matrix": file1.getMatrix(id), "Deg": None, "Reg": None,
+for id in range(len(file_col)):
+    my_dict = {"Matrix": gs.io.gsFileData.getMatrix(file_col[id]), "Deg": None, "Reg": None,
                "Geo": None, "Name": None}
 
-    path_name = file1.getString(id)
+    path_name = file_col[id]
     name = path_name[path_name.find('/results/nitsche/') + 17:]
     my_dict["Name"] = name[:name.find('.xml')]
 

@@ -81,10 +81,7 @@ path_dir = "jump/"
 path_tikz = "tikz_files/" + path_dir
 path_fig = "tikz_figures/" + path_dir
 
-xml_col = "results/xml_files/xml_jump_collections.xml"
-
-max_id = 0
-file_col = gs.io.gsXmlCollection(xml_col)
+file_col = []
 for idx, compute in enumerate(compute_list):
     if compute:
         for geo in geo_list:
@@ -103,8 +100,7 @@ for idx, compute in enumerate(compute_list):
                 path_output = path_bvp.replace("bvp/", "results/")
                 path_output = path_output + "-result.xml"
                 lib.biharmonic_example(path_bvp + ".xml", path_output)
-                file_col.addFile(path_output)
-                max_id = max_id + 1
+                file_col.append(path_output)
         print("Finished!")
     else:
         for geo in geo_list:
@@ -117,19 +113,15 @@ for idx, compute in enumerate(compute_list):
                                "-l" + str(loop)
                 path_output = path_bvp.replace("bvp/", "results/")
                 path_output = path_output + "-result.xml"
-                file_col.addFile(path_output)
-                max_id = max_id + 1
+                file_col.append(path_output)
 
-file_col.save()
 
-file1 = gs.io.gsXmlCollection("")
-file1.load(xml_col)
 list_dict = []
-for id in range(max_id):
-    my_dict = {"Matrix": file1.getMatrix(id), "Deg": None, "Reg": None,
+for id in range(len(file_col)):
+    my_dict = {"Matrix": gs.io.gsFileData.getMatrix(file_col[id]), "Deg": None, "Reg": None,
                "Geo": None, "Name": None}
 
-    path_name = file1.getString(id)
+    path_name = file_col[id]
     name = path_name[path_name.find('/results/') + 9:]
     my_dict["Name"] = name[:name.find('.xml')]
 

@@ -17,6 +17,8 @@
 import os
 import sys
 
+import numpy
+
 gismo_path = os.path.join(os.path.dirname(__file__), "../../../build/lib")
 print("G+Smo path:", gismo_path, "(change if needed).")
 sys.path.append(gismo_path)
@@ -45,16 +47,20 @@ import lib.diss_library as lib
            
 """
 """ -------------------------------------------------------------------------------------------------- """
-# geo_list = ["g1000", "g1100", "g1510", "g1400"]  # Without .xml extension
-geo_list = ["g1021", "g1121", "g1501", "g1311"]  # Without .xml extension
+geo_list = ["g1000", "g1100", "g1510", "g1400"]  # Without .xml extension
+#geo_list = ["g1021", "g1121", "g1500", "g1311"]  # Without .xml extension
 path_geo = "planar/geometries/"
 
 # caption_list = ["Ex. I: geometry", "Ex. II: geometry", "Ex. III: geometry", "Ex. IV: geometry",
 #                "Ex. I: solution", "Ex. II: solution", "Ex. III: solution", "Ex. IV: solution"]
-caption_list = ["Ex. V: geometry", "Ex. VI: geometry", "Ex. VII: geometry", "Ex. VIII: geometry",
+caption_list = ["Ex. V: gluing data", "Ex. VI: gluing data", "Ex. VII: gluing data", "Ex. VIII: gluing data",
+                "Ex. V: geometry", "Ex. VI: geometry", "Ex. VII: geometry", "Ex. VIII: geometry",
                 "Ex. V: solution", "Ex. VI: solution", "Ex. VII: solution", "Ex. VIII: solution"]
 
 #geo_list = ["g1000", "g1100", "g1510", "g1400","g1021", "g1121", "g1501", "g1311"]
+#caption_list = geo_list + geo_list
+
+#geo_list = [f[:f.find(".xml")] for f in os.listdir("../filedata/" + path_geo) ]
 #caption_list = geo_list + geo_list
 
 numData = 50
@@ -62,9 +68,9 @@ numData = 50
 ms = gs.core.gsFunctionExpr("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)", 2)
 
 compute_mesh = True
-compute_solution = True
+compute_solution = False
+plot_solution = False
 """ -------------------------------------------------------------------------------------------------- """
-
 # Here the tikz files and the corresponding pdf are stored
 # Change if necessary
 path_dir = "geo/"
@@ -82,25 +88,30 @@ if compute_mesh:
         file = gs.io.gsFileData(path_geo + geo + ".xml")
         file.getAnyFirst(mp)  # Assume that there exist only one gsMultiPatch
 
-        v0 = np.zeros((2, numData))
-        v0[0, :] = np.linspace(0, 1, numData)
+        uv_list = []
+
         u0 = np.zeros((2, numData))
         u0[1, :] = np.linspace(0, 1, numData)
-
+        uv_list.append(u0)
         v1 = np.ones((2, numData))
         v1[0, :] = np.flip(np.linspace(0, 1, numData))
-        u1 = np.flip(np.ones((2, numData)))
+        uv_list.append(v1)
+        u1 = np.ones((2, numData))
         u1[1, :] = np.linspace(0, 1, numData)
+        uv_list.append(u1)
+        v0 = np.zeros((2, numData))
+        v0[0, :] = np.linspace(0, 1, numData)
+        uv_list.append(v0)
 
         points_patchwise = []
         for idx in range(mp.nPatches()):
-            points = mp.patch(idx).eval(v0)
 
-            pointsB = mp.patch(idx).eval(u0)
-            pointsC = mp.patch(idx).eval(v1)
-            pointsD = mp.patch(idx).eval(u1)
+            points_list = []
+            for uv in uv_list:
+                points_list.append(mp.patch(idx).eval(uv))
+            points = points_list[0]
+            points_list = points_list[1:]
 
-            points_list = [pointsB, pointsC, pointsD]
             while len(points_list) > 0:
                 for idx, p in enumerate(points_list):
                     if points[0, -1] == p[0, 0] and points[1, -1] == p[1, 0]:
@@ -117,8 +128,11 @@ if compute_mesh:
 
         # Creating the tikz figures
         # Here we can change the layout setting of the mesh
-        opt_patch = [{'fill': 'gray!20'}, {'fill': 'gray!40'}, {'fill': 'gray!60'}, {'fill': 'gray!80'}]
+        opt_patch = [{'fill': 'gray!20', 'line width': '1pt'}, {'fill': 'gray!40', 'line width': '1pt'},
+                     {'fill': 'gray!60', 'line width': '1pt'}, {'fill': 'gray!80', 'line width': '1pt'}]
         opt_patch = opt_patch * 10
+
+        opt_mesh = ['solid']
 
         opt_axis = TikZOptions(width=NoEscape(r'1\textwidth'))
         doc = Document()
@@ -127,6 +141,26 @@ if compute_mesh:
                 for idx in range(mp.nPatches()):
                     curve = Plot(options=opt_patch[idx], coordinates=points_patchwise[idx])
                     axis.append(curve)
+
+                    # Adding the mesh line:
+                    # Works only for uniform refinement
+                    for el in range(mp.basis(idx).component(0).numElements()-1):
+                        u1 = np.ones((2, numData)) * (el+1) / mp.basis(idx).component(0).numElements()
+                        u1[1, :] = np.linspace(0, 1, numData)
+                        points = mp.patch(idx).eval(u1)
+                        points = points.T
+                        curve = Plot(options=opt_mesh, coordinates=points)
+                        axis.append(curve)
+
+                    # Works only for uniform refinement
+                    for el in range(mp.basis(idx).component(1).numElements()-1):
+                        v1 = np.ones((2, numData)) * (el+1) / mp.basis(idx).component(1).numElements()
+                        v1[0, :] = np.linspace(0, 1, numData)
+                        points = mp.patch(idx).eval(v1)
+                        points = points.T
+                        curve = Plot(options=opt_mesh, coordinates=points)
+                        axis.append(curve)
+
 
         tikz_list.append(path_dir + geo + "_mesh")
         tex = doc.dumps()  # The document as string in LaTeX syntax
@@ -142,7 +176,7 @@ else:
     for geo in geo_list:
         tikz_list.append(path_dir + geo + "_mesh")
 
-if compute_solution:
+if compute_solution and plot_solution:
     nx, ny = (500, 500)  # If you need a "smoother" picture, increase the number of points
 
     x = np.linspace(0, 1, nx)
@@ -179,13 +213,15 @@ if compute_solution:
         tikz_list.append(path_dir + 'solution_' + geo + '.pdf')
         plt.savefig(path_fig + 'solution_' + geo + '.pdf')
         # plt.show()
-else:
+        plt.close(fig)
+elif plot_solution:
     for geo in geo_list:
         tikz_list.append(path_dir + 'solution_' + geo + '.pdf')
 
 crop_list = []
-for geo in geo_list:
-    crop_list.append(path_dir + 'solution_' + geo)
+if plot_solution:
+    for geo in geo_list:
+        crop_list.append(path_dir + 'solution_' + geo)
 
 # Creating the tex and pdf file
 doc = lib.MyDocument()

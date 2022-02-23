@@ -444,6 +444,18 @@ int main(int argc, char *argv[])
     }
     //! [Read XML file]
 
+//    for (index_t np = 0; np < mp.nPatches(); np++)
+//    {
+//        gsMatrix<> coefs = mp.patch(np).coefs();
+//        coefs *= 0.5;
+//        mp.patch(np).setCoefs(coefs);
+//    }
+//    gsFileData<> fd;
+//    fd << mp;
+//    fd.save("test.xml");
+
+    gsDebugVar(mp.basis(0).numElements(boxSide(1)));
+
     //! [Refinement]
     gsMultiBasis<real_t> dbasis(mp, true);//true: poly-splines (not NURBS)
 
