@@ -27,7 +27,6 @@ void gsApproxC1Spline<d,T>::defaultOptions()
     /*
         to do: general
     */
-    gsDebugVar(m_multiBasis.basis(0));
     gsTensorBSplineBasis<d, T> basis = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(0));
     index_t p = basis.degree(0);
 

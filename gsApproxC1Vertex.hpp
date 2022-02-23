@@ -119,6 +119,7 @@ void gsApproxC1Vertex<d, T>::computeKernel()
 
     index_t dim_mat = 0;
     std::vector<index_t> dim_u, dim_v, side, patchID;
+    std::vector<index_t> dim_u_iFace, patchID_iFace;
     gsMatrix<> matrix_det(2,2), points(2,1);
     points.setZero();
     for(size_t np = 0; np < mp_vertex.nPatches(); np++)
@@ -130,6 +131,8 @@ void gsApproxC1Vertex<d, T>::computeKernel()
             dim_u.push_back(basisVertexResult[np].basis(0).component(0).size());
             dim_v.push_back(basisVertexResult[np].basis(0).component(1).size());
             dim_mat += basisVertexResult[np].basis(0).component(0).size();
+            if (!m_optionList.getSwitch("second"))
+                dim_mat += basisVertexResult[np].basis(0).component(0).size();
 
             matrix_det.col(0) = m_auxPatches[np].getPatchRotated().jacobian(points).col(0); // u
         }
@@ -140,16 +143,37 @@ void gsApproxC1Vertex<d, T>::computeKernel()
             dim_u.push_back(basisVertexResult[np].basis(0).component(0).size());
             dim_v.push_back(basisVertexResult[np].basis(0).component(1).size());
             dim_mat += basisVertexResult[np].basis(0).component(1).size();
+            if (!m_optionList.getSwitch("second"))
+                dim_mat += basisVertexResult[np].basis(0).component(1).size();
 
             matrix_det.col(1) = m_auxPatches[np].getPatchRotated().jacobian(points).col(1); // u
         }
+        if(mp_vertex.isInterface(patchSide(np,1)) && mp_vertex.isInterface(patchSide(np,3)))
+        {
+            if (!m_optionList.getSwitch("second"))
+                dim_mat += 4;
+            else
+                dim_mat += 1;
+            patchID_iFace.push_back(np);
+            dim_u_iFace.push_back(basisVertexResult[np].basis(0).component(0).size());
+        }
+
     }
     if (patchID.size() != 2)
         gsInfo << "Something went wrong \n";
 
-    index_t dofsCorner = 3;
+    index_t dofsCorner = 1;
+    if (m_optionList.getSwitch("second"))
+        dofsCorner = 3;  // No Neumann
+
     if (matrix_det.determinant()*matrix_det.determinant() > 1e-15) // There is (numerically) a kink
-        dofsCorner = 1;
+    {
+        if (!m_optionList.getSwitch("second"))
+            dofsCorner = 0;  // With Neumann
+        else
+            dofsCorner = 1;
+    }
+
 
     if (m_optionList.getSwitch("info"))
         gsInfo << "Det: " << matrix_det.determinant() << "\n";
@@ -162,6 +186,7 @@ void gsApproxC1Vertex<d, T>::computeKernel()
     {
         if (side[bdy_index] < 3) // v
         {
+            index_t shift_row_neumann = dim_v[bdy_index];
             for (index_t i = 0; i < dim_v[bdy_index]; ++i)
             {
                 for (index_t j = 0; j < 6; ++j)
@@ -169,12 +194,21 @@ void gsApproxC1Vertex<d, T>::computeKernel()
                     T coef_temp = basisVertexResult[patchID[bdy_index]].patch(j).coef(i*dim_u[bdy_index], 0); // v = 0
                     if (coef_temp * coef_temp > 1e-25)
                         coefs_corner(shift_row+i, j) = coef_temp;
+                    if (!m_optionList.getSwitch("second"))
+                    {
+                        T coef_temp = basisVertexResult[patchID[bdy_index]].patch(j).coef(i*dim_u[bdy_index] +1, 0); // v = 0
+                        if (coef_temp * coef_temp > 1e-25)
+                            coefs_corner(shift_row_neumann + shift_row+i, j) = coef_temp;
+                    }
                 }
             }
             shift_row += dim_v[bdy_index];
+            if (!m_optionList.getSwitch("second"))
+                shift_row += dim_v[bdy_index];
         }
         else // u
         {
+            index_t shift_row_neumann = dim_u[bdy_index];
             for (index_t i = 0; i < dim_u[bdy_index]; ++i)
             {
                 for (index_t j = 0; j < 6; ++j)
@@ -182,43 +216,85 @@ void gsApproxC1Vertex<d, T>::computeKernel()
                     T coef_temp = basisVertexResult[patchID[bdy_index]].patch(j).coef(i, 0); // v = 0
                     if (coef_temp * coef_temp > 1e-25)
                         coefs_corner(shift_row+i, j) = coef_temp;
+                    if (!m_optionList.getSwitch("second"))
+                    {
+                        T coef_temp = basisVertexResult[patchID[bdy_index]].patch(j).coef(i+dim_u[bdy_index], 0); // v = 0
+                        if (coef_temp * coef_temp > 1e-25)
+                            coefs_corner(shift_row_neumann + shift_row+i, j) = coef_temp;
+                    }
                 }
             }
             shift_row += dim_u[bdy_index];
+            if (!m_optionList.getSwitch("second"))
+                shift_row += dim_u[bdy_index];
         }
     }
-
-    real_t threshold = 1e-10;
-    Eigen::FullPivLU<gsMatrix<>> KernelCorner(coefs_corner);
-    KernelCorner.setThreshold(threshold);
-    //gsInfo << "Coefs: " << coefs_corner << "\n";
-    while (KernelCorner.dimensionOfKernel() < dofsCorner)
+    for (size_t iFace_index = 0; iFace_index < patchID_iFace.size(); ++iFace_index)
     {
-        threshold += 1e-8;
-        KernelCorner.setThreshold(threshold);
-    }
-    if (m_optionList.getSwitch("info"))
-        gsInfo << "Dimension of Kernel: " << KernelCorner.dimensionOfKernel() << " With " << threshold << "\n";
-
-    gsMatrix<> vertBas;
-    vertBas.setIdentity(6, 6);
-
-    gsMatrix<T> kernel = KernelCorner.kernel();
-
-    size_t count = 0;
-    while (kernel.cols() < 6) {
-        kernel.conservativeResize(kernel.rows(), kernel.cols() + 1);
-        kernel.col(kernel.cols() - 1) = vertBas.col(count);
-
-        Eigen::FullPivLU<gsMatrix<>> ker_temp(kernel);
-        ker_temp.setThreshold(1e-6);
-        if (ker_temp.dimensionOfKernel() != 0) {
-            kernel = kernel.block(0, 0, kernel.rows(), kernel.cols() - 1);
+        if (!m_optionList.getSwitch("second")) {
+            for (index_t i = 0; i < 2; ++i) // Only the first two
+            {
+                for (index_t j = 0; j < 6; ++j) {
+                    T coef_temp = basisVertexResult[patchID[iFace_index]].patch(j).coef(i, 0); // v = 0
+                    if (coef_temp * coef_temp > 1e-25)
+                        coefs_corner(shift_row + i, j) = coef_temp;
+                    coef_temp = basisVertexResult[patchID[iFace_index]].patch(j).coef(i + dim_u[iFace_index],
+                                                                                      0); // v = 0
+                    if (coef_temp * coef_temp > 1e-25)
+                        coefs_corner(shift_row + 2 + i, j) = coef_temp; //  +2 bcs of the previous adding
+                }
+            }
+            shift_row += 4;
         }
-        count++;
+        else
+        {
+            for (index_t j = 0; j < 6; ++j)
+            {
+                T coef_temp = basisVertexResult[patchID[iFace_index]].patch(j).coef(0, 0); // v = 0
+                if (coef_temp * coef_temp > 1e-25)
+                    coefs_corner(shift_row, j) = coef_temp;
+            }
+            shift_row += 1;
+        }
     }
+
+    gsMatrix<T> kernel;
+    if (dofsCorner > 0)
+    {
+        real_t threshold = 1e-10;
+        Eigen::FullPivLU<gsMatrix<>> KernelCorner(coefs_corner);
+        KernelCorner.setThreshold(threshold);
+        //gsInfo << "Coefs: " << coefs_corner << "\n";
+        while (KernelCorner.dimensionOfKernel() < dofsCorner) {
+            threshold += 1e-8;
+            KernelCorner.setThreshold(threshold);
+        }
+        if (m_optionList.getSwitch("info"))
+            gsInfo << "Dimension of Kernel: " << KernelCorner.dimensionOfKernel() << " With " << threshold << "\n";
+
+        gsMatrix<> vertBas;
+        vertBas.setIdentity(6, 6);
+
+        kernel = KernelCorner.kernel();
+
+        size_t count = 0;
+        while (kernel.cols() < 6) {
+            kernel.conservativeResize(kernel.rows(), kernel.cols() + 1);
+            kernel.col(kernel.cols() - 1) = vertBas.col(count);
+
+            Eigen::FullPivLU<gsMatrix<>> ker_temp(kernel);
+            ker_temp.setThreshold(1e-6);
+            if (ker_temp.dimensionOfKernel() != 0) {
+                kernel = kernel.block(0, 0, kernel.rows(), kernel.cols() - 1);
+            }
+            count++;
+        }
+    }
+    else
+        kernel.setIdentity(6, 6);
+
     if (m_optionList.getSwitch("info"))
-        gsInfo << "Kernel: " << kernel << "\n";
+        gsInfo << "NumDofs: " << dofsCorner << " with Kernel: \n" << kernel << "\n";
 
     for(size_t np = 0; np < m_patchesAroundVertex.size(); np++)
     {
