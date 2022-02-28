@@ -9,7 +9,7 @@
 };%
 %
 %
-\addplot[forget plot,samples=100,line width=1pt,yshift=-0.2cm,domain={0.03125:0.015625},draw=black]{16.96613901503872*x^5} node[right, pos=0.75] {\tiny{$h5$}};%
+\addplot[domain={0.03125:0.015625},forget plot,yshift=-0.2cm,samples=100,line width=1pt,draw=black]{16.96613901503872*x^5} node[right, pos=0.75] {\tiny{$h5$}};%
 \addplot[mark=square*,color=blue,line width=1pt,solid] coordinates {%
 (0.25,0.4541841627955793)%
 (0.125,0.02725738523971716)%
@@ -19,7 +19,7 @@
 };%
 %
 %
-\addplot[forget plot,samples=100,line width=1pt,yshift=-0.2cm,domain={0.03125:0.015625},draw=black]{61.8244510100378*x^4} node[right, pos=0.75] {\tiny{$h4$}};%
+\addplot[domain={0.03125:0.015625},forget plot,yshift=-0.2cm,samples=100,line width=1pt,draw=black]{61.8244510100378*x^4} node[right, pos=0.75] {\tiny{$h4$}};%
 \addplot[mark=triangle*,color=red,line width=1pt,solid] coordinates {%
 (0.25,19.01063629076579)%
 (0.125,2.134271709334063)%
@@ -29,7 +29,7 @@
 };%
 %
 %
-\addplot[forget plot,samples=100,line width=1pt,yshift=-0.2cm,domain={0.03125:0.015625},draw=black]{765.3460305964969*x^3} node[right, pos=0.75] {\tiny{$h3$}};%
+\addplot[domain={0.03125:0.015625},forget plot,yshift=-0.2cm,samples=100,line width=1pt,draw=black]{765.3460305964969*x^3} node[right, pos=0.75] {\tiny{$h3$}};%
 \addplot[mark=diamond*,color=green,line width=1pt,dashed] coordinates {%
 (0.25,0.02205408077658026)%
 (0.125,0.0006635425406566749)%

@@ -218,24 +218,38 @@ for idx, deg in enumerate(deg_list):
         for legend in legend_list2:
             legend_coll.append(legend)
 
-# legend_list = []
-# for idx, method in enumerate(method_list):
-#     legend_image = []
-#     legend_entry = []
-#     legend_image.append(["empty legend"])
-#     legend_entry.append([r'\hspace{-0.5cm}$L^2$-error'])
-#     for image in legend_coll[idx]:
-#         legend_entry.append([""])
-#         legend_image.append(image)
-#     legend_entry.append([""])
-#     legend_image.append(["empty legend"])
-#     for deg in deg_list[idx]:
-#         legend_image.append(["empty legend"])
-#         legend_entry.append([r'\hspace{-1.7cm}$\widetilde{p}=' + str(deg) + '$, $\widetilde{r}=' + str(deg - 1) + '$'])
-#     fig = MyTikz()
-#     fig.create_legend(legend_image, legend_entry)
-#     fig.generate_tikz(path_tikz + "legend_error")
-#     legend_list.append([path_dir + "legend_error"])
+
+legend_list = []
+
+legend_image = []
+legend_entry = []
+legend_image.append(["empty legend"])
+legend_entry.append([r'\hspace{-0.8cm}$L^2$-error'])
+for idx in range(len(method_list)):
+    legend_entry.append([""])
+    legend_image.append(legend_coll[idx*3])
+legend_image.append(["empty legend"])
+legend_entry.append([r'\hspace{-0.8cm}$H^1$-error'])
+for idx in range(len(method_list)):
+    legend_entry.append([""])
+    legend_image.append(legend_coll[idx*3+1])
+legend_image.append(["empty legend"])
+legend_entry.append([r'\hspace{-0.8cm}$H^2$-error'])
+for idx in range(len(method_list)):
+    legend_image.append(legend_coll[idx*3+2])
+
+if range(len(method_list)) != 2:
+    print("Need here more entries!")
+legend_image.append(["empty legend"])
+legend_entry.append([r'\hspace{+0.5cm}Approx. $C^1$'])
+legend_image.append(["empty legend"])
+legend_entry.append([r'\hspace{+0.5cm}Nitsche'])
+# TODO ADD MORE METHODS
+
+fig = lib.MyTikz()
+fig.create_legend(legend_image, legend_entry, col=3)
+fig.generate_tikz(path_tikz + "legend_error")
+legend_list.append(path_dir + "legend_error")
 
 
 caption_coll = []
@@ -244,7 +258,8 @@ for deg in deg_list:
         caption_coll.append("$p=" + str(deg) + "$, $r=" + str(deg - 1) + "$")
 
 doc = lib.MyDocument()
-doc.addTikzFigure(tikz_coll, caption_coll, row=4)
+doc.addTikzFigure(tikz_coll, caption_coll, row=4, legend=legend_list)
 doc.generate_pdf("error_example", compiler="pdflatex", compiler_args=["-shell-escape"], clean_tex=False)
+lib.clean_extensions(crop=legend_list)
 doc.generate_pdf("error_example", compiler="pdflatex", clean_tex=False)
 lib.clean_extensions()

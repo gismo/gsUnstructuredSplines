@@ -177,7 +177,7 @@ class MyDocument(Document):
                             position='b',
                             width=NoEscape(width))) as subfig:
                         self.append(NoEscape(r"\centering"))
-                        self.append(NoEscape(r'\inputtikz{' + leg + '}'))
+                        self.append(NoEscape(r'\inputtikz{' + str(leg) + '}'))
                 self.append(NoEscape(r"\end{center}"))
 
             fig.add_caption("Two kittens")
@@ -224,11 +224,11 @@ class MyTikz(Document):
     def getLegendList(self):
         return self.legend
 
-    def create_legend(self, legend_image, legend_entry):
+    def create_legend(self, legend_image, legend_entry, col=2):
         self.opt = ["hide axis", "xmin=0", "xmax=1", "ymin=0", "ymax=0.4", NoEscape("mark options={solid}"),
                     NoEscape(r"legend style={draw=white!15!black,legend cell align=left}"),
                     "transpose legend",
-                    NoEscape(r"legend columns=" + str(int(len(legend_image) / 2)) +
+                    NoEscape(r"legend columns=" + str(int(len(legend_image) / col)) +
                              ",legend style={/tikz/every even column/.append style={column sep=0.5cm}}")
                     ]
         with self.create(TikZ()) as tikz:
