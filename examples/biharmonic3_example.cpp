@@ -477,6 +477,9 @@ int main(int argc, char *argv[])
     gsInfo<< "Available threads: "<< omp_get_max_threads() <<"\n";
 #endif
 
+    dbasis.basis(0).uniformRefine(1);
+    mp.patch(0).uniformRefine(1);
+
 //    gsWriteParaview(mp, "geom", 2000);
 //
 //    gsVector<> vec;

@@ -500,10 +500,6 @@ int main(int argc, char *argv[])
 
         if (method == MethodFlags::NITSCHE)
         {
-
-            if (r < 3) // From level 3 and more, the previous EW is used and devided by ḿesh-size (save computation time)
-                computeStabilityParameter(mp, dbasis, mu_interfaces);
-
             index_t i = 0;
             for ( typename gsMultiPatch<real_t>::const_iiterator it = mp.iBegin(); it != mp.iEnd(); ++it, ++i)
             {
