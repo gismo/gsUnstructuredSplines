@@ -167,7 +167,7 @@ class gsTraceBasis : public gismo::gsFunction<T>
 protected:
     gsGeometry<T> & _geo;
 
-    gsBSpline<T>  _m_basis_beta;
+    gsBSpline<T>  m_basis_beta;
     gsBSplineBasis<T>  m_basis_plus;
 
     gsBasis<T> &   m_basis;
@@ -192,7 +192,7 @@ public:
                  bool isboundary,
                  const index_t bfID,
                  const index_t uv) :
-            _geo(geo), _m_basis_beta(basis_beta), m_basis_plus(basis_plus), m_basis(basis),
+            _geo(geo), m_basis_beta(basis_beta), m_basis_plus(basis_plus), m_basis(basis),
             m_isboundary(isboundary), m_bfID(bfID), m_uv(uv), _traceBasis_piece(nullptr)
     {
         //_tmp.flags = NEED_JACOBIAN;
@@ -231,7 +231,7 @@ public:
         gsMatrix<T> beta, N_0, N_1, N_i_plus, der_N_i_plus;
 
         if (!m_isboundary)
-            _m_basis_beta.eval_into(u.row(m_uv),beta); // 1-dir == PatchID
+            m_basis_beta.eval_into(u.row(m_uv),beta); // 1-dir == PatchID
         else
             beta.setZero(1, u.cols());
 
@@ -397,6 +397,7 @@ public:
     }
 
     // Input is parametric coordinates of 2-D \a mp
+    // TODO IMPROVE THE FUNCTION
     void eval_into(const gsMatrix<T>& u, gsMatrix<T>& result) const
     {
         result.resize( targetDim() , u.cols() );

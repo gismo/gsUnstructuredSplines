@@ -181,100 +181,6 @@ void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & 
     }
 }
 
-void computeStabilityParameter(gsMultiPatch<> mp, gsMultiBasis<> dbasis, gsMatrix<real_t> & mu_interfaces)
-{
-    mu_interfaces.setZero();
-
-    index_t i = 0;
-    for ( typename gsMultiPatch<real_t>::const_iiterator it = mp.iBegin(); it != mp.iEnd(); ++it, ++i)
-    {
-        gsMultiPatch<> mp_temp;
-        mp_temp.addPatch(mp.patch(it->first().patch));
-        mp_temp.addPatch(mp.patch(it->second().patch));
-        mp_temp.computeTopology();
-
-        gsMultiBasis<> dbasis_temp;
-        dbasis_temp.addBasis(dbasis.basis(it->first().patch).clone().release());
-        dbasis_temp.addBasis(dbasis.basis(it->second().patch).clone().release());
-/*
-        patchSide pS1 = mp_temp.interfaces()[0].first();
-        patchSide pS2 = mp_temp.interfaces()[0].second();
-        gsBoundaryConditions<> bc;
-
-        index_t side = pS1.index() < 3 ? (pS1.index() == 1 ? 2 : 1) : (pS1.index() == 3 ? 4 : 3);
-        bc.addCondition(patchSide(pS1.patchIndex(), side), condition_type::dirichlet, 0);
-
-        side = pS2.index() < 3 ? (pS2.index() == 1 ? 2 : 1) : (pS2.index() == 3 ? 4 : 3);
-        bc.addCondition(patchSide(pS2.patchIndex(), side), condition_type::dirichlet, 0);
-*/
-        gsExprAssembler<real_t> A2(1, 1), B2(1, 1);
-
-        // Elements used for numerical integration
-        A2.setIntegrationElements(dbasis_temp);
-        B2.setIntegrationElements(dbasis_temp);
-
-        // Set the geometry map
-        auto GA = A2.getMap(mp_temp);
-        auto GB = B2.getMap(mp_temp);
-
-        // Set the discretization space
-        auto uA = A2.getSpace(dbasis_temp);
-        auto uB = B2.getSpace(dbasis_temp);
-
-        //uA.setup(bc, dirichlet::homogeneous, 0);
-        //uB.setup(bc, dirichlet::homogeneous,0);
-        uA.setup(0);
-        uB.setup(0);
-
-        A2.initSystem();
-        B2.initSystem();
-
-        real_t c = 0.25;
-        A2.assembleIfc(mp_temp.interfaces(),
-                       c * ilapl(uA.left(), GA.left()) * ilapl(uA.left(), GA.left()).tr() * nv(GA.left()).norm(),
-                       c * ilapl(uA.left(), GA.left()) * ilapl(uA.right(), GA.right()).tr() * nv(GA.left()).norm(),
-                       c * ilapl(uA.right(), GA.right()) * ilapl(uA.left(), GA.left()).tr() * nv(GA.left()).norm(),
-                       c * ilapl(uA.right(), GA.right()) * ilapl(uA.right(), GA.right()).tr() * nv(GA.left()).norm());
-
-        B2.assemble(ilapl(uB, GB) * ilapl(uB, GB).tr() * meas(GB));
-
-        // TODO STILL INSTABLE
-        Eigen::MatrixXd AA = A2.matrix().toDense().cast<double>();
-        Eigen::MatrixXd BB = B2.matrix().toDense().cast<double>();
-        Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXd> ges(AA, BB);
-
-        real_t m_h      = dbasis_temp.basis(0).getMinCellLength(); //*dbasis.basis(0).getMinCellLength();
-        mu_interfaces(i,0) = 4.0 * m_h * ges.eigenvalues().array().maxCoeff();
-/*
-        gsSparseSolver<>::SimplicialLDLT sol;
-        sol.compute(B2.matrix());
-        gsSparseMatrix<> R = sol.matrixU();
-        gsSparseMatrix<> RT = sol.matrixL();
-        gsMatrix<> AAA = RT.toDense().inverse() * AA * R.toDense().inverse();
-
-        gsConjugateGradient<> cg(AAA);
-
-        cg.setCalcEigenvalues(true);
-        cg.setTolerance(1e-15);
-        cg.setMaxIterations(100000);
-
-        gsMatrix<> rhs, result;
-        rhs.setRandom( AAA.rows(), 1 );
-        result.setRandom( AAA.rows(), 1 );
-
-        cg.solve(rhs,result);
-
-        gsInfo << "Tol: " << cg.error() << "\n";
-        gsInfo << "Max it: " << cg.iterations() << "\n";
-
-        gsMatrix<real_t> eigenvalues;
-        cg.getEigenvalues(eigenvalues);
-
-        gsInfo << "Cond Number: " << eigenvalues.bottomRows(1)(0,0) << "\n";
-*/
-    }
-}
-
 
 int main(int argc, char *argv[])
 {
@@ -444,18 +350,6 @@ int main(int argc, char *argv[])
     }
     //! [Read XML file]
 
-//    for (index_t np = 0; np < mp.nPatches(); np++)
-//    {
-//        gsMatrix<> coefs = mp.patch(np).coefs();
-//        coefs *= 0.5;
-//        mp.patch(np).setCoefs(coefs);
-//    }
-//    gsFileData<> fd;
-//    fd << mp;
-//    fd.save("test.xml");
-
-    gsDebugVar(mp.basis(0).numElements(boxSide(1)));
-
     //! [Refinement]
     gsMultiBasis<real_t> dbasis(mp, true);//true: poly-splines (not NURBS)
 
@@ -489,29 +383,6 @@ int main(int argc, char *argv[])
     gsInfo<< "Available threads: "<< omp_get_max_threads() <<"\n";
 #endif
 
-    dbasis.basis(0).uniformRefine(1);
-    mp.patch(0).uniformRefine(1);
-
-//    gsWriteParaview(mp, "geom", 2000);
-//
-//    gsVector<> vec;
-//    vec.setLinSpaced(5,0,1);
-//    gsMatrix<> points;
-//    points.setZero(2,5);
-//    points.row(1) = vec;
-//    gsInfo << mp.patch(0).eval(points) << "\n";
-//
-//    points.setOnes(2,5);
-//    points.row(1) = vec;
-//    gsInfo << mp.patch(1).eval(points) << "\n";
-//
-//    mp.patch(0).degreeElevate(2);
-//    mp.patch(1).degreeElevate(1);
-//    //mp.patch(0).uniformRefine(1);
-//
-//    gsFileData<> fd;
-//    fd << mp;
-//    fd.save("geometry");
     //! [Refinement]
 
     //! [Problem setup]
@@ -629,10 +500,6 @@ int main(int argc, char *argv[])
 
         if (method == MethodFlags::NITSCHE)
         {
-
-            if (r < 3) // From level 3 and more, the previous EW is used and devided by ḿesh-size (save computation time)
-                computeStabilityParameter(mp, dbasis, mu_interfaces);
-
             index_t i = 0;
             for ( typename gsMultiPatch<real_t>::const_iiterator it = mp.iBegin(); it != mp.iEnd(); ++it, ++i)
             {
@@ -732,71 +599,6 @@ int main(int argc, char *argv[])
             //                                               nv(G).normalized()).sqNorm() * meas(G)));
         }
 
-        // Compute the condition-number for the matrix (Slow)
-        if (cond)
-        {
-            //Eigen::MatrixXd mat = A.matrix().toDense().cast<double>()
-            //Eigen::SparseMatrix<double> mat = A.matrix().cast<double>();
-
-            //Eigen::EigenSolver<Eigen::MatrixXd> es;
-            //es.compute(mat, /* computeEigenvectors = */ false);
-            //cond_num[r] = es.eigenvalues().real().maxCoeff() / es.eigenvalues().real().minCoeff();
-
-            //Eigen::JacobiSVD<Eigen::SparseMatrix<double>> svd(mat);
-            //cond_num[r] = svd.singularValues()(0) / svd.singularValues()(svd.singularValues().size()-1);
-
-            gsConjugateGradient<> cg(A.matrix());
-
-            cg.setCalcEigenvalues(true);
-            //cg.setTolerance(1e-15);
-            cg.setMaxIterations(100000);
-
-            gsMatrix<> rhs, result;
-            rhs.setRandom( A.matrix().rows(), 1 );
-            result.setRandom( A.matrix().rows(), 1 );
-
-            cg.solve(rhs,result);
-
-            gsInfo << "Tol: " << cg.error() << "\n";
-            gsInfo << "Max it: " << cg.iterations() << "\n";
-
-            gsMatrix<real_t> eigenvalues;
-            cg.getEigenvalues(eigenvalues);
-
-            gsInfo << "Cond Number: " << eigenvalues.bottomRows(1)(0,0)/ eigenvalues(0,0) << "\n";
-            cond_num[r] = eigenvalues.bottomRows(1)(0,0)/ eigenvalues(0,0);
-            //cond_num[r] = cg.getConditionNumber();
-/*
-            gsMatrix<> x, x2;
-            x.setRandom( A.matrix().rows(), 1 );
-
-            for(index_t i=0; i<100; ++i)
-
-            {
-                x /= x.norm();
-                x = A.matrix()*x;
-            }
-
-            real_t max_ev = x.norm();
-            gsInfo << "max_ev: " << max_ev << "\n";
-
-            x.setRandom( A.matrix().rows(), 1 );
-            x2.setZero( A.matrix().rows(), 1 );
-            gsSparseMatrix<> id(A.matrix().rows(),A.matrix().cols());
-            id.setIdentity();
-            while(abs((x.norm()-x2.norm())) > 1e-8)
-            {
-                x2 = x;
-                x /= x.norm();
-                x = ( A.matrix() - max_ev * id)*x;
-            }
-
-            real_t min_ev = max_ev - x.norm();
-            gsInfo << "min_ev: " << min_ev << "\n";
-            gsInfo << "Cond: " << max_ev/min_ev << "\n";
-            cond_num[r] = max_ev/min_ev;
-*/
-        }
         err_time += timer.stop();
         gsInfo<< ". " <<std::flush; // Error computations done
     } //for loop
@@ -865,36 +667,6 @@ int main(int argc, char *argv[])
         gsInfo << "Done. No output created, re-run with --plot to get a ParaView "
                   "file containing the solution.\n";
     //! [Export visualization in ParaView]
-
-
-    //! [Export data to xml]
-    if (!output.empty())
-    {
-        index_t cols = method == MethodFlags::NITSCHE ? 7+penalty.cols() : 7;
-        gsMatrix<real_t> error_collection(l2err.rows(), cols);
-        error_collection.col(0) = meshsize;
-        error_collection.col(1) = dofs;
-        error_collection.col(2) = l2err;
-        error_collection.col(3) = h1err;
-        error_collection.col(4) = h2err;
-        error_collection.col(5) = IFaceErr;
-        error_collection.col(6) = cond_num;
-        if (method == MethodFlags::NITSCHE)
-            error_collection.block(0,7,penalty.rows(),penalty.cols()) = penalty;
-
-        gsFileData<real_t> xml_out;
-        xml_out << error_collection;
-        xml_out.addString("Meshsize, dofs, l2err, h1err, h2err, iFaceErr, cond_num, (penalty)","Label");
-        xml_out.addString(std::to_string(degree),"Degree");
-        xml_out.addString(std::to_string(smoothness),"Regularity");
-        xml_out.addString(std::to_string(numRefine),"NumRefine");
-        xml_out.addString(std::to_string(method),"Method");
-        // Add solution
-        // [...]
-        xml_out.save(output);
-        gsInfo << "XML saved to " + output << "\n";
-    }
-    //! [Export data to xml]
 
     return EXIT_SUCCESS;
 }// end main

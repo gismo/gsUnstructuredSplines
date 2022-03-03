@@ -69,26 +69,7 @@ void gsApproxC1Spline<d,T>::init()
     for (size_t np = 0; np < m_patches.nPatches(); np++)
     {
         gsTensorBSplineBasis<d, T> basis_inner = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(np));
-        //m_bases[np].setBasis(9, basis_inner); // Inner
 
-        // Construct special space for r = p - 1:
-        // The first and the last knot (not 0,1) are repeated +1, e.g.
-        // deg 3, r = 2: |||| || | [...] | || ||||
-        /*index_t m,p;
-        for (index_t uv = 0; uv < 2; uv++)
-        {
-            p = basis_inner.degree(uv);
-            m = basis_inner.knots(uv).multiplicityIndex(p+1);
-            if (m == 1)
-            {
-                T knot_u = basis_inner.knot(uv,basis_inner.degree(uv)+1);
-                if (knot_u != 1)
-                    basis_inner.insertKnot(knot_u,uv,1);
-
-                if (knot_u != 0.5 && knot_u != 1)
-                    basis_inner.insertKnot(1-knot_u,uv,1);
-            }
-        }*/
         index_t dim_u = basis_inner.component(0).size();
         index_t dim_v = basis_inner.component(1).size();
 
@@ -108,36 +89,46 @@ void gsApproxC1Spline<d,T>::init()
         // [!Basis space]
         gsTensorBSplineBasis<d, T> basis_11 = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(item.first().patch));
         gsTensorBSplineBasis<d, T> basis_22 = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(item.second().patch));
-/*
+
         gsTensorBSplineBasis<d, T> basis;
-        index_t dir;
+        index_t dir, patch;
         if (basis_11.component(dir_1).numElements() > basis_22.component(dir_2).numElements())
         {
             basis = basis_22;
             dir = dir_2;
+            patch = item.second().patch;
+            basis_11.component(dir_1) = basis_22.component(dir_2);
         }
         else
         {
             basis = basis_11;
             dir = dir_1;
+            patch = item.first().patch;
+            basis_22.component(dir_2) = basis_11.component(dir_1);
         }
         // [!Basis space]
-*/
+
         // [!Plus Minus space]
         gsBSplineBasis<T> basis_plus;
         gsBSplineBasis<T> basis_minus;
-        createPlusSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_plus);
-        createMinusSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_minus);
+        //createPlusSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_plus);
+        //createMinusSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_minus);
+        createPlusSpace(m_patches.patch(patch), basis, dir, basis_plus);
+        createMinusSpace(m_patches.patch(patch), basis, dir, basis_minus);
         // [!Plus Minus space]
 
         // [!Gluing data space]
         gsBSplineBasis<T> basis_gluingData;
-        createGluingDataSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_gluingData,
+        //createGluingDataSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_gluingData,
+        //                      m_options.getInt("gluingDataDegree"), m_options.getInt("gluingDataSmoothness"));
+        createGluingDataSpace(m_patches.patch(patch), basis, dir, basis_gluingData,
                               m_options.getInt("gluingDataDegree"), m_options.getInt("gluingDataSmoothness"));
         // [!Gluing data space]
 
         // [!Edge space]
         gsTensorBSplineBasis<d, T> basis_edge_11, basis_edge_22;
+        //createEdgeSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_plus, basis_minus, basis_gluingData, basis_edge_11);
+        //createEdgeSpace(m_patches.patch(item.second().patch), basis_22, dir_2, basis_plus, basis_minus, basis_gluingData, basis_edge_22);
         createEdgeSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_plus, basis_minus, basis_gluingData, basis_edge_11);
         createEdgeSpace(m_patches.patch(item.second().patch), basis_22, dir_2, basis_plus, basis_minus, basis_gluingData, basis_edge_22);
 
@@ -185,6 +176,30 @@ void gsApproxC1Spline<d,T>::init()
             bool isInterface_1 = m_patches.isInterface(patchSide(allcornerLists[j].patch, containingSides.at(0).side()));
             bool isInterface_2 = m_patches.isInterface(patchSide(allcornerLists[j].patch, containingSides.at(1).side()));
 
+            gsTensorBSplineBasis<d, real_t> basis = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(allcornerLists[j].patch));
+            if (isInterface_1)
+            {
+                patchSide result;
+                m_patches.getNeighbour(containingSides.at(0), result);
+
+                gsTensorBSplineBasis<d, real_t> basis2 = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(result.patch));
+                index_t dir_1 = containingSides.at(0).side() < 3 ? 1 : 0;
+                index_t dir_2 = result.side().index() < 3 ? 1 : 0;
+                if (basis.component(dir_1).numElements() > basis2.component(dir_2).numElements())
+                    basis.component(dir_1) = basis2.component(dir_2);
+            }
+            if (isInterface_2)
+            {
+                patchSide result;
+                m_patches.getNeighbour(containingSides.at(1), result);
+
+                gsTensorBSplineBasis<d, real_t> basis2 = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(result.patch));
+                index_t dir_1 = containingSides.at(1).side() < 3 ? 1 : 0;
+                index_t dir_2 = result.side().index() < 3 ? 1 : 0;
+                if (basis.component(dir_1).numElements() > basis2.component(dir_2).numElements())
+                    basis.component(dir_1) = basis2.component(dir_2);
+            }
+
             if (containingSides.at(0).side() < 3) // If isInterface_1 == v, then switch
             {
                 bool isInterface_temp = isInterface_1;
@@ -193,7 +208,7 @@ void gsApproxC1Spline<d,T>::init()
             }
 
             gsTensorBSplineBasis<d, T> basis_vertex_11;
-            createVertexSpace(m_patches.patch(allcornerLists[j].patch), m_multiBasis.basis(allcornerLists[j].patch),
+            createVertexSpace(m_patches.patch(allcornerLists[j].patch), basis,
                               isInterface_1, isInterface_2, basis_vertex_11, m_options.getInt("gluingDataDegree"),
                               m_options.getInt("gluingDataSmoothness"));
 

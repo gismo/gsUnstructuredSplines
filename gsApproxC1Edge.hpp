@@ -27,6 +27,27 @@ namespace gismo
         // Compute GLuing data
         gsApproxGluingData<d, T> approxGluingData(m_auxPatches, m_optionList, sidesContainer);
 
+        gsTensorBSplineBasis<d, T> basis;
+        index_t dir_pm, patch;
+        if (sidesContainer.size() == 2) {
+            if (m_auxPatches[0].getBasisRotated().piece(0).component(1).numElements() >
+                m_auxPatches[1].getBasisRotated().piece(0).component(0).numElements()) {
+                basis = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(m_auxPatches[1].getBasisRotated().piece(0));
+                dir_pm = 0;
+                patch = 0;
+            } else {
+                basis = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(m_auxPatches[0].getBasisRotated().piece(0));
+                dir_pm = 1;
+                patch = 1;
+            }
+        }
+        else
+        {
+            basis = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(m_auxPatches[0].getBasisRotated().piece(0));
+            dir_pm = 1;
+            patch = 0;
+        }
+
         //! [Problem setup]
         basisEdgeResult.clear();
         for (size_t patchID = 0; patchID < sidesContainer.size(); patchID++) {
@@ -37,8 +58,8 @@ namespace gismo
             gsBSplineBasis<T> basis_plus, basis_minus;
 
             gsMultiBasis<T> initSpace(m_auxPatches[patchID].getBasisRotated().piece(0));
-            createPlusSpace(m_auxPatches[0].getPatchRotated(), initSpace.basis(0), dir, basis_plus);
-            createMinusSpace(m_auxPatches[0].getPatchRotated(), initSpace.basis(0), dir, basis_minus);
+            createPlusSpace(m_auxPatches[patch].getPatchRotated(), basis, dir, basis_plus);
+            createMinusSpace(m_auxPatches[patch].getPatchRotated(), basis, dir, basis_minus);
 
             gsGeometry<T> &geo = m_auxPatches[patchID].getPatchRotated();
 
