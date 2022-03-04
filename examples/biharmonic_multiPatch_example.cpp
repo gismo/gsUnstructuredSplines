@@ -29,9 +29,9 @@ using namespace gismo;
  */
 enum MethodFlags
 {
-    APPROXC1    = 0 << 0, // Approx C1 Method
-    NITSCHE     = 1 << 0, // Nitsche's method
-    DPATCH      = 1 << 1, // D-Patch
+    APPROXC1       = 0 << 0, // Approx C1 Method
+    DPATCH         = 1 << 0, // D-Patch
+    ALMOSTC1       = 1 << 1, //
     //????      = 1 << 2, // ????
     //????      = 1 << 3, // ????
     // Add more [...]
@@ -53,33 +53,6 @@ void setMapperForBiharmonic(gsBoundaryConditions<> & bc, gsMappedBasis<2,real_t>
              it = bc.begin("Neumann"); it != bc.end("Neumann"); ++it)
     {
         bnd = bb2.basis(it->ps.patch).boundaryOffset(it->ps.side(),1);
-        mapper.markBoundary(it->ps.patch, bnd, 0);
-    }
-    mapper.finalize();
-}
-
-void setMapperForBiharmonic(gsBoundaryConditions<> & bc, gsMultiBasis<> & dbasis, gsDofMapper & mapper)
-{
-    mapper.init(dbasis);
-
-    for (gsBoxTopology::const_iiterator it = dbasis.topology().iBegin();
-         it != dbasis.topology().iEnd(); ++it) // C^0 at the interface
-    {
-        dbasis.matchInterface(*it, mapper);
-    }
-
-    gsMatrix<index_t> bnd;
-    for (typename gsBoundaryConditions<real_t>::const_iterator
-                 it = bc.begin("Dirichlet"); it != bc.end("Dirichlet"); ++it)
-    {
-        bnd = dbasis.basis(it->ps.patch).boundary(it->ps.side());
-        mapper.markBoundary(it->ps.patch, bnd, 0);
-    }
-
-    for (typename gsBoundaryConditions<real_t>::const_iterator
-                 it = bc.begin("Neumann"); it != bc.end("Neumann"); ++it)
-    {
-        bnd = dbasis.basis(it->ps.patch).boundaryOffset(it->ps.side(),1);
         mapper.markBoundary(it->ps.patch, bnd, 0);
     }
     mapper.finalize();
@@ -123,64 +96,6 @@ void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & 
     fixedDofs = solver.solve(A.rhs());
 }
 
-void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & dbasis, gsBoundaryConditions<> & bc, const expr::gsFeSpace<real_t> & u)
-{
-    gsDofMapper mapper = u.mapper();
-    gsDofMapper mapperBdy(dbasis, u.dim());
-    for (gsBoxTopology::const_iiterator it = dbasis.topology().iBegin();
-         it != dbasis.topology().iEnd(); ++it) // C^0 at the interface
-    {
-        dbasis.matchInterface(*it, mapperBdy);
-    }
-    for (size_t np = 0; np < mp.nPatches(); np++)
-    {
-        gsMatrix<index_t> bnd = mapper.findFree(np);
-        mapperBdy.markBoundary(np, bnd, 0);
-    }
-    mapperBdy.finalize();
-
-    gsExprAssembler<real_t> A(1,1);
-    A.setIntegrationElements(dbasis);
-
-    auto G = A.getMap(mp);
-    auto uu = A.getSpace(dbasis);
-    auto g_bdy = A.getBdrFunction(G);
-
-    uu.setupMapper(mapperBdy);
-    gsMatrix<real_t> & fixedDofs_A = const_cast<expr::gsFeSpace<real_t>&>(uu).fixedPart();
-    fixedDofs_A.setZero( uu.mapper().boundarySize(), 1 );
-
-    real_t lambda = 1e-5;
-
-    A.initSystem();
-    A.assembleBdr(bc.get("Dirichlet"), uu * uu.tr() * meas(G));
-    A.assembleBdr(bc.get("Dirichlet"), uu * g_bdy * meas(G));
-    A.assembleBdr(bc.get("Neumann"),
-                  lambda * (igrad(uu, G) * nv(G).normalized()) * (igrad(uu, G) * nv(G).normalized()).tr() * meas(G));
-    A.assembleBdr(bc.get("Neumann"),
-                  lambda *  (igrad(uu, G) * nv(G).normalized()) * (g_bdy.tr() * nv(G).normalized()) * meas(G));
-
-    gsSparseSolver<real_t>::SimplicialLDLT solver;
-    solver.compute( A.matrix() );
-    gsMatrix<real_t> & fixedDofs = const_cast<expr::gsFeSpace<real_t>& >(u).fixedPart();
-    gsMatrix<real_t> fixedDofs_temp = solver.solve(A.rhs());
-
-    // Reordering the dofs of the boundary
-    fixedDofs.setZero(mapper.boundarySize(),1);
-    index_t sz = 0;
-    for (size_t np = 0; np < mp.nPatches(); np++)
-    {
-        gsMatrix<index_t> bnd = mapperBdy.findFree(np);
-        bnd.array() += sz;
-        for (index_t i = 0; i < bnd.rows(); i++)
-        {
-            index_t ii = mapperBdy.asVector()(bnd(i,0));
-            fixedDofs(mapper.global_to_bindex(mapper.asVector()(bnd(i,0))),0) = fixedDofs_temp(ii,0);
-        }
-        sz += mapperBdy.patchSize(np,0);
-    }
-}
-
 
 int main(int argc, char *argv[])
 {
@@ -202,10 +117,6 @@ int main(int argc, char *argv[])
     bool cond = false;
     bool interpolation = false;
 
-    real_t penalty_init = -1.0;
-    std::string xml;
-    std::string output;
-
     std::string fn;
 
     index_t geometry = 1000;
@@ -220,7 +131,6 @@ int main(int argc, char *argv[])
     // Flags related to the input/geometry
     cmd.addString( "f", "file", "Input geometry file from path (with .xml)", fn );
     cmd.addInt( "g", "geometry", "Input geometry file",  geometry );
-    cmd.addString("x", "xml", "Use the input from the xml file", xml);
 
     // Flags related to the discrete settings
     cmd.addInt( "p", "degree", "Set the polynomial degree of the basis.", degree );
@@ -233,15 +143,10 @@ int main(int argc, char *argv[])
     cmd.addSwitch("interpolation", "Compute the basis constructions with interpolation", interpolation);
     cmd.addSwitch("info", "Getting the information inside of Approximate C1 basis functions", info);
 
-    // Flags related to Nitsche's method
-    cmd.addReal( "y", "penalty", "Fixed Penalty value for Nitsche's method",  penalty_init);
-
     // Flags related to the output
     cmd.addSwitch("last", "Solve solely for the last level of h-refinement", last);
     cmd.addSwitch("plot", "Create a ParaView visualization file with the solution", plot);
-    //cmd.addSwitch("cond", "Estimate condition number (slow!)", cond);
 
-    cmd.addString("o", "output", "Output in xml (for python)", output);
     try { cmd.getValues(argc,argv); } catch (int rv) { return rv; }
     //! [Parse command line]
 
@@ -253,102 +158,50 @@ int main(int argc, char *argv[])
     //! [Initialize data]
 
     //! [Read Argument inputs]
-    if (xml.empty()) {
-        //! [Read geometry]
-        std::string string_geo;
-        if (fn.empty())
-            string_geo = "planar/geometries/g" + util::to_string(geometry) + ".xml";
-        else
-            string_geo = fn;
-
-        gsInfo << "Filedata: " << string_geo << "\n";
-        gsReadFile<>(string_geo, mp);
-        mp.clearTopology();
-        mp.computeTopology();
-
-        gsFunctionExpr<>source("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
-        f.swap(source);
-        gsInfo << "Source function " << f << "\n";
-
-        gsFunctionExpr<> solution("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",2);
-        ms.swap(solution);
-        gsInfo << "Exact function " << ms << "\n";
-
-        //! [Boundary condition]
-        for (gsMultiPatch<>::const_biterator bit = mp.bBegin(); bit != mp.bEnd(); ++bit)
-        {
-            // Laplace
-            gsFunctionExpr<> laplace ("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
-
-            // Neumann
-            gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
-                                     "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)", 2);
-
-            bc.addCondition(*bit, condition_type::dirichlet, ms);
-            if (second)
-                bc.addCondition(*bit, condition_type::laplace, laplace);
-            else
-                bc.addCondition(*bit, condition_type::neumann, sol1der);
-
-        }
-        bc.setGeoMap(mp);
-        gsInfo << "Boundary conditions:\n" << bc << "\n";
-        //! [Boundary condition]
-
-        optionList = cmd;
-        gsInfo << "OptionList: " << optionList << "\n";
-        gsInfo << "Finished\n";
-    }
-    //! [Read Argument inputs]
-
-    //! [Read XML file]
+    std::string string_geo;
+    if (fn.empty())
+        string_geo = "planar/geometries/g" + util::to_string(geometry) + ".xml";
     else
+        string_geo = fn;
+
+    gsInfo << "Filedata: " << string_geo << "\n";
+    gsReadFile<>(string_geo, mp);
+    mp.clearTopology();
+    mp.computeTopology();
+
+    gsFunctionExpr<>source("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
+    f.swap(source);
+    gsInfo << "Source function " << f << "\n";
+
+    gsFunctionExpr<> solution("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",2);
+    ms.swap(solution);
+    gsInfo << "Exact function " << ms << "\n";
+
+    //! [Boundary condition]
+    for (gsMultiPatch<>::const_biterator bit = mp.bBegin(); bit != mp.bEnd(); ++bit)
     {
-        // id=0 Boundary
-        // id=1 Source function
-        // id=2 Optionlist
-        // id=3 Exact solution
-        // id=X Geometry (should be last!)
-        gsFileData<> fd(xml); // "planar/biharmonic_pde/bvp1.xml"
+        // Laplace
+        gsFunctionExpr<> laplace ("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
 
-        // Geometry
-        fd.getAnyFirst(mp);
-        mp.computeTopology();
-        gsInfo << "Multipatch " << mp << "\n";
+        // Neumann
+        gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
+                                 "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)", 2);
 
-        // Functions
-        fd.getId(1, f); // Source solution
-        gsInfo << "Source function " << f << "\n";
+        bc.addCondition(*bit, condition_type::dirichlet, ms);
+        if (second)
+            bc.addCondition(*bit, condition_type::laplace, laplace);
+        else
+            bc.addCondition(*bit, condition_type::neumann, sol1der);
 
-        fd.getId(3, ms); // Exact solution
-        gsInfo << "Exact function " << ms << "\n";
-
-        // Boundary condition
-        fd.getId(0, bc); // id=2: boundary conditions
-        bc.setGeoMap(mp);
-        gsInfo << "Boundary conditions:\n" << bc << "\n";
-
-        // Option list
-        fd.getId(2, optionList); // id=100: assembler options
-        gsInfo << "OptionList: " << optionList << "\n";
-
-        degree = optionList.getInt("degree");
-        smoothness = optionList.getInt("smoothness");
-        numRefine = optionList.getInt("numRefine");
-
-        gluingDataDegree = optionList.getInt("gluingDataDegree");
-        gluingDataSmoothness = optionList.getInt("gluingDataSmoothness");
-
-        method = optionList.getInt("method");
-
-        penalty_init = optionList.getReal("penalty");
-
-        //cond = optionList.getSwitch("cond");
-        plot = optionList.getSwitch("plot");
-        info = optionList.getSwitch("info");
-        interpolation = optionList.getSwitch("interpolation");
     }
-    //! [Read XML file]
+    bc.setGeoMap(mp);
+    gsInfo << "Boundary conditions:\n" << bc << "\n";
+    //! [Boundary condition]
+
+    optionList = cmd;
+    gsInfo << "OptionList: " << optionList << "\n";
+    gsInfo << "Finished\n";
+    //! [Read Argument inputs]
 
     //! [Refinement]
     gsMultiBasis<real_t> dbasis(mp, true);//true: poly-splines (not NURBS)
@@ -401,7 +254,7 @@ int main(int argc, char *argv[])
 
     // Set the discretization space
     gsMappedBasis<2,real_t> bb2;
-    auto u = method == MethodFlags::NITSCHE ? A.getSpace(dbasis) : A.getSpace(bb2);
+    auto u = A.getSpace(bb2);
 
     // The approx. C1 space
     gsApproxC1Spline<2,real_t> approxC1(mp,dbasis);
@@ -440,11 +293,6 @@ int main(int argc, char *argv[])
             meshsize[r] = dbasis.basis(0).getMinCellLength();
             approxC1.update(bb2);
         }
-        else if (method == MethodFlags::NITSCHE)
-        {
-            dbasis.uniformRefine(1,degree-smoothness);
-            meshsize[r] = dbasis.basis(0).getMinCellLength();
-        }
         else if (method == MethodFlags::DPATCH)
         {
             mp.uniformRefine(1,degree-smoothness);
@@ -463,24 +311,12 @@ int main(int argc, char *argv[])
         gsInfo<< "." <<std::flush; // Approx C1 construction done
 
         // Setup the mapper
-        if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH) // MappedBasis
-        {
-            gsDofMapper map;
-            setMapperForBiharmonic(bc, bb2,map);
+        gsDofMapper map;
+        setMapperForBiharmonic(bc, bb2,map);
 
-            // Setup the system
-            u.setupMapper(map);
-            gsDirichletNeumannValuesL2Projection(mp, dbasis, bc, bb2, u);
-        }
-        else if (method == MethodFlags::NITSCHE) // Nitsche
-        {
-            gsDofMapper map;
-            setMapperForBiharmonic(bc, dbasis,map);
-
-            // Setup the system
-            u.setupMapper(map);
-            gsDirichletNeumannValuesL2Projection(mp, dbasis, bc, u);
-        }
+        // Setup the system
+        u.setupMapper(map);
+        gsDirichletNeumannValuesL2Projection(mp, dbasis, bc, bb2, u);
 
         // Initialize the system
         A.initSystem();
@@ -498,60 +334,6 @@ int main(int argc, char *argv[])
         //auto g_L = A.getCoeff(laplace, G);
         A.assembleBdr(bc.get("Laplace"), (igrad(u, G) * nv(G)) * g_L.tr() );
 
-        if (method == MethodFlags::NITSCHE)
-        {
-            index_t i = 0;
-            for ( typename gsMultiPatch<real_t>::const_iiterator it = mp.iBegin(); it != mp.iEnd(); ++it, ++i)
-            {
-                real_t stab     = 4 * ( dbasis.maxCwiseDegree() + dbasis.dim() ) * ( dbasis.maxCwiseDegree() + 1 );
-                real_t m_h      = dbasis.basis(0).getMinCellLength(); //*dbasis.basis(0).getMinCellLength();
-                real_t mu       = 2 * stab / m_h;
-                real_t alpha = 1;
-
-                mu = penalty_init == -1.0 ? mu : penalty_init / m_h;
-                mu = mu_interfaces(i,0) / m_h;
-                penalty(r,i) = mu;
-
-                std::vector<boundaryInterface> iFace;
-                iFace.push_back(*it);
-                A.assembleIfc(iFace,
-                        //B11
-                              -alpha * 0.5 * igrad(u.left(), G) * nv(G.left()).normalized() *
-                              (ilapl(u.left(), G)).tr() * nv(G.left()).norm(),
-                              -alpha * 0.5 *
-                              (igrad(u.left(), G) * nv(G.left()).normalized() * (ilapl(u.left(), G)).tr()).tr() *
-                              nv(G.left()).norm(),
-                        //B12
-                              -alpha * 0.5 * igrad(u.left(), G.left()) * nv(G.left()).normalized() *
-                              (ilapl(u.right(), G.right())).tr() * nv(G.left()).norm(),
-                              -alpha * 0.5 * (igrad(u.left(), G.left()) * nv(G.left()).normalized() *
-                                              (ilapl(u.right(), G.right())).tr()).tr() * nv(G.left()).norm(),
-                        //B21
-                              alpha * 0.5 * igrad(u.right(), G.right()) * nv(G.left()).normalized() *
-                              (ilapl(u.left(), G.left())).tr() * nv(G.left()).norm(),
-                              alpha * 0.5 * (igrad(u.right(), G.right()) * nv(G.left()).normalized() *
-                                             (ilapl(u.left(), G.left())).tr()).tr() * nv(G.left()).norm(),
-                        //B22
-                              alpha * 0.5 * igrad(u.right(), G.right()) * nv(G.left()).normalized() *
-                              (ilapl(u.right(), G.right())).tr() * nv(G.left()).norm(),
-                              alpha * 0.5 * (igrad(u.right(), G.right()) * nv(G.left()).normalized() *
-                                             (ilapl(u.right(), G.right())).tr()).tr() * nv(G.left()).norm(),
-
-                        // E11
-                              mu * igrad(u.left(), G.left()) * nv(G.left()).normalized() *
-                              (igrad(u.left(), G.left()) * nv(G.left()).normalized()).tr() * nv(G.left()).norm(),
-                        //-E12
-                              -mu * (igrad(u.left(), G.left()) * nv(G.left()).normalized()) *
-                              (igrad(u.right(), G.right()) * nv(G.left()).normalized()).tr() * nv(G.left()).norm(),
-                        //-E21
-                              -mu * (igrad(u.right(), G.right()) * nv(G.left()).normalized()) *
-                              (igrad(u.left(), G.left()) * nv(G.left()).normalized()).tr() * nv(G.left()).norm(),
-                        // E22
-                              mu * igrad(u.right(), G.right()) * nv(G.left()).normalized() *
-                              (igrad(u.right(), G.right()) * nv(G.left()).normalized()).tr() * nv(G.left()).norm()
-                );
-            }
-        }
         ma_time += timer.stop();
         gsInfo<< "." <<std::flush;// Assemblying done
 
@@ -573,31 +355,15 @@ int main(int argc, char *argv[])
         h2err[r]= h1err[r] +
                  math::sqrt(ev.integral( ( ihess(u_ex) - ihess(u_sol,G) ).sqNorm() * meas(G) )); // /ev.integral( ihess(f).sqNorm()*meas(G) )
 
-        if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH)
-        {
-            gsMatrix<real_t> solFull;
-            u_sol.extractFull(solFull);
-            gsMappedSpline<2, real_t> mappedSpline(bb2, solFull);
 
-            auto ms_sol = A.getCoeff(mappedSpline);
-            IFaceErr[r] = math::sqrt(ev.integralInterface(((igrad(ms_sol.left(), G.left()) -
+        gsMatrix<real_t> solFull;
+        u_sol.extractFull(solFull);
+        gsMappedSpline<2, real_t> mappedSpline(bb2, solFull);
+
+        auto ms_sol = A.getCoeff(mappedSpline);
+        IFaceErr[r] = math::sqrt(ev.integralInterface(((igrad(ms_sol.left(), G.left()) -
                                                             igrad(ms_sol.right(), G.right())) *
                                                            nv(G).normalized()).sqNorm() * meas(G)));
-        }
-        else if (method == MethodFlags::NITSCHE)
-        {
-            gsMultiPatch<> sol_nitsche;
-            u_sol.extract(sol_nitsche);
-            auto ms_sol = A.getCoeff(sol_nitsche);
-            IFaceErr[r] = math::sqrt(ev.integralInterface((( igrad(ms_sol.left(), G.left()) -
-                                                            igrad(ms_sol.right(), G.right())) *
-                                                            nv(G).normalized()).sqNorm() * meas(G)));
-
-            // This doesn't work yet. Bug?
-            //IFaceErr[r] = math::sqrt(ev.integralInterface((( igrad(u_sol.left(), G.left()) -
-            //                                                 igrad(u_sol.right(), G.right())) *
-            //                                               nv(G).normalized()).sqNorm() * meas(G)));
-        }
 
         err_time += timer.stop();
         gsInfo<< ". " <<std::flush; // Error computations done
@@ -613,10 +379,6 @@ int main(int argc, char *argv[])
     gsInfo<<"     Norms: "<< err_time   <<"\n";
 
     gsInfo<< "\nMesh-size: " << meshsize.transpose() << "\n";
-    if (cond)
-        gsInfo<< "\nCondition-number: " << cond_num.transpose() << "\n";
-    if (method == MethodFlags::NITSCHE)
-        gsInfo<< "\nStabilization: " << penalty.transpose() << "\n";
 
     //! [Error and convergence rates]
     gsInfo<< "\nL2 error: "<<std::scientific<<std::setprecision(3)<<l2err.transpose()<<"\n";
@@ -642,11 +404,6 @@ int main(int argc, char *argv[])
         gsInfo<<   "EoC (Iface): "<< std::fixed<<std::setprecision(2)
               <<( IFaceErr.head(numRefine).array() /
                   IFaceErr.tail(numRefine).array() ).log().transpose() / std::log(2.0) <<"\n";
-
-        if (cond)
-            gsInfo<<   "EoC (Cnum): "<< std::fixed<<std::setprecision(2)
-                  <<( cond_num.tail(numRefine).array() /
-                          cond_num.head(numRefine).array() ).log().transpose() / std::log(2.0) <<"\n";
     }
     //! [Error and convergence rates]
 
