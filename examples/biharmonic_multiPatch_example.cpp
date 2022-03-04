@@ -17,6 +17,7 @@
 
 #include <gsUnstructuredSplines/gsApproxC1Spline.h>
 #include <gsUnstructuredSplines/gsDPatch.h>
+#include <gsUnstructuredSplines/gsAlmostC1.h>
 
 using namespace gismo;
 //! [Include namespace]
@@ -114,7 +115,7 @@ int main(int argc, char *argv[])
     bool last = false;
     bool info = false;
     bool second = false;
-    bool cond = false;
+
     bool interpolation = false;
 
     std::string fn;
@@ -265,6 +266,9 @@ int main(int argc, char *argv[])
     approxC1.options().setInt("gluingDataDegree",gluingDataDegree);
     approxC1.options().setInt("gluingDataSmoothness",gluingDataSmoothness);
 
+    // D-Patch
+    gsMultiPatch<> geom = mp;
+
     // Solution vector and solution variable
     gsMatrix<real_t> solVector;
     auto u_sol = A.getSolution(u, solVector);
@@ -295,18 +299,29 @@ int main(int argc, char *argv[])
         }
         else if (method == MethodFlags::DPATCH)
         {
-            mp.uniformRefine(1,degree-smoothness);
+            geom.uniformRefine(1,degree-smoothness);
             dbasis.uniformRefine(1,degree-smoothness);
 
             meshsize[r] = dbasis.basis(0).getMinCellLength();
 
             gsSparseMatrix<real_t> global2local;
-            gsDPatch<2,real_t> dpatch(mp);
+            gsDPatch<2,real_t> dpatch(geom);
             dpatch.matrix_into(global2local);
             global2local = global2local.transpose();
             mp = dpatch.exportToPatches();
             dbasis = dpatch.localBasis();
             bb2.init(dbasis,global2local);
+
+            gsFileData<> fd;
+            fd << mp;
+            fd.save("mp_filedata.xml");
+            fd.clear();
+            fd << geom;
+            fd.save("geom_filedata.xml");
+        }
+        else if (method == MethodFlags::ALMOSTC1)
+        {
+
         }
         gsInfo<< "." <<std::flush; // Approx C1 construction done
 
@@ -325,7 +340,7 @@ int main(int argc, char *argv[])
         dofs[r] = A.numDofs();
         gsInfo<< A.numDofs() <<std::flush;
 
-        timer.restart();
+        timer.restart();geom
         // Compute the system matrix and right-hand side
         A.assemble(ilapl(u, G) * ilapl(u, G).tr() * meas(G),u * ff * meas(G));
 
@@ -412,7 +427,7 @@ int main(int argc, char *argv[])
     {
         gsInfo<<"Plotting in Paraview...\n";
         gsWriteParaview( mp, "geom",1000,true);
-        ev.options().setSwitch("plot.elements", false);
+        ev.options().setSwitch("plot.elements", true);
         ev.options().setInt   ("plot.npts"    , 1000);
         ev.writeParaview( u_sol   , G, "solution");
         //ev.writeParaview( u_ex    , G, "solution_ex");
