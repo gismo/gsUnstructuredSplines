@@ -119,8 +119,9 @@ int main(int argc, char *argv[])
     bool interpolation = false;
 
     std::string fn;
+    std::string output;
 
-    index_t geometry = 1000;
+    std::string geometry = "g1000";
 
     gsCmdLine cmd("Tutorial on solving a Biharmonic problem with different spaces.");
     // Flags related to the method (default: Approx C1 method)
@@ -131,23 +132,18 @@ int main(int argc, char *argv[])
 
     // Flags related to the input/geometry
     cmd.addString( "f", "file", "Input geometry file from path (with .xml)", fn );
-    cmd.addInt( "g", "geometry", "Input geometry file",  geometry );
+    cmd.addString( "g", "geometry", "Input geometry file",  geometry );
 
     // Flags related to the discrete settings
     cmd.addInt( "p", "degree", "Set the polynomial degree of the basis.", degree );
     cmd.addInt( "s", "smoothness", "Set the smoothness of the basis.",  smoothness );
     cmd.addInt( "r", "numRefine", "Number of refinement-loops.",  numRefine );
 
-    // Flags related to the approximate C1 method
-    cmd.addInt( "P", "gluingDataDegree","Set the polynomial degree for the gluing data", gluingDataDegree );
-    cmd.addInt( "R", "gluingDataSmoothness", "Set the smoothness for the gluing data",  gluingDataSmoothness );
-    cmd.addSwitch("interpolation", "Compute the basis constructions with interpolation", interpolation);
-    cmd.addSwitch("info", "Getting the information inside of Approximate C1 basis functions", info);
-
     // Flags related to the output
     cmd.addSwitch("last", "Solve solely for the last level of h-refinement", last);
     cmd.addSwitch("plot", "Create a ParaView visualization file with the solution", plot);
 
+    cmd.addString("o", "output", "Output in xml (for python)", output);
     try { cmd.getValues(argc,argv); } catch (int rv) { return rv; }
     //! [Parse command line]
 
@@ -161,7 +157,7 @@ int main(int argc, char *argv[])
     //! [Read Argument inputs]
     std::string string_geo;
     if (fn.empty())
-        string_geo = "planar/geometries/g" + util::to_string(geometry) + ".xml";
+        string_geo = "planar/geometries/" + geometry + ".xml";
     else
         string_geo = fn;
 
@@ -340,7 +336,7 @@ int main(int argc, char *argv[])
         dofs[r] = A.numDofs();
         gsInfo<< A.numDofs() <<std::flush;
 
-        timer.restart();geom
+        timer.restart();
         // Compute the system matrix and right-hand side
         A.assemble(ilapl(u, G) * ilapl(u, G).tr() * meas(G),u * ff * meas(G));
 
@@ -439,6 +435,29 @@ int main(int argc, char *argv[])
         gsInfo << "Done. No output created, re-run with --plot to get a ParaView "
                   "file containing the solution.\n";
     //! [Export visualization in ParaView]
+
+        //! [Export data to xml]
+    if (!output.empty())
+    {
+        index_t cols = 7;
+        gsMatrix<real_t> error_collection(l2err.rows(), cols);
+        error_collection.col(0) = meshsize;
+        error_collection.col(1) = dofs;
+        error_collection.col(2) = l2err;
+        error_collection.col(3) = h1err;
+        error_collection.col(4) = h2err;
+        error_collection.col(5) = IFaceErr;
+        error_collection.col(6) = cond_num;
+
+        gsFileData<real_t> xml_out;
+        xml_out << error_collection;
+        // Add solution
+        // [...]
+        xml_out.save(output + ".xml");
+        gsInfo << "XML saved to " + output + ".xml" << "\n";
+    }
+    //! [Export data to xml]
+
 
     return EXIT_SUCCESS;
 }// end main
