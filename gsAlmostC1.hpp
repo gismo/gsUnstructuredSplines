@@ -1286,7 +1286,7 @@ namespace gismo
                 index_t iindex = m_patches.isInterface(psides[0]) ? 0 : 1;
 
                 boundaryInterface iface;
-                GISMO_ASSERT(m_patches.getInterface(psides[iindex],iface),"Must be an interface");
+                GISMO_ENSURE(m_patches.getInterface(psides[iindex],iface),"Must be an interface");
                 // 2. collect indices
                 // If we want C0 at this vertex, we only handle the row k=1.
                 indices.resize(3);
