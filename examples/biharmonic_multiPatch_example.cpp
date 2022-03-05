@@ -120,7 +120,6 @@ int main(int argc, char *argv[])
 
     std::string fn;
     std::string output;
-
     std::string geometry = "g1000";
 
     gsCmdLine cmd("Tutorial on solving a Biharmonic problem with different spaces.");

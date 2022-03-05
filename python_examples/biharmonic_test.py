@@ -50,7 +50,7 @@ class Method(Enum):
            
 """
 """ -------------------------------------------------------------------------------------------------- """
-geo_list = ["g1021", "g1121"]  # Without .xml extension
+geo_list = ["g1000", "g1020", "g1702", "g1021", "g1704"]  # Without .xml extension
 path_geo = "planar/geometries/"
 
 loop = 1
@@ -60,9 +60,11 @@ deg_list = [
     3
 ]
 method_list = [
-    Method.ApproxC1
+    #Method.ApproxC1,
+    Method.DPatch
 ]
 compute_list = [
+    #True,
     True
 ]
 
