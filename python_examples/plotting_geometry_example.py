@@ -54,12 +54,13 @@ import library.library as lib
 
 from glob import glob
 
-path_geo = "../filedata/planar/"
+
+#path_geo = "../filedata/planar/"
+path_geo = "../filedata/planar/geometries/"
 path_geo_global = os.path.join(os.path.dirname(__file__), path_geo)
 #path_geo = "../filedata/"
 #path_geo_global = path_geo
 geo_list = [y for x in os.walk(path_geo_global) for y in glob(os.path.join(x[0], '*.xml'))]
-print(geo_list)
 geo_list_temp = []
 for geo in geo_list:
     geo_list_temp.append(geo[geo.find(path_geo)+len(path_geo):geo.find(".xml")])
@@ -194,6 +195,8 @@ else:
 if not len(tikz_list) == len(caption_list):
     print("Something is wrong in tikz_list and caption_list!")
     exit()
+
+print(tikz_list)
 
 # Creating the tex and pdf file
 doc = lib.MyDocument()

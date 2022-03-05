@@ -29,9 +29,10 @@ from enum import Enum
 
 
 class Method(Enum):
-    ApproxC1 = 0
-    Nitsche = 1
-    DPatch = 2
+    ApproxC1 =  0
+    DPatch =    1
+    AlmostC1 =  2
+    Nitsche =   3
 
 """
     To run the biharmonic_test.py, we have the following options:
@@ -49,19 +50,25 @@ class Method(Enum):
            
 """
 """ -------------------------------------------------------------------------------------------------- """
-geo_list = ["g1021", "g1121"]  # Without .xml extension
+geo_list = ["g1000", "g1020", "g1702", "g1021", "g1704"]  # Without .xml extension
 path_geo = "planar/geometries/"
 
 loop = 1
 second = False
 
 deg_list = [
-    3
+    [3, 4, 5],
+    [3, 4, 5],
+    [2]
 ]
 method_list = [
-    Method.ApproxC1
+    Method.ApproxC1,
+    Method.DPatch,
+    Method.AlmostC1
 ]
 compute_list = [
+    True,
+    True,
     True
 ]
 
@@ -82,7 +89,7 @@ for idx, compute in enumerate(compute_list):
             if not os.path.exists(path_results_geo):
                 os.makedirs(path_results_geo)
 
-            for deg in deg_list:
+            for deg in deg_list[idx]:
                 m_str = ""
                 if method_list[idx] == Method.ApproxC1:
                     m_str = "approxC1"
@@ -90,6 +97,8 @@ for idx, compute in enumerate(compute_list):
                     m_str = "nitsche"
                 elif method_list[idx] == Method.DPatch:
                     m_str = "dPatch"
+                elif method_list[idx] == Method.AlmostC1:
+                    m_str = "almostC1"
                 else:
                     print("METHOD NOT IMPLEMENTED!!!")
 
@@ -106,7 +115,7 @@ for idx, compute in enumerate(compute_list):
         print("Finished!")
     else:
         for geo in geo_list:
-            for deg in deg_list:
+            for deg in deg_list[idx]:
                 m_str = ""
                 if method_list[idx] == Method.ApproxC1:
                     m_str = "approxC1"
@@ -114,6 +123,8 @@ for idx, compute in enumerate(compute_list):
                     m_str = "nitsche"
                 elif method_list[idx] == Method.DPatch:
                     m_str = "dPatch"
+                elif method_list[idx] == Method.AlmostC1:
+                    m_str = "almostC1"
                 else:
                     print("METHOD NOT IMPLEMENTED!!!")
 

@@ -68,7 +68,7 @@ class MyDocument(Document):
         #        caption_list   [list] A list of captions for each tikz_file
 
         width = r'' + str(1 / col) + '\\textwidth'
-        for pages in range(len(tikz_list)//(col*row)):
+        for pages in range(len(tikz_list)//(col*row) +1):
             with self.create(Figure(position='h!')) as fig:
                 self.append(NoEscape(r"\centering"))
                 if not pages ==0:
