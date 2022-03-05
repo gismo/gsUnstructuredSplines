@@ -807,8 +807,6 @@ namespace gismo
 
                         }
                     }
-                    gsDebugVar("here");
-
                 }
             }
         }

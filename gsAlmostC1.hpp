@@ -36,7 +36,7 @@ namespace gismo
         this->_initialize();
         this->_computeMapper();
         this->_computeSmoothMatrix();
-        // m_RefPatches = m_patches;
+        m_RefPatches = m_patches;
         this->_makeTHB();
         this->_computeEVs();
     }
@@ -217,7 +217,7 @@ namespace gismo
         }
 
         // 9. Move the corners of the triangle back to physical coordinates
-        gsMatrix<T> Cg(tdim,3);
+        gsMatrix<T> Cg(3,3);
         Cg.setZero();
         Cg.block(0,0,2,3) = Cp;
 
@@ -233,8 +233,6 @@ namespace gismo
 
         return std::make_tuple(Cg,ub,uind);
     }
-
-
 
     template<short_t d,class T>
     void gsAlmostC1<d,T>::_toBarycentricCoordinates(const gsMatrix<T> & Cs, gsMatrix<T> & u) const
@@ -331,7 +329,7 @@ namespace gismo
     // ADD THE COEFFICIENTS OF THE TRIANGLES AS EXTRA COEFFICIENTS
 
     template<short_t d,class T>
-    gsMatrix<T> gsAlmostC1<d,T>::preCoefficients()
+    gsMatrix<T> gsAlmostC1<d,T>::freeCoefficients()
     {
         GISMO_ASSERT(m_mapModified.isFinalized(),"Mapper is not finalized, run XXXX first");
 
@@ -347,6 +345,15 @@ namespace gismo
                     coefs.row(m_mapModified.index(k,p,0)) = m_patches.patch(p).coefs().row(k);
             }
         }
+        return coefs;
+    }
+
+    template<short_t d,class T>
+    gsMatrix<T> gsAlmostC1<d,T>::preCoefficients()
+    {
+        GISMO_ASSERT(m_mapModified.isFinalized(),"Mapper is not finalized, run XXXX first");
+
+        gsMatrix<T> coefs = this->freeCoefficients();
 
         // Correct the EVs
         std::fill(m_vertCheck.begin(), m_vertCheck.end(), false);
@@ -428,6 +435,35 @@ namespace gismo
         }
 
         return coefs;
+    }
+
+    template<short_t d,class T>
+    void gsAlmostC1<d,T>::setCoefficients(const gsMatrix<T> & coefs, gsMultiPatch<T> & mp) const
+    {
+        std::vector<index_t> sizes(mp.nPatches());
+        index_t totalsize = 0;
+        for (size_t p=0; p!=mp.nPatches(); p++) // patches
+        {
+            sizes.at(p) = mp.patch(p).coefs().rows();
+            totalsize += sizes.at(p);
+        }
+
+        GISMO_ASSERT(totalsize==coefs.rows(),"Sizes do not agree");
+
+        gsMultiBasis<T> basis(mp);
+        gsDofMapper tmpMap(basis);
+        tmpMap.finalize();
+
+        index_t offset = 0;
+        for (size_t p=0; p!=mp.nPatches(); p++) // patches
+        {
+            for (index_t k=0; k!=sizes.at(p); k++)
+            {
+                mp.patch(p).coefs().row(k) = coefs.row(tmpMap.index(k,p));
+            }
+            offset += sizes.at(p);
+        }
+
     }
 
     /*=====================================================================================
@@ -685,6 +721,8 @@ namespace gismo
     template<short_t d,class T>
     void gsAlmostC1<d,T>::_removeLowestCorners(std::vector<patchCorner> & pcorners, index_t n) const
     {
+        index_t size = pcorners.size();
+        GISMO_ASSERT(n<=size,"You cannot remove more corners than there are actually stored in the container. Container size = "<<size<<" no. corners to be removed = "<<n);
         struct {
             bool operator()(patchCorner a, patchCorner b) const { return a.patch > b.patch; }
         } customGreater;
@@ -692,7 +730,7 @@ namespace gismo
         // Sort
         std::sort(pcorners.begin(), pcorners.end(),customGreater);
         // Resize; this vector are the indices we want to keep the DoFs of
-        pcorners.resize(n);
+        pcorners.resize(size-n);
     }
 
     /*=====================================================================================
@@ -703,8 +741,6 @@ namespace gismo
     template<short_t d,class T>
     void gsAlmostC1<d,T>::_makeTHB()
     {
-        m_RefPatches = gsMultiPatch<T>(m_patches);
-        // gsMultiPatch<T> refPatches(m_patches);
         typename gsBlockOp<T>::Ptr thbMat=gsBlockOp<T>::make(m_RefPatches.nPatches(),m_RefPatches.nPatches());
         // prepare the geometry
         std::vector<std::vector<patchCorner> > cornerLists;
@@ -712,6 +748,13 @@ namespace gismo
 
         if (cornerLists.size()!=0)
         {
+            /// Change the coefficients
+            gsMatrix<T> coefs = this->freeCoefficients(); // gets coefficients of the modified size
+            coefs = m_matrix.transpose() * coefs; // maps to local size
+
+            this->setCoefficients(coefs,m_RefPatches);
+
+            /// Handle the EVs
             std::vector< std::vector<index_t> > elVec(m_RefPatches.nPatches());
             for (size_t v =0; v!=cornerLists.size(); v++)
                 for (size_t c = 0; c!=cornerLists[v].size(); c++)
@@ -1158,6 +1201,7 @@ namespace gismo
                 }
                 else if (vdata.first>4)
                 {
+                    m_patches.getCornerList(pcorner,pcorners); // bool is true if interior vertex
                     for (std::vector<patchCorner>::iterator it=pcorners.begin(); it!=pcorners.end(); it++)
                     {
                         // mark the vertex as passed
@@ -1511,10 +1555,9 @@ namespace gismo
             {
                 index_t idx = m_mapModified.index(b,p);
                 if (m_mapModified.is_free_index(idx))
-                    gsInfo<<"basis function "<<b<<" on patch "<<p<<" is "<<(m_basisCheck[idx] ? "":"not ")<<"handled\n";
+                    gsInfo<<"basis function "<<b<<" (check="<<m_basisCheck[idx]<<") on patch "<<p<<" is "<<(m_basisCheck[idx] ? "":"not ")<<"handled\n";
                 else
                     gsInfo<<"basis function "<<b<<" on patch "<<p<<" is "<<"eliminated\n";
-
             }
         }
     }
@@ -1551,7 +1594,7 @@ namespace gismo
         bool checkVerts = std::all_of(m_vertCheck.begin(), m_vertCheck.end(), [](bool m_vertCheck) { return m_vertCheck; });
         GISMO_ASSERT(checkVerts,"Not all vertices are checked");
         bool checkBasis = std::all_of(m_basisCheck.begin(), m_basisCheck.end(), [](bool m_basisCheck) { return m_basisCheck; });
-        GISMO_ASSERT(checkBasis,"Not all vertices are checked");
+        GISMO_ASSERT(checkBasis,"Not all bases are checked");
     }
 
     // THIS FUNCTION IS LEGACY!!
