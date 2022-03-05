@@ -29,9 +29,10 @@ from enum import Enum
 
 
 class Method(Enum):
-    ApproxC1 = 0
-    Nitsche = 1
-    DPatch = 2
+    ApproxC1 =  0
+    DPatch =    1
+    AlmostC1 =  2
+    Nitsche =   3
 
 """
     To run the biharmonic_test.py, we have the following options:
@@ -90,6 +91,8 @@ for idx, compute in enumerate(compute_list):
                     m_str = "nitsche"
                 elif method_list[idx] == Method.DPatch:
                     m_str = "dPatch"
+                elif method_list[idx] == Method.AlmostC1:
+                    m_str = "almostC1"
                 else:
                     print("METHOD NOT IMPLEMENTED!!!")
 
@@ -114,6 +117,8 @@ for idx, compute in enumerate(compute_list):
                     m_str = "nitsche"
                 elif method_list[idx] == Method.DPatch:
                     m_str = "dPatch"
+                elif method_list[idx] == Method.AlmostC1:
+                    m_str = "almostC1"
                 else:
                     print("METHOD NOT IMPLEMENTED!!!")
 
