@@ -14,11 +14,16 @@ import os
 import sys
 import subprocess
 
-gismo_path = os.path.join(os.path.dirname(__file__), "../../../build/lib")
-print("G+Smo path:", gismo_path, "(change if needed).")
+
+path_module = "data-private/"
+print("Module path:", path_module, "(change if needed).")
+os.chdir(os.path.join(os.path.dirname(__file__), "../../../"+path_module))
+
+gismo_path = "../build/lib"
+print("G+Smo path:", os.getcwd() + "/" + gismo_path, "(change if needed).")
 sys.path.append(gismo_path)
 
-import pygismo as gs
+#import pygismo as gs
 
 from enum import Enum
 
@@ -44,7 +49,7 @@ class Method(Enum):
            
 """
 """ -------------------------------------------------------------------------------------------------- """
-geo_list = ["g1000", "g1100"]  # Without .xml extension
+geo_list = ["g1021", "g1121"]  # Without .xml extension
 path_geo = "planar/geometries/"
 
 loop = 1
@@ -60,9 +65,7 @@ compute_list = [
     True
 ]
 
-path_results = "../../../data-private/"
-print("Results path:", path_results, "(change if needed).")
-path_example = "../../../build/bin/biharmonic_multiPatch_example"
+path_example = "../build/bin/biharmonic_multiPatch_example"
 """ -------------------------------------------------------------------------------------------------- """
 
 path_dir = "error/"
@@ -75,7 +78,7 @@ for idx, compute in enumerate(compute_list):
         for geo in geo_list:
 
             # Making new folder if there exist no folder.
-            path_results_geo = path_results + "results/" + geo + "/results/"
+            path_results_geo = "results/" + geo + "/results/"
             if not os.path.exists(path_results_geo):
                 os.makedirs(path_results_geo)
 
@@ -114,7 +117,7 @@ for idx, compute in enumerate(compute_list):
                 else:
                     print("METHOD NOT IMPLEMENTED!!!")
 
-                path_results_geo = path_results + "results/" + geo + "/results/"
+                path_results_geo = "results/" + geo + "/results/"
                 argument_list = m_str + "-g" + geo + "-p" + deg + "-s" + str(deg-1) + "-r" + loop \
                                 + "-m" + str(method_list[idx].value) + ("-second" if second else "")
 
