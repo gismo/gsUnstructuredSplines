@@ -253,10 +253,53 @@ int main(int argc, char *argv[])
 
         gsInfo<< A.numDofs() <<std::flush;
 
+        index_t N = 5;
+        gsMatrix<> points;
+        points.setZero(2,N);
+        gsVector<> pp;
+        pp.setLinSpaced(N,0,1);
+        points.row(0) = pp;
+
+        auto gg = pow(fform(G).det(),0.5);
+        auto G0 = 1.0/gg * fform(G);
+        for (index_t i = 0; i < points.cols(); i++)
+        {
+            gsDebugVar(ev.eval(pow(fform(G).det(),0.5), points.col(i)));
+            gsDebugVar(ev.eval(fform2nd(G), points.col(i)));
+            gsDebugVar(ev.eval(fform(G),points.col(i)));
+            gsDebugVar(ev.eval(G0, points.col(i)));
+            gsDebugVar(ev.eval(lapl(u), points.col(i)));
+            gsDebugVar(ev.eval(ilapl(u), points.col(i)));
+            gsDebugVar(ev.eval(ilapl(u, G), points.col(i)));
+            gsDebugVar(ev.eval(div(u).tr(), points.col(i)));
+            gsDebugVar(ev.eval(div(u).tr() * (grad(u) * G0.inv()).tr(), points.col(i)));
+            //gsDebugVar(ev.eval(grad(u), points.col(i)));
+            //gsDebugVar(ev.eval( (div(u).tr() * (grad(u) * G0.inv()).tr()).tr() * (div(u).tr() * (grad(u) * G0.inv()).tr()), points.col(i)));
+            //gsDebugVar(ev.eval( u * ff * gg, points.col(i)));
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         timer.restart();
         // Compute the system matrix and right-hand side
-        A.assemble(ilapl(u, G) * ilapl(u, G).tr() * meas(G),u * ff * meas(G));
 
+        A.assemble(( lapl(u) * G0.inv() * (lapl(u) * G0.inv()).tr()) * 1.0/gg,
+                   u * ff * gg);
+        gsInfo << "Finished \n";
         // Enforce Laplace conditions to right-hand side
         auto g_L = A.getBdrFunction(G); // Set the laplace bdy value
         //auto g_L = A.getCoeff(laplace, G);
