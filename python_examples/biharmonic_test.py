@@ -48,6 +48,7 @@ geo_list = ["g1000", "g1100"]  # Without .xml extension
 path_geo = "planar/geometries/"
 
 loop = 1
+second = False
 
 deg_list = [
     3
@@ -90,15 +91,15 @@ for idx, compute in enumerate(compute_list):
                     print("METHOD NOT IMPLEMENTED!!!")
 
                 argument_list = m_str + "-g" + geo + "-p" + str(deg) + "-s" + str(deg-1) + "-r" + str(loop) \
-                                + "-m" + str(method_list[idx].value)
+                                + "-m" + str(method_list[idx].value) + ("-second" if second else "")
 
                 # [!Run biharmonic2_example]
                 proc = subprocess.Popen([path_example, "-g", geo, "-p", str(deg), "-s", str(deg-1), "-r", str(loop),
-                                         "-m", str(method_list[idx].value), "-o", path_results_geo+argument_list])
+                                         "-m", str(method_list[idx].value), ("--second" if second else ""), "", "-o", path_results_geo+argument_list])
                 proc.wait()
                 # [!Run biharmonic2_example]
-                
-                file_coll.append(argument_list)
+
+                file_coll.append(path_results_geo+argument_list)
         print("Finished!")
     else:
         for geo in geo_list:
@@ -115,7 +116,7 @@ for idx, compute in enumerate(compute_list):
 
                 path_results_geo = path_results + "results/" + geo + "/results/"
                 argument_list = m_str + "-g" + geo + "-p" + deg + "-s" + str(deg-1) + "-r" + loop \
-                                + "-m" + str(method_list[idx].value)
+                                + "-m" + str(method_list[idx].value) + ("-second" if second else "")
 
                 file_coll.append(path_results_geo+argument_list)
 

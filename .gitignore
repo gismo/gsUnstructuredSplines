@@ -1,2 +1,2 @@
 # Ignore
-diss_pascal/*
+python_examples/library/__pycache__/*
