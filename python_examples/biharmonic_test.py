@@ -57,14 +57,18 @@ loop = 1
 second = False
 
 deg_list = [
-    3
+    [3, 4, 5],
+    [3, 4, 5],
+    [2]
 ]
 method_list = [
-    #Method.ApproxC1,
-    Method.DPatch
+    Method.ApproxC1,
+    Method.DPatch,
+    Method.AlmostC1
 ]
 compute_list = [
-    #True,
+    True,
+    True,
     True
 ]
 
@@ -85,7 +89,7 @@ for idx, compute in enumerate(compute_list):
             if not os.path.exists(path_results_geo):
                 os.makedirs(path_results_geo)
 
-            for deg in deg_list:
+            for deg in deg_list[idx]:
                 m_str = ""
                 if method_list[idx] == Method.ApproxC1:
                     m_str = "approxC1"
@@ -111,7 +115,7 @@ for idx, compute in enumerate(compute_list):
         print("Finished!")
     else:
         for geo in geo_list:
-            for deg in deg_list:
+            for deg in deg_list[idx]:
                 m_str = ""
                 if method_list[idx] == Method.ApproxC1:
                     m_str = "approxC1"
