@@ -17,6 +17,7 @@
 
 #include <gsUnstructuredSplines/gsApproxC1Spline.h>
 #include <gsUnstructuredSplines/gsDPatch.h>
+#include <gsUnstructuredSplines/gsAlmostC1.h>
 
 using namespace gismo;
 //! [Include namespace]
@@ -32,7 +33,7 @@ enum MethodFlags
     APPROXC1    = 0 << 0, // Approx C1 Method
     NITSCHE     = 1 << 0, // Nitsche's method
     DPATCH      = 1 << 1, // D-Patch
-    //????      = 1 << 2, // ????
+    ALMOSTC1    = 1 << 2, // ????
     //????      = 1 << 3, // ????
     // Add more [...]
 };
@@ -452,7 +453,7 @@ int main(int argc, char *argv[])
     dbasis.setDegree( degree); // preserve smoothness
     //dbasis.degreeElevate(degree- mp.patch(0).degree(0));
 
-    if (method == MethodFlags::DPATCH)
+    if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
         mp.degreeElevate(degree-mp.patch(0).degree(0));
 
     // h-refine each basis
@@ -468,7 +469,7 @@ int main(int argc, char *argv[])
     if (dbasis.basis(0).numElements() < 4)
     {
         dbasis.uniformRefine(1, degree-smoothness);
-        if (method == MethodFlags::DPATCH)
+        if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
             mp.uniformRefine(1, degree-smoothness);
     }
 
@@ -577,10 +578,25 @@ int main(int argc, char *argv[])
             dbasis = dpatch.localBasis();
             bb2.init(dbasis,global2local);
         }
+        else if (method == MethodFlags::ALMOSTC1)
+        {
+            mp.uniformRefine(1,degree-smoothness);
+            dbasis.uniformRefine(1,degree-smoothness);
+
+            meshsize[r] = dbasis.basis(0).getMinCellLength();
+
+            gsSparseMatrix<real_t> global2local;
+            gsAlmostC1<2,real_t> almostC1(mp);
+            almostC1.matrix_into(global2local);
+            global2local = global2local.transpose();
+            mp = almostC1.exportToPatches();
+            dbasis = almostC1.localBasis();
+            bb2.init(dbasis,global2local);
+        }
         gsInfo<< "." <<std::flush; // Approx C1 construction done
 
         // Setup the mapper
-        if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH) // MappedBasis
+        if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1) // MappedBasis
         {
             gsDofMapper map;
             setMapperForBiharmonic(bc, bb2,map);
@@ -694,7 +710,7 @@ int main(int argc, char *argv[])
         h2err[r]= h1err[r] +
                  math::sqrt(ev.integral( ( ihess(u_ex) - ihess(u_sol,G) ).sqNorm() * meas(G) )); // /ev.integral( ihess(f).sqNorm()*meas(G) )
 
-        if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH)
+        if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
         {
             gsMatrix<real_t> solFull;
             u_sol.extractFull(solFull);

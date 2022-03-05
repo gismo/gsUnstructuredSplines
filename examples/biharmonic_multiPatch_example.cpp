@@ -102,6 +102,7 @@ int main(int argc, char *argv[])
 {
     //! [Parse command line]
     bool plot = false;
+    bool mesh = false;
 
     index_t method = 0;
 
@@ -142,6 +143,7 @@ int main(int argc, char *argv[])
     // Flags related to the output
     cmd.addSwitch("last", "Solve solely for the last level of h-refinement", last);
     cmd.addSwitch("plot", "Create a ParaView visualization file with the solution", plot);
+    cmd.addSwitch("mesh", "Plot the mesh", mesh);
 
     cmd.addString("o", "output", "Output in xml (for python)", output);
     try { cmd.getValues(argc,argv); } catch (int rv) { return rv; }
@@ -208,14 +210,17 @@ int main(int argc, char *argv[])
     dbasis.setDegree( degree); // preserve smoothness
     //dbasis.degreeElevate(degree- mp.patch(0).degree(0));
 
-    if (method == MethodFlags::DPATCH)
+    if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
         mp.degreeElevate(degree-mp.patch(0).degree(0));
 
     // h-refine each basis
     if (last)
     {
         for (int r =0; r < numRefine; ++r)
+        {
             dbasis.uniformRefine(1, degree-smoothness);
+            mp.uniformRefine(1, degree-smoothness);
+        }
         numRefine = 0;
     }
 
@@ -224,7 +229,7 @@ int main(int argc, char *argv[])
     if (dbasis.basis(0).numElements() < 4)
     {
         dbasis.uniformRefine(1, degree-smoothness);
-        if (method == MethodFlags::DPATCH)
+        if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
             mp.uniformRefine(1, degree-smoothness);
     }
 
@@ -317,7 +322,18 @@ int main(int argc, char *argv[])
         }
         else if (method == MethodFlags::ALMOSTC1)
         {
+            geom.uniformRefine(1,degree-smoothness);
+            dbasis.uniformRefine(1,degree-smoothness);
 
+            meshsize[r] = dbasis.basis(0).getMinCellLength();
+
+            gsSparseMatrix<real_t> global2local;
+            gsAlmostC1<2,real_t> almostC1(geom);
+            almostC1.matrix_into(global2local);
+            global2local = global2local.transpose();
+            mp = almostC1.exportToPatches();
+            dbasis = almostC1.localBasis();
+            bb2.init(dbasis,global2local);
         }
         gsInfo<< "." <<std::flush; // Approx C1 construction done
 
@@ -423,13 +439,13 @@ int main(int argc, char *argv[])
     {
         gsInfo<<"Plotting in Paraview...\n";
         gsWriteParaview( mp, "geom",1000,true);
-        ev.options().setSwitch("plot.elements", true);
+        ev.options().setSwitch("plot.elements", mesh);
         ev.options().setInt   ("plot.npts"    , 1000);
         ev.writeParaview( u_sol   , G, "solution");
         //ev.writeParaview( u_ex    , G, "solution_ex");
         //ev.writeParaview( grad(s), G, "solution_grad");
         //ev.writeParaview( grad(f), G, "solution_ex_grad");
-        //ev.writeParaview( (u_ex-u_sol), G, "error_pointwise");
+        ev.writeParaview( (u_ex-u_sol), G, "error_pointwise");
     }
     else
         gsInfo << "Done. No output created, re-run with --plot to get a ParaView "

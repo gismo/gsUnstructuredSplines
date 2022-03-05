@@ -167,9 +167,27 @@ class gsAlmostC1  //: public gsMappedGeom<d,T>
         gsMatrix<T> preCoefficients();
 
         /**
+         * @brief       Computes the C1 coefficients for pre-multiplication to make the multipatch
+         *
+         * Takes the coefficients which are tagged as "free" in the modified DoFMapper (m_mapModified)
+         *
+         */
+        gsMatrix<T> freeCoefficients();
+
+        /**
          * @brief       Computes the local coefficients and puts them in one big matrix
          */
         gsMatrix<T> allCoefficients() const;
+
+        /**
+         * @brief      Set the coefficients of mp to \a coefs
+         *
+         * @param[in]  coefs  The coefs
+         * @param      mp     The multipatch to update
+         *
+         */
+        void setCoefficients(const gsMatrix<T> & coefs, gsMultiPatch<T> & mp) const;
+
 
         /**
          * @brief       Exports a single modified patch with index \a patch
