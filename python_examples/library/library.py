@@ -146,7 +146,7 @@ class MyTikz(Document):
         self.opt = ["hide axis", "xmin=0", "xmax=1", "ymin=0", "ymax=0.4", NoEscape("mark options={solid}"),
                     NoEscape(r"legend style={draw=white!15!black,legend cell align=left}"),
                     "transpose legend",
-                    NoEscape(r"legend columns=" + str(int(len(legend_image) / col)) +
+                    NoEscape(r"legend columns=" + str(int((len(legend_image)+1) / (col+1))) +
                              ",legend style={/tikz/every even column/.append style={column sep=0.5cm}}")
                     ]
         with self.create(TikZ()) as tikz:
