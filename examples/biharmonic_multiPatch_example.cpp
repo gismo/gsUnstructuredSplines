@@ -24,16 +24,17 @@ using namespace gismo;
 
 /**
  * Smoothing method:
- * - s 0 == Approx C1 method
- * - s 1 == Nitsche's method
- * - s 2 == D-Patch's method
+ * - m 0 == Approx C1 method
+ * - m 1 == D-Patch method
+ * - m 2 == Almost C1 method
+ * - m 3 == Nitsche's method
  */
 enum MethodFlags
 {
     APPROXC1       = 0 << 0, // Approx C1 Method
     DPATCH         = 1 << 0, // D-Patch
-    ALMOSTC1       = 1 << 1, //
-    //????      = 1 << 2, // ????
+    ALMOSTC1       = 1 << 1, // Almost C1
+    NITSCHE        = 1 << 2, // Nitsche
     //????      = 1 << 3, // ????
     // Add more [...]
 };
@@ -266,9 +267,6 @@ int main(int argc, char *argv[])
     approxC1.options().setInt("gluingDataDegree",gluingDataDegree);
     approxC1.options().setInt("gluingDataSmoothness",gluingDataSmoothness);
 
-    // D-Patch
-    gsMultiPatch<> geom = mp;
-
     // Solution vector and solution variable
     gsMatrix<real_t> solVector;
     auto u_sol = A.getSolution(u, solVector);
@@ -311,13 +309,6 @@ int main(int argc, char *argv[])
             mp = dpatch.exportToPatches();
             dbasis = dpatch.localBasis();
             bb2.init(dbasis,global2local);
-
-            gsFileData<> fd;
-            fd << mp;
-            fd.save("mp_filedata.xml");
-            fd.clear();
-            fd << geom;
-            fd.save("geom_filedata.xml");
         }
         else if (method == MethodFlags::ALMOSTC1)
         {
