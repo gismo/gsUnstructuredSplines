@@ -299,13 +299,13 @@ int main(int argc, char *argv[])
         }
         else if (method == MethodFlags::DPATCH)
         {
-            geom.uniformRefine(1,degree-smoothness);
+            mp.uniformRefine(1,degree-smoothness);
             dbasis.uniformRefine(1,degree-smoothness);
 
             meshsize[r] = dbasis.basis(0).getMinCellLength();
 
             gsSparseMatrix<real_t> global2local;
-            gsDPatch<2,real_t> dpatch(geom);
+            gsDPatch<2,real_t> dpatch(mp);
             dpatch.matrix_into(global2local);
             global2local = global2local.transpose();
             mp = dpatch.exportToPatches();
@@ -321,13 +321,13 @@ int main(int argc, char *argv[])
         }
         else if (method == MethodFlags::ALMOSTC1)
         {
-            geom.uniformRefine(1,degree-smoothness);
+            mp.uniformRefine(1,degree-smoothness);
             dbasis.uniformRefine(1,degree-smoothness);
 
             meshsize[r] = dbasis.basis(0).getMinCellLength();
 
             gsSparseMatrix<real_t> global2local;
-            gsAlmostC1<2,real_t> almostC1(geom);
+            gsAlmostC1<2,real_t> almostC1(mp);
             almostC1.matrix_into(global2local);
             global2local = global2local.transpose();
             mp = almostC1.exportToPatches();

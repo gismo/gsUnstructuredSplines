@@ -35,14 +35,13 @@ namespace gismo{
 
             index_t rows() const //(components)
             {
-                return _u.source().domainDim() * ( _u.source().domainDim() + 1 ) / 2;
+                return 3; // _u.dim() for space or targetDim() for geometry
             }
 
             index_t cols() const
             {
-                return cols_impl(_u);
+                return _u.source().domainDim() * ( _u.source().domainDim() + 1 ) / 2;
             }
-
 
             void parse(gsExprHelper<Scalar> & evList) const
             {
@@ -68,14 +67,55 @@ namespace gismo{
                         [d11 c1, d11 c2, d11 c3]
                         [d22 c1, d22 c2, d22 c3]
                         [d12 c1, d12 c2, d12 c3]
-
                         The geometry map has components c=[c1,c2,c3]
                     */
                     // evaluate the geometry map of U
-                    res = _u.data().values[2].reshapeCol(k, rows(), cols() );
+                    res = _u.data().values[2].reshapeCol(k, cols(), _u.data().dim.second );
                     return res;
                 }
 
+                template<class U> inline
+                typename util::enable_if< util::is_same<U,gsComposition<Scalar> >::value, const gsMatrix<Scalar> & >::type
+                eval_impl(const U & u, const index_t k)  const
+                {
+                    /*
+                        Here, we compute the hessian of the geometry map.
+                        The hessian of the geometry map c has the form: hess(c)
+                        [d11 c1, d11 c2, d11 c3]
+                        [d22 c1, d22 c2, d22 c3]
+                        [d12 c1, d12 c2, d12 c3]
+                        The geometry map has components c=[c1,c2,c3]
+                    */
+                    // evaluate the geometry map of U
+                    tmp =  _u.data().values[2];
+                    gsDebugVar(tmp);
+                    // Cast to Voight notation
+                    tmp.resize(4,1);
+                    std::swap( tmp(3,0), tmp(1,0) );
+
+                    res = tmp;
+                    return res;
+                }
+
+                template<class U> inline
+                typename util::enable_if< util::is_same<U,gsFeSolution<Scalar> >::value, const gsMatrix<Scalar> & >::type
+                eval_impl(const U & u, const index_t k)  const
+                {
+                    /*
+                        Here, we compute the hessian of the geometry map.
+                        The hessian of the geometry map c has the form: hess(c)
+                        [d11 c1, d11 c2, d11 c3]
+                        [d22 c1, d22 c2, d22 c3]
+                        [d12 c1, d12 c2, d12 c3]
+                        The geometry map has components c=[c1,c2,c3]
+                    */
+                    // evaluate the geometry map of U
+                    hess_expr<gsFeSolution<Scalar>> sHess = hess_expr<gsFeSolution<Scalar>>(_u);
+                    res = sHess.eval(k).transpose();
+                    return res;
+                }
+
+                /// Spexialization for a space
                 template<class U> inline
                 typename util::enable_if<util::is_same<U,gsFeSpace<Scalar> >::value, const gsMatrix<Scalar> & >::type
                 eval_impl(const U & u, const index_t k) const
@@ -87,25 +127,21 @@ namespace gismo{
                         [d11 u1, d11 u2, d11 u3] [d11 u1, d11 u2, d11 u3] ... [d11 u1, d11 u2, d11 u3]
                         [d22 u1, d22 u2, d22 u3] [d22 u1, d22 u2, d22 u3] ... [d22 u1, d22 u2, d22 u3]
                         [d12 u1, d12 u2, d12 u3] [d12 u1, d12 u2, d12 u3] ... [d12 u1, d12 u2, d12 u3]
-
                         Here, the basis function has components u = [u1,u2,u3]. Since they are evaluated for scalars
                         we use blockDiag to make copies for all components ui
-
                             active 1     active 2     active k = cardinality/dim   active 1           active 2k       active 1           active 2k
                         [d11 u, 0, 0] [d11 u, 0, 0] ... [d11 u, 0, 0]            [0, d11 u, 0]  ... [0, d11 u, 0]  [0, d11 u, 0]  ... [0, d11 u, 0]
                         [d22 u, 0, 0] [d22 u, 0, 0] ... [d22 u, 0, 0]            [0, d22 u, 0]  ... [0, d22 u, 0]  [0, d22 u, 0]  ... [0, d22 u, 0]
                         [d12 u, 0, 0] [d12 u, 0, 0] ... [d12 u, 0, 0]            [0, d12 u, 0]  ... [0, d12 u, 0]  [0, d12 u, 0]  ... [0, d12 u, 0]
-
                     */
                     const index_t numAct = u.data().values[0].rows();   // number of actives of a basis function
                     const index_t cardinality = u.cardinality();        // total number of actives (=3*numAct)
 
-                    res.resize(rows(), cols() *_u.cardinality()); // (3 x 3*cardinality)
+                    res.resize(rows(), _u.dim() *_u.cardinality()); // (3 x 3*cardinality)
                     res.setZero();
 
-                    tmp = _u.data().values[2].reshapeCol(k, rows(), numAct );
-
-                    for (index_t d = 0; d != _u.dim(); ++d)
+                    tmp = _u.data().values[2].reshapeCol(k, cols(), numAct );
+                    for (index_t d = 0; d != cols(); ++d)
                     {
                         const index_t s = d*(cardinality + 1);
                         for (index_t i = 0; i != numAct; ++i)
@@ -114,21 +150,6 @@ namespace gismo{
 
                     return res;
                 }
-
-                template<class U> inline
-                typename util::enable_if< util::is_same<U,gsGeometryMap<Scalar> >::value, index_t >::type
-                cols_impl(const U & u)  const
-                {
-                    return _u.data().dim.second;
-                }
-
-                template<class U> inline
-                typename util::enable_if< !util::is_same<U,gsGeometryMap<Scalar>  >::value, index_t >::type
-                cols_impl(const U & u) const
-                {
-                    return _u.dim();
-                }
-
         };
 
         // vector v should be a row vector
@@ -166,28 +187,47 @@ namespace gismo{
                 parse_impl<E1>(evList);
             }
 
+//            const gsFeSpace<Scalar> & rowVar() const
+//            {
+//                // Note: what happens if E2 is a space? The following can fix it:
+//                // if      (E1::Space == 1 && E2::Space == 0)
+//                //     return _u.rowVar();
+//                // else if (E1::Space == 0 && E2::Space == 1)
+//                //     return _v.rowVar();
+//                // else
+//
+//                return _u.rowVar();
+//            }
+//
+//            const gsFeSpace<Scalar> & colVar() const
+//            {
+//                // Note: what happens if E2 is a space? The following can fix it:
+//                // if      (E1::Space == 1 && E2::Space == 0)
+//                //     return _v.rowVar();
+//                // else if (E1::Space == 0 && E2::Space == 1)
+//                //     return _u.rowVar();
+//                // else
+//
+//                return _v.rowVar();
+//            }
             const gsFeSpace<Scalar> & rowVar() const
             {
-                // Note: what happens if E2 is a space? The following can fix it:
-                // if      (E1::Space == 1 && E2::Space == 0)
-                //     return _u.rowVar();
-                // else if (E1::Space == 0 && E2::Space == 1)
-                //     return _v.rowVar();
-                // else
-
-                return _u.rowVar();
+                if      (E1::Space == 1 && E2::Space == 0)
+                    return _u.rowVar();
+                else if (E1::Space == 0 && E2::Space == 1)
+                    return _v.rowVar();
+                else
+                    return gsNullExpr<Scalar>::get();
             }
 
             const gsFeSpace<Scalar> & colVar() const
             {
-                // Note: what happens if E2 is a space? The following can fix it:
-                // if      (E1::Space == 1 && E2::Space == 0)
-                //     return _v.rowVar();
-                // else if (E1::Space == 0 && E2::Space == 1)
-                //     return _u.rowVar();
-                // else
-
-                return _v.rowVar();
+                if      (E1::Space == 1 && E2::Space == 0)
+                    return _v.colVar();
+                else if (E1::Space == 0 && E2::Space == 1)
+                    return _u.colVar();
+                else
+                    return gsNullExpr<Scalar>::get();
             }
 
             void print(std::ostream &os) const { os << "deriv2("; _u.print(os); _v.print(os); os <<")"; }
@@ -284,7 +324,35 @@ namespace gismo{
             typename util::enable_if<util::is_same<U,gsFeSolution<Scalar> >::value, const gsMatrix<Scalar> & >::type
             eval_impl(const U & u, const index_t k) const
             {
-                GISMO_NO_IMPLEMENTATION;
+                /*
+                    We assume that the basis has the form v*e_i where e_i is the unit vector with 1 on index i and 0 elsewhere
+                    This implies that hess(v) = [hess(v_1), hess(v_2), hess(v_3)] only has nonzero entries in column i. Hence,
+                    hess(v) . normal = hess(v_i) * n_i (vector-scalar multiplication. The result is then of the form
+                    [hess(v_1)*n_1 .., hess(v_2)*n_2 .., hess(v_3)*n_3 ..]. Here, the dots .. represent the active basis functions.
+                */
+                hess_expr<gsFeSolution<Scalar>> sHess = hess_expr<gsFeSolution<Scalar>>(_u); // NOTE: This does not parse automatically!
+                tmp = sHess.eval(k);
+                vEv = _v.eval(k);
+
+                // Cast to Voight notation
+                vEv.resize(4,1);
+                std::swap( vEv(3,0), vEv(1,0) );
+                vEv.conservativeResize(3,1);
+
+                // Cast to Voight notation
+                tmp.resize(4,1);
+                std::swap( tmp(3,0), tmp(1,0) );
+                tmp.conservativeResize(3,1);
+
+
+                // [dxx u, dyy u, dxy u] [1 0 0] [v11]
+                //                       [0 1 0] [v22]
+                //                       [0 0 2] [v12]
+                gsMatrix<Scalar,3,3> ones;
+                ones.setIdentity();
+                ones(2,2) = 2.0;
+                res = tmp.transpose() * ones * vEv;
+                return res;
             }
         };
 
@@ -348,6 +416,7 @@ void setDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> &
     auto G = A.getMap(mp);
     auto uu = A.getSpace(basis);
     auto g_bdy = A.getBdrFunction(G);
+    auto gg = pow(fform(G).det(),0.5);
 
     uu.setupMapper(mapperBdy);
     gsMatrix<real_t> & fixedDofs_A = const_cast<expr::gsFeSpace<real_t>&>(uu).fixedPart();
@@ -356,12 +425,13 @@ void setDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> &
     real_t lambda = 1e-5;
 
     A.initSystem();
-    A.assembleBdr(bc.get("Dirichlet"), uu * uu.tr() * meas(G));
-    A.assembleBdr(bc.get("Dirichlet"), uu * g_bdy * meas(G));
+    A.assembleBdr(bc.get("Dirichlet"), uu * uu.tr() * gg);
+    A.assembleBdr(bc.get("Dirichlet"), uu * g_bdy * gg);
     A.assembleBdr(bc.get("Neumann"),
-                  lambda * (igrad(uu, G) * nv(G).normalized()) * (igrad(uu, G) * nv(G).normalized()).tr() * meas(G));
+                  lambda * ((jac(G) * fform(G).inv() * igrad(uu).tr()).tr() * nv(G).normalized())
+                               * ((jac(G) * fform(G).inv() * igrad(uu).tr()).tr() * nv(G).normalized()).tr() * gg);
     A.assembleBdr(bc.get("Neumann"),
-                  lambda *  (igrad(uu, G) * nv(G).normalized()) * (g_bdy.tr() * nv(G).normalized()) * meas(G));
+                  lambda *  ((jac(G) * fform(G).inv() * igrad(uu).tr()).tr() * nv(G).normalized()) * (g_bdy.tr() * nv(G).normalized()) * gg);
 
     gsSparseSolver<real_t>::SimplicialLDLT solver;
     solver.compute( A.matrix() );
@@ -395,17 +465,19 @@ int main(int argc, char *argv[])
     index_t smoothness = 2;
     bool last = false;
     bool second = false;
+    bool residual = false;
 
     std::string fn;
 
     gsCmdLine cmd("Example for solving the biharmonic problem (single patch only).");
     cmd.addInt("p", "degree","Set discrete polynomial degree", degree);
     cmd.addInt("s", "smoothness", "Set discrete regularity",  smoothness);
-    cmd.addInt("l", "refinementLoop", "Number of refinement steps",  numRefine);
+    cmd.addInt("r", "refinementLoop", "Number of refinement steps", numRefine);
     cmd.addString("f", "file", "Input geometry file (with .xml)", fn);
 
     cmd.addSwitch("last", "Solve problem only on the last level of h-refinement", last);
     cmd.addSwitch("plot", "Create a ParaView visualization file with the solution", plot);
+    cmd.addSwitch("residual", "Compute the error with residual", residual);
 
     cmd.addSwitch("second", "Compute second biharmonic problem with u = g1 and Delta u = g2 "
                             "(default first biharmonic problem: u = g1 and partial_n u = g2)", second);
@@ -427,7 +499,6 @@ int main(int argc, char *argv[])
     mp.clearTopology();
     mp.computeTopology();
 
-
     if (mp.nPatches() != 1)
     {
         gsInfo << "The geometry has more than one patch. Run the code with a single patch!\n";
@@ -442,7 +513,7 @@ int main(int argc, char *argv[])
     gsInfo << "Exact function: " << ms << "\n";
 
     //! [Refinement]
-    gsMultiBasis<> basis(mp, false);//true: poly-splines (not NURBS)
+    gsMultiBasis<real_t> basis(mp, false);//true: poly-splines (not NURBS)
 
     // Elevate and p-refine the basis to order p + numElevate
     // where p is the highest degree in the bases
@@ -452,26 +523,27 @@ int main(int argc, char *argv[])
     if (last)
     {
         for (index_t r =0; r < numRefine; ++r)
+        {
             basis.uniformRefine(1, degree-smoothness);
+        }
+
         numRefine = 0;
     }
     //! [Refinement]
 
     gsDebugVar(mp.basis(0));
 
-
     //! [Boundary condition]
+    // Laplace
+    gsFunctionExpr<> laplace ("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
+    // Neumann
+    gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
+                     "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)",
+                     "0", 3);
+
     gsBoundaryConditions<> bc;
     for (gsMultiPatch<>::const_biterator bit = mp.bBegin(); bit != mp.bEnd(); ++bit)
     {
-        // Laplace
-        gsFunctionExpr<> laplace ("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
-
-        // Neumann
-        gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
-                                 "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)",
-                                 "0", 3);
-
         bc.addCondition(*bit, condition_type::dirichlet, ms);
         if (second)
             bc.addCondition(*bit, condition_type::laplace, laplace);
@@ -502,6 +574,7 @@ int main(int argc, char *argv[])
     // Solution vector and solution variable
     gsMatrix<real_t> solVector;
     auto u_sol = A.getSolution(u, solVector);
+    gsMultiPatch<real_t> sol_coarse;
 
     // Recover manufactured solution
     auto u_ex = ev.getVariable(ms, G);
@@ -540,68 +613,18 @@ int main(int argc, char *argv[])
 
         gsInfo<< A.numDofs() <<std::flush;
 
-        index_t N = 5;
-        gsMatrix<> points;
-        points.setZero(2,N);
-        gsVector<> pp;
-        pp.setLinSpaced(N,0,1);
-        points.row(0) = pp;
-
+        timer.restart();
+        // Compute the system matrix and right-hand side
         auto gg = pow(fform(G).det(),0.5);
         auto G0 = 1.0/gg * fform(G);
         auto G0inv = G0.inv();
-        for (index_t i = 0; i < points.cols(); i++)
-        {
-            gsDebugVar(ev.eval(pow(fform(G).det(),0.5), points.col(i)));
-            gsDebugVar(ev.eval(fform2nd(G), points.col(i)));
-            gsDebugVar(ev.eval(fform(G),points.col(i)));
-            gsDebugVar(ev.eval(G0, points.col(i)));
-            gsDebugVar(ev.eval(lapl(u), points.col(i)));
-            gsDebugVar(ev.eval(ilapl(u), points.col(i)));
-            gsDebugVar(ev.eval(ilapl(u, G), points.col(i)));
-            gsDebugVar(ev.eval(div(u).tr(), points.col(i)));
-            gsDebugVar(ev.eval(div(u).tr() * (grad(u) * G0inv).tr(), points.col(i)));
-            gsDebugVar(ev.eval(G0inv, points.col(i)));
-
-
-            gsDebugVar(ev.eval(deriv2(G), points.col(i)));
-
-
-            gsDebugVar(ev.eval(deriv2(u), points.col(i)));
-            gsDebugVar(ev.eval(deriv2(u,G0inv), points.col(i)));
-
-
-            //gsDebugVar(ev.eval(grad(u), points.col(i)));
-            //gsDebugVar(ev.eval( (div(u).tr() * (grad(u) * G0.inv()).tr()).tr() * (div(u).tr() * (grad(u) * G0.inv()).tr()), points.col(i)));
-            //gsDebugVar(ev.eval( u * ff * gg, points.col(i)));
-        }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        timer.restart();
-        // Compute the system matrix and right-hand side
-
-        A.assemble(( lapl(u) * G0.inv() * (lapl(u) * G0.inv()).tr()) * 1.0/gg,
+        A.assemble(( deriv2(u,G0inv) * (deriv2(u,G0inv)).tr()) * 1.0/gg,
                    u * ff * gg);
-        gsInfo << "Finished \n";
+        //gsInfo << "Finished \n";
         // Enforce Laplace conditions to right-hand side
-        auto g_L = A.getBdrFunction(G); // Set the laplace bdy value
-        //auto g_L = A.getCoeff(laplace, G);
-        A.assembleBdr(bc.get("Laplace"), (igrad(u, G) * nv(G)) * g_L.tr() );
+        // auto g_L = A.getBdrFunction(G); // Set the laplace bdy value  // Bug, doesnt work
+        auto g_L = A.getCoeff(laplace, G);
+        A.assembleBdr(bc.get("Laplace"), ((jac(G) * fform(G).inv() * igrad(u).tr()).tr() * nv(G).normalized()) * g_L.tr() * gg );
 
         dofs[r] = A.numDofs();
         ma_time += timer.stop();
@@ -617,13 +640,50 @@ int main(int argc, char *argv[])
         timer.restart();
         //linferr[r] = ev.max( f-s ) / ev.max(f);
 
-        l2err[r]= math::sqrt( ev.integral( (u_ex - u_sol).sqNorm() * meas(G) ) ); // / ev.integral(ff.sqNorm()*meas(G)) );
-        h1err[r]= l2err[r] +
-                  math::sqrt(ev.integral( ( igrad(u_ex) - igrad(u_sol,G) ).sqNorm() * meas(G) )); // /ev.integral( igrad(ff).sqNorm()*meas(G) ) );
 
-        h2err[r]= h1err[r] +
-                  math::sqrt(ev.integral( ( ihess(u_ex) - ihess(u_sol,G) ).sqNorm() * meas(G) )); // /ev.integral( ihess(ff).sqNorm()*meas(G) )
+//        index_t N = 5;
+//        gsMatrix<> points;
+//        points.setZero(2,N);
+//        gsVector<> pp;
+//        pp.setLinSpaced(N,0,1);
+//        points.row(0) = pp;
+//
+//        for (index_t i = 0; i < points.cols(); i++)
+//        {
+//            gsDebugVar(ev.eval(u_ex, points.col(i)));
+//            gsDebugVar( ev.eval(u_sol, points.col(i) ));
+//        }
 
+        if (residual)
+        {
+            if (r!=0)
+            {
+                auto u_coarse = A.getCoeff(sol_coarse);
+                l2err[r] = math::sqrt( ev.integral( (u_coarse - u_sol).sqNorm() * gg ) ); // / ev.integral(ff.sqNorm()*meas(G)) );
+                h1err[r]= l2err[r] +
+                    math::sqrt(ev.integral( ( igrad(u_coarse) - igrad(u_sol) ).sqNorm() * gg )); // /ev.integral( igrad(f).sqNorm()*meas(G) ) );
+
+                h2err[r]= h1err[r] +
+                         math::sqrt(ev.integral( ( ihess(u_coarse) - ihess(u_sol) ).sqNorm() * gg )); // /ev.integral( ihess(f).sqNorm()*meas(G) )
+            }
+            else
+            {
+                l2err[r] = 0;
+                h1err[r] = 0;
+                h2err[r] = 0;
+
+            }
+            u_sol.extract(sol_coarse);
+        }
+        else
+        {
+            l2err[r]= math::sqrt( ev.integral( (u_ex - u_sol).sqNorm() * gg ) ); // / ev.integral(ff.sqNorm()*meas(G)) );
+            h1err[r]= l2err[r] +
+                      math::sqrt(ev.integral( ( igrad(u_ex) - (jac(G) * fform(G).inv() * igrad(u_sol).tr()).tr() ).sqNorm() * gg )); // /ev.integral( igrad(ff).sqNorm()*meas(G) ) );
+
+            //h2err[r]= h1err[r] +
+            //          math::sqrt(ev.integral( ( ihess(u_ex) - 1.0/gg * (deriv2(u_sol,G0inv)).tr() ).sqNorm() * meas(G) )); // /ev.integral( ihess(ff).sqNorm()*meas(G) )
+        }
         err_time += timer.stop();
         gsInfo << ". " << std::flush; // Error computations done
     } //for loop
@@ -667,6 +727,7 @@ int main(int argc, char *argv[])
         gsInfo << "Plotting in Paraview...\n";
         ev.options().setSwitch("plot.elements", true);
         ev.writeParaview( u_sol   , G, "solution");
+        ev.writeParaview( u_ex - u_sol   , G, "solution_pointwise");
         gsInfo << "Saved with solution.pvd \n";
     }
     else
