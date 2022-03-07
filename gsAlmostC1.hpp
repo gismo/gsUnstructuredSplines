@@ -982,9 +982,14 @@ namespace gismo
         m_size = tmp = 0;
 
         // number of interior basis functions (denoted by x)
-        // (ONLY FOR TENSOR-PRODUCT STRUCTURE!!)
         for (size_t k=0; k!=m_patches.nPatches(); k++)
-            tmp += (m_bases.basis(k).component(0).size()-2)*(m_bases.basis(k).component(1).size()-2);
+        {
+            tmp += m_bases.basis(k).size();
+            tmp -= m_bases.basis(k).boundary(boxSide(1)).size();
+            tmp -= m_bases.basis(k).boundary(boxSide(2)).size();
+            tmp -= m_bases.basis(k).boundary(boxSide(3)).size()-2;
+            tmp -= m_bases.basis(k).boundary(boxSide(4)).size()-2;
+        }
         // gsDebug<<"Number of interior DoFs: "<<tmp<<"\n";
         m_size += tmp;
 
@@ -1327,36 +1332,74 @@ namespace gismo
                 // The 1,1 corners of each patch will be given 0.5 weight in the interface handling, but in addition they will receive a 1/(v+2) weight from the 0,0 DoFs on each patch
                 pcorner.getContainingSides(d,psides);
 
-                for (typename std::vector<patchCorner>::iterator it = corners.begin(); it!=corners.end(); it++)
+                bool C0 = true; // Flag to choose to treat it as C0 or not
+                if (C0)
                 {
-                    basis = &m_bases.basis(it->patch);
-                    colIndices.push_back(basis->functionAtCorner(*it));
-                    patchIndices.push_back(it->patch);
+                    // colIndices stores the 0,0 corners (including the 0,0s of the boundary sides)
+                    for (typename std::vector<patchCorner>::iterator it = corners.begin(); it!=corners.end(); it++)
+                    {
+                        basis = &m_bases.basis(it->patch);
+                        colIndices.push_back(basis->functionAtCorner(*it));
+                        patchIndices.push_back(it->patch);
+                    }
+
+                    basis = &m_bases.basis(pcorner.patch);
+                    tmpIdx = _indexFromVert(1,pcorner,psides[0],1); // 1,1 corner
+                    rowIndices.push_back(tmpIdx);
+                    // Check if one of the adjacent interfaces is a boundary; if so, add weight 1.0 to itself and add it to the rowIndices
+                    for (index_t k = 0; k!=2; k++)
+                        if (!m_patches.getInterface(psides[k],iface)) // check if the side is NOT an interface
+                        {
+                            tmpIdx = _indexFromVert(1,pcorner,psides[k],0); // 1,0 corner (on the boundary)
+                            rowIdx = m_mapModified.index(tmpIdx,pcorner.patch);
+                            colIdx = m_mapOriginal.index(tmpIdx,pcorner.patch);
+                            m_matrix(rowIdx,colIdx) = 1.0;
+                            rowIndices.push_back(tmpIdx);
+                        }
+
+                    // Assign the 1/(nu+2) to the 0,0 vertices
+                    for (size_t k=0; k!=colIndices.size(); k++)
+                        for (std::vector<index_t>::iterator rit=rowIndices.begin(); rit!=rowIndices.end(); rit++ )
+                        {
+                            rowIdx = m_mapModified.index(*rit,pcorner.patch);
+                            colIdx = m_mapOriginal.index(colIndices.at(k),patchIndices.at(k));
+                            m_matrix(rowIdx,colIdx) = 1. / (vdata.first + 2);
+                            m_basisCheck[rowIdx] = true;
+                        }
                 }
-
-                basis = &m_bases.basis(pcorner.patch);
-                tmpIdx = _indexFromVert(1,pcorner,psides[0],1); // 1,1 corner
-                rowIndices.push_back(tmpIdx);
-                // Check if one of the adjacent interfaces is a boundary; if so, add weight 1.0 to itself and add it to the rowIndices
-                for (index_t k = 0; k!=2; k++)
-                    if (!m_patches.getInterface(psides[k],iface)) // check if the side is NOT an interface
-                    {
-                        tmpIdx = _indexFromVert(1,pcorner,psides[k],0); // 1,0 corner (on the boundary)
-                        rowIdx = m_mapModified.index(tmpIdx,pcorner.patch);
-                        colIdx = m_mapOriginal.index(tmpIdx,pcorner.patch);
-                        m_matrix(rowIdx,colIdx) = 1.0;
-                        rowIndices.push_back(tmpIdx);
-                    }
+                else
+                {
+                    // // check if the current corner is on a boundary patch (i.e. one interface is a boundary)
+                    // pcorner.getContainingSides(2,psides);
+                    // bool bdr = true;
+                    // for (index_t k = 0; k!=2; k++)
+                    //     ifc &= !(m_patches.getInterface(psides[k],iface));
 
 
-                for (size_t k=0; k!=colIndices.size(); k++)
-                    for (std::vector<index_t>::iterator rit=rowIndices.begin(); rit!=rowIndices.end(); rit++ )
-                    {
-                        rowIdx = m_mapModified.index(*rit,pcorner.patch);
-                        colIdx = m_mapOriginal.index(colIndices.at(k),patchIndices.at(k));
-                        m_matrix(rowIdx,colIdx) = 1. / (vdata.first + 2);
-                        m_basisCheck[rowIdx] = true;
-                    }
+                    // if (bdr)
+                    // {
+
+                    // }
+
+                    // // colIndices stores the 0,0 corners (including the 0,0s of the boundary sides)
+                    // for (typename std::vector<patchCorner>::iterator it = corners.begin(); it!=corners.end(); it++)
+                    // {
+                    //     basis = &m_bases.basis(it->patch);
+                    //     colIndices.push_back(basis->functionAtCorner(*it));
+                    //     patchIndices.push_back(it->patch);
+                    // }
+
+                    // // if it is a boundary patch, the 1,1 DoF gets 1/nu from all 0,0 of the other patches
+                    // rowIdx = _indexFromVert(1,pcorner,psides[0],1); // 1,1 corner
+                    // rowIdx = m_mapModified.index(rowIdx,pcorner.patch);
+                    // // Assign the 1/(nu+2) to the 0,0 vertices
+                    // for (size_t k=0; k!=colIndices.size(); k++)
+                    // {
+                    //     colIdx = m_mapOriginal.index(colIndices.at(k),patchIndices.at(k));
+                    //     m_matrix(rowIdx,colIdx) = 1. / (vdata.first);
+                    //     m_basisCheck[rowIdx] = true;
+                    // }
+                }
 
                 // Furthermore, if the corner is one of the three DoFs that is preserved, we mark the 0,0 DoF as handled (should be a zero-row)
                 basis = &m_bases.basis(pcorner.patch);
