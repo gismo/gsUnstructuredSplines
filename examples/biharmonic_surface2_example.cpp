@@ -13,6 +13,25 @@
 
 # include <gismo.h>
 
+#include <gsUnstructuredSplines/gsApproxC1Spline.h>
+#include <gsUnstructuredSplines/gsDPatch.h>
+#include <gsUnstructuredSplines/gsAlmostC1.h>
+
+/**
+ * Smoothing method:
+ * - m 0 == Approx C1 method
+ * - m 1 == D-Patch method
+ * - m 2 == Almost C1 method
+ * - m 3 == Nitsche's method
+ */
+enum MethodFlags
+{
+    APPROXC1       = 0 << 0, // Approx C1 Method
+    DPATCH         = 1 << 0, // D-Patch
+    ALMOSTC1       = 1 << 1, // Almost C1
+    SPLINE         = 1 << 2, // Tensor Spline (only for single Patch)
+    // Add more [...]
+};
 
 namespace gismo{
     namespace expr{
@@ -342,54 +361,43 @@ namespace gismo{
 
 using namespace gismo;
 
-void setMapperForBiharmonic(gsBoundaryConditions<> & bc, gsMultiBasis<> & basis, gsDofMapper & mapper)
+void setMapperForBiharmonic(gsBoundaryConditions<> & bc, gsMappedBasis<2,real_t> & bb2, gsDofMapper & mapper)
 {
-    mapper.init(basis);
-
-    for (gsBoxTopology::const_iiterator it = basis.topology().iBegin();
-         it != basis.topology().iEnd(); ++it) // C^0 at the interface
-    {
-        basis.matchInterface(*it, mapper);
-    }
+    mapper.setIdentity(bb2.nPatches(), bb2.size(), 1);
 
     gsMatrix<index_t> bnd;
     for (typename gsBoundaryConditions<real_t>::const_iterator
                  it = bc.begin("Dirichlet"); it != bc.end("Dirichlet"); ++it)
     {
-        bnd = basis.basis(it->ps.patch).boundary(it->ps.side());
+        bnd = bb2.basis(it->ps.patch).boundary(it->ps.side());
         mapper.markBoundary(it->ps.patch, bnd, 0);
     }
 
     for (typename gsBoundaryConditions<real_t>::const_iterator
-                 it = bc.begin("Neumann"); it != bc.end("Neumann"); ++it)
+             it = bc.begin("Neumann"); it != bc.end("Neumann"); ++it)
     {
-        bnd = basis.basis(it->ps.patch).boundaryOffset(it->ps.side(),1);
+        bnd = bb2.basis(it->ps.patch).boundaryOffset(it->ps.side(),1);
         mapper.markBoundary(it->ps.patch, bnd, 0);
     }
     mapper.finalize();
 }
 
-void setDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & basis, gsBoundaryConditions<> & bc, const expr::gsFeSpace<real_t> & u)
+void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & dbasis, gsBoundaryConditions<> & bc,
+                                           gsMappedBasis<2,real_t> & bb2, const expr::gsFeSpace<real_t> & u)
 {
     const gsDofMapper & mapper = u.mapper();
-    gsDofMapper mapperBdy(basis, u.dim());
-    for (gsBoxTopology::const_iiterator it = basis.topology().iBegin();
-         it != basis.topology().iEnd(); ++it) // C^0 at the interface
-    {
-        basis.matchInterface(*it, mapperBdy);
-    }
-    for (size_t np = 0; np < mp.nPatches(); np++)
-    {
-        gsMatrix<index_t> bnd = mapper.findFree(np);
-        mapperBdy.markBoundary(np, bnd, 0);
-    }
+
+    gsMatrix<index_t> bnd = mapper.findFree(mapper.numPatches()-1);
+    gsDofMapper mapperBdy;
+    mapperBdy.setIdentity(bb2.nPatches(), bb2.size(), 1);  // bb2.nPatches() == 1
+    mapperBdy.markBoundary(0, bnd, 0);
     mapperBdy.finalize();
 
     gsExprAssembler<real_t> A(1,1);
-    A.setIntegrationElements(basis);
+    A.setIntegrationElements(dbasis);
 
     auto G = A.getMap(mp);
-    auto uu = A.getSpace(basis);
+    auto uu = A.getSpace(bb2);
     auto g_bdy = A.getBdrFunction(G);
     auto gg = pow(fform(G).det(),0.5);
 
@@ -411,22 +419,7 @@ void setDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> &
     gsSparseSolver<real_t>::SimplicialLDLT solver;
     solver.compute( A.matrix() );
     gsMatrix<real_t> & fixedDofs = const_cast<expr::gsFeSpace<real_t>& >(u).fixedPart();
-    gsMatrix<real_t> fixedDofs_temp = solver.solve(A.rhs());
-
-    // Reordering the dofs of the boundary
-    fixedDofs.setZero(mapper.boundarySize(),1);
-    index_t sz = 0;
-    for (size_t np = 0; np < mp.nPatches(); np++)
-    {
-        gsMatrix<index_t> bnd = mapperBdy.findFree(np);
-        bnd.array() += sz;
-        for (index_t i = 0; i < bnd.rows(); i++)
-        {
-            index_t ii = mapperBdy.asVector()(bnd(i,0));
-            fixedDofs(mapper.global_to_bindex(mapper.asVector()(bnd(i,0))),0) = fixedDofs_temp(ii,0);
-        }
-        sz += mapperBdy.patchSize(np,0);
-    }
+    fixedDofs = solver.solve(A.rhs());
 }
 
 
@@ -436,6 +429,8 @@ int main(int argc, char *argv[])
     bool plot = false;
     bool mesh = false;
 
+    index_t method = 0;
+
     index_t numRefine  = 5;
     index_t degree = 3;
     index_t smoothness = 2;
@@ -443,10 +438,12 @@ int main(int argc, char *argv[])
     bool second = false;
     bool residual = false;
 
-    std::string fn;
-    std::string geometry = "surface/surface_roof.xml";
+    std::string fn = "surfaces/surface_roof.xml";
+    std::string geometry;
 
     gsCmdLine cmd("Example for solving the biharmonic problem (single patch only).");
+    cmd.addInt( "m", "method", "The chosen method for the biharmonic problem", method );
+
     cmd.addInt("p", "degree","Set discrete polynomial degree", degree);
     cmd.addInt("s", "smoothness", "Set discrete regularity",  smoothness);
     cmd.addInt("r", "refinementLoop", "Number of refinement steps", numRefine);
@@ -467,10 +464,10 @@ int main(int argc, char *argv[])
     //! [Read Argument inputs]
     gsMultiPatch<real_t> mp;
     std::string string_geo;
-    if (fn.empty())
-        string_geo = "planar/geometries/" + geometry + ".xml";
-    else
+    if (geometry.empty())
         string_geo = fn;
+    else
+        string_geo = "surfaces/geometries/" + geometry + ".xml";
 
     gsInfo << "Filedata: " << string_geo << "\n";
     gsReadFile<>(string_geo, mp);
@@ -497,19 +494,27 @@ int main(int argc, char *argv[])
     // where p is the highest degree in the bases
     basis.setDegree(degree); // preserve smoothness
 
+    if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
+        mp.degreeElevate(degree-mp.patch(0).degree(0));
+
     // h-refine each basis
     if (last)
     {
         for (index_t r =0; r < numRefine; ++r)
-        {
             basis.uniformRefine(1, degree-smoothness);
-        }
 
         numRefine = 0;
     }
-    //! [Refinement]
 
-    gsDebugVar(mp.basis(0));
+    // Assume that the condition holds for each patch TODO
+    // Refine once
+    if (basis.basis(0).numElements() < 4)
+    {
+        basis.uniformRefine(1, degree-smoothness);
+        if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
+            mp.uniformRefine(1, degree-smoothness);
+    }
+    //! [Refinement]
 
     //! [Boundary condition]
     // Laplace
@@ -547,12 +552,22 @@ int main(int argc, char *argv[])
     auto ff = A.getCoeff(f, G); // Laplace example
 
     // Set the discretization space
-    auto u = A.getSpace(basis);
+    gsMappedBasis<2,real_t> bb2;
+    auto u = A.getSpace(bb2);
+
+    // The approx. C1 space
+    //gsApproxC1Spline<2,real_t> approxC1(mp,basis);
+    //approxC1.options().setSwitch("info",info);
+    //approxC1.options().setSwitch("plot",plot);
+    //approxC1.options().setSwitch("interpolation",true);
+    //approxC1.options().setSwitch("second",second);
+    //approxC1.options().setInt("gluingDataDegree",gluingDataDegree);
+    //approxC1.options().setInt("gluingDataSmoothness",gluingDataSmoothness);
 
     // Solution vector and solution variable
     gsMatrix<real_t> solVector;
     auto u_sol = A.getSolution(u, solVector);
-    gsMultiPatch<real_t> sol_coarse;
+    gsMappedSpline<2, real_t> ms_coarse;
 
     // Recover manufactured solution
     auto u_ex = ev.getVariable(ms, G);
@@ -573,17 +588,70 @@ int main(int argc, char *argv[])
     gsStopwatch timer;
     for (index_t r=0; r<=numRefine; ++r)
     {
-        // Refine uniform once
-        basis.uniformRefine(1,degree -smoothness);
-        meshsize[r] = basis.basis(0).getMaxCellLength();
+
+        if (method == MethodFlags::SPLINE)
+        {
+            if (mp.nPatches() != 1)
+            {
+                gsInfo << "The geometry has more than one patch. Run the code with a single patch!\n";
+                return EXIT_FAILURE;
+            }
+
+            // Refine uniform once
+            basis.uniformRefine(1,degree -smoothness);
+            meshsize[r] = basis.basis(0).getMaxCellLength();
+
+            gsSparseMatrix<real_t> global2local(basis.size(), basis.size());
+            global2local.setIdentity();
+            bb2.init(basis,global2local);
+            gsInfo << "Spline basis created \n";
+        }
+//        else if (method == MethodFlags::APPROXC1)
+//        {
+//            basis.uniformRefine(1,degree -smoothness);
+//            meshsize[r] = basis.basis(0).getMinCellLength();
+//            approxC1.update(bb2);
+//        }
+        else if (method == MethodFlags::DPATCH)
+        {
+            mp.uniformRefine(1,degree-smoothness);
+            basis.uniformRefine(1,degree-smoothness);
+
+            meshsize[r] = basis.basis(0).getMinCellLength();
+
+            gsSparseMatrix<real_t> global2local;
+            gsDPatch<2,real_t> dpatch(mp);
+            dpatch.matrix_into(global2local);
+            global2local = global2local.transpose();
+            mp = dpatch.exportToPatches();
+            basis = dpatch.localBasis();
+            bb2.init(basis,global2local);
+            gsInfo << "DPATCH basis created \n";
+        }
+        else if (method == MethodFlags::ALMOSTC1)
+        {
+            mp.uniformRefine(1,degree-smoothness);
+            basis.uniformRefine(1,degree-smoothness);
+
+            meshsize[r] = basis.basis(0).getMinCellLength();
+
+            gsSparseMatrix<real_t> global2local;
+            gsAlmostC1<2,real_t> almostC1(mp);
+            almostC1.matrix_into(global2local);
+            global2local = global2local.transpose();
+            mp = almostC1.exportToPatches();
+            basis = almostC1.localBasis();
+            bb2.init(basis,global2local);
+            gsInfo << "ALMOSTC1 basis created \n";
+        }
 
         // Setup the Mapper
         gsDofMapper map;
-        setMapperForBiharmonic(bc, basis,map);
+        setMapperForBiharmonic(bc, bb2,map);
 
         // Setup the system
         u.setupMapper(map);
-        setDirichletNeumannValuesL2Projection(mp, basis, bc, u);
+        gsDirichletNeumannValuesL2Projection(mp, basis, bc, bb2, u);
 
         // Initialize the system
         A.initSystem();
@@ -617,8 +685,6 @@ int main(int argc, char *argv[])
 
         timer.restart();
 
-
-
 //        index_t N = 5;
 //        gsMatrix<> points;
 //        points.setZero(2,N);
@@ -637,7 +703,7 @@ int main(int argc, char *argv[])
         {
             if (r!=0)
             {
-                auto u_coarse = A.getCoeff(sol_coarse);
+                auto u_coarse = A.getCoeff(ms_coarse);
                 l2err[r] = math::sqrt( ev.integral( (u_coarse - u_sol).sqNorm() * gg ) ); // / ev.integral(ff.sqNorm()*meas(G)) );
                 h1err[r]= l2err[r] +
                     math::sqrt(ev.integral( ( igrad(u_coarse) - igrad(u_sol) ).sqNorm() * gg )); // /ev.integral( igrad(f).sqNorm()*meas(G) ) );
@@ -652,7 +718,9 @@ int main(int argc, char *argv[])
                 h2err[r] = 0;
 
             }
-            u_sol.extract(sol_coarse);
+            gsMatrix<real_t> solFull_coarse;
+            u_sol.extractFull(solFull_coarse);
+            ms_coarse.init(bb2, solFull_coarse);
         }
         else
         {
