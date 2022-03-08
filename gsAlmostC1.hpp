@@ -1331,7 +1331,7 @@ namespace gismo
                 // The 1,1 corners of each patch will be given 0.5 weight in the interface handling, but in addition they will receive a 1/(v+2) weight from the 0,0 DoFs on each patch
                 pcorner.getContainingSides(d,psides);
 
-                bool C0 = true; // Flag to choose to treat it as C0 or not
+                bool C0 = false; // Flag to choose to treat it as C0 or not
                 if (C0)
                 {
                     // colIndices stores the 0,0 corners (including the 0,0s of the boundary sides)
