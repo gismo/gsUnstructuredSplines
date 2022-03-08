@@ -1462,60 +1462,59 @@ namespace gismo
         std::vector<gsBasis<T> *> basis(2);
         std::vector<gsMatrix<index_t>> indices(2); // interface indices
         std::vector<gsMatrix<index_t>> oindices(2); // interface indices
-        gsVector<bool> dirOr;
+
+        // get the bases belonging to both patches
+        for (index_t p =0; p!=2; p++)
+            basis[p] = &m_bases.basis(iface[p].patch);
+
+        // this assumes the directions are handled correctly in matchWith (indices has the same direction as oindices)
+        basis[0]->matchWith(iface,*basis[1],indices[0],indices[1],0);
+        basis[0]->matchWith(iface,*basis[1],oindices[0],oindices[1],1);
 
         index_t np;
-        // for both vertices of the side, add the indices at the vertex and one inside
         for (index_t p =0; p!=2; p++)
         {
-            np = abs(p-1); // not index p;
-            // get the bases belonging to both patches
-            basis[p] = &m_bases.basis(iface[p].patch);
-            // now we treat the offset of the interface
-            indices[p] = basis[p]->boundaryOffset(iface[p].side(),0);
-            oindices[p] = basis[p]->boundaryOffset(iface[p].side(),1);
+            np = 1-p; // not index p;
 
             iface[p].getContainedCorners(d,pcorners);
             for (index_t c =0; c!=2; c++)
             {
                 selectedIndices[p].push_back(_indexFromVert(0,pcorners[c],iface[p],0,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
+                selectedIndices[p].push_back(_indexFromVert(1,pcorners[c],iface[p],0,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
+
                 selectedOIndices[p].push_back(_indexFromVert(0,pcorners[c],iface[p],1,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
+                selectedOIndices[p].push_back(_indexFromVert(1,pcorners[c],iface[p],1,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
             }
 
-            std::sort(selectedIndices[p].begin(),selectedIndices[p].end());
-            std::sort(selectedOIndices[p].begin(),selectedOIndices[p].end());
             std::vector<index_t> allIndices(indices[p].data(), indices[p].data() + indices[p].rows() * indices[p].cols());
-            std::vector<index_t> result(allIndices.size());
-            std::vector<index_t>::iterator it=std::set_difference (allIndices.begin(), allIndices.end(), selectedIndices[p].begin(), selectedIndices[p].end(), result.begin());
-            result.resize(it-result.begin());
+            std::vector<index_t> result;
+            std::copy_if(allIndices.begin(), allIndices.end(), std::back_inserter(result),
+                [&selectedIndices,&p] (index_t entry)
+                {
+                    std::vector<index_t>::const_iterator res = std::find(selectedIndices[p].begin(), selectedIndices[p].end(), entry);
+                    return (res == selectedIndices[p].end());
+                });
             indices[p] = gsAsMatrix<index_t>(result);
 
             std::vector<index_t> allOIndices(oindices[p].data(), oindices[p].data() + oindices[p].rows() * oindices[p].cols());
-            result.resize(allOIndices.size());
-            std::vector<index_t>::iterator ito=std::set_difference (allOIndices.begin(), allOIndices.end(), selectedOIndices[p].begin(), selectedOIndices[p].end(), result.begin());
-            result.resize(ito-result.begin());
+            result.clear();
+            std::copy_if(allOIndices.begin(), allOIndices.end(), std::back_inserter(result),
+                [&selectedOIndices,&p] (index_t entry)
+                {
+                    std::vector<index_t>::const_iterator res = std::find(selectedOIndices[p].begin(), selectedOIndices[p].end(), entry);
+                    return (res == selectedOIndices[p].end());
+                });
             oindices[p] = gsAsMatrix<index_t>(result);
         }
-        // Flip the index vector if the directions of the indices do not match
-        dirOr = iface.dirOrientation();
-        for (short_t k = 0; k<m_patches.dim(); ++k )
-        {
-            if ( k == iface[0].side().direction() ) // skip ?
-                continue;
 
-            if ( ! dirOr[k] ) // flip ?
-            {
-                // gsDebug<<"\t\tReversed direction\n";
-                indices[0].reverseInPlace();
-                oindices[0].reverseInPlace();
-            }
-        }
+        GISMO_ASSERT(indices[0].size()==indices[1].size(),"Indices do not have the right size, indices[0].size()="<<indices[0].size()<<",indices[1].size()="<<indices[1].size());
+        GISMO_ASSERT(oindices[0].size()==oindices[1].size(),"Offset indices do not have the right size, oindices[0].size()="<<oindices[0].size()<<",oindices[1].size()="<<oindices[1].size());
 
         index_t rowIdx,colIdx;
         // loop over adjacent patches and couple the DoFs.
         for (index_t p =0; p!= 2; p++)
         {
-            np = abs(p-1); // not index p;
+            np = 1-p; // not index p;
             for (index_t k=0; k!= indices[p].size(); k++ )
             {
                 rowIdx = m_mapModified.index(oindices[p].at(k),iface[p].patch);
@@ -1533,7 +1532,6 @@ namespace gismo
             }
             m_sideCheck[ _sideIndex(iface[p].patch, iface[p].side()) ] = true; // side finished
         }
-
     }
 
     template<short_t d,class T>

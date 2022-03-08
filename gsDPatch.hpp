@@ -348,57 +348,7 @@ namespace gismo
         return index;
     }
 
-    template<short_t d,class T>
-    const gsVector<index_t> gsDPatch<d,T>::_indicesFromVert(index_t index, const patchCorner corner, const patchSide side, index_t offset)
-    {
-        /*
-            Finds indices i1,...,in in the direction of side away from the vertex
-        */
-
-        gsVector<index_t> result(index);
-
-        gsBasis<T> * basis = &m_bases.basis(side.patch);
-
-        gsVector<index_t> indices = static_cast<gsVector<index_t>>(basis->boundaryOffset(side.side(),offset));
-        if (side.side()==1) //west
-        {
-            if (corner.corner()==1)//southwest
-                result = indices.head(index);
-            else if (corner.corner()==3) //northwest
-                result = indices.tail(index);
-            else
-                GISMO_ERROR(corner.corner() << "is not on side "<<side.side()<<"!");
-        }
-        else if (side.side()==2) //east
-        {
-            if (corner.corner()==2)//southeast
-                result = indices.head(index);
-            else if (corner.corner()==4) //northeast
-                result = indices.tail(index);
-            else
-                GISMO_ERROR(corner.corner() << "is not on side "<<side.side()<<"!");
-        }
-        else if (side.side()==3) //south
-        {
-            if (corner.corner()==1)//southwest
-                result = indices.head(index);
-            else if (corner.corner()==2) //southeast
-                result = indices.tail(index);
-            else
-                GISMO_ERROR(corner.corner() << "is not adjacent to side "<<side.side()<<"!");
-        }
-        else if (side.side()==4) //north
-        {
-            if (corner.corner()==3)//northwest
-                result = indices.head(index);
-            else if (corner.corner()==4) //northeast
-                result = indices.tail(index);
-            else
-                GISMO_ERROR(corner.corner() << "is not adjacent to side "<<side.side()<<"!");
-        }
-        return result;
-    }
-
+    // TO DO: change this so that it works for all hierarchical levels (and does not depend on the storage of the boundary order)
     template<short_t d,class T>
     const index_t gsDPatch<d,T>::_indexFromVert(index_t index, const patchCorner corner, const patchSide side, index_t offset, index_t levelOffset)
     {
@@ -883,31 +833,40 @@ namespace gismo
         m_vertCheck.resize(nVerts);
         std::fill(m_vertCheck.begin(), m_vertCheck.end(), false);
 
-        m_bases = gsMultiBasis<T>(m_patches);
-
-        m_mapModified = gsDofMapper(m_bases);
-        m_mapOriginal = gsDofMapper(m_bases);
-
         m_size = -1;
 
         // Cast all patches of the mp object to THB splines
         gsTHBSpline<d,T> thb;
+        gsTensorBSpline<2,real_t> * geo;
         for (size_t k=0; k!=m_patches.nPatches(); ++k)
         {
-            if (typeid(gsTHBSplineBasis<2,T>)!=typeid(m_bases.basis(k)))
+            if ( (geo = dynamic_cast< gsTensorBSpline<2,real_t> * > (&m_patches.patch(k))) )
             {
-                gsTensorBSpline<2,real_t> *geo = dynamic_cast< gsTensorBSpline<2,real_t> * > (&m_patches.patch(k));
-
                 thb = gsTHBSpline<2,real_t>(*geo);
                 m_patches.patch(k) = thb;
             }
         }
 
+        m_Bbases = m_bases = gsMultiBasis<T>(m_patches);
+
+        m_mapModified = gsDofMapper(m_bases);
+        m_mapOriginal = gsDofMapper(m_bases);
+
         size_t tmp;
         m_size = tmp = 0;
         // number of interior basis functions
-        for (size_t k=0; k!=m_patches.nPatches(); k++)
-            tmp += (m_bases.basis(k).component(0).size()-4)*(m_bases.basis(k).component(1).size()-4);
+        for (size_t p=0; p!=m_patches.nPatches(); p++)
+        {
+            tmp += m_bases.basis(p).size();
+            for (index_t k=0; k!=2; k++)
+            {
+                tmp -= m_bases.basis(p).boundaryOffset(boxSide(1),k).size();
+                tmp -= m_bases.basis(p).boundaryOffset(boxSide(2),k).size();
+                tmp -= m_bases.basis(p).boundaryOffset(boxSide(3),k).size()-4;
+                tmp -= m_bases.basis(p).boundaryOffset(boxSide(4),k).size()-4;
+            }
+        }
+
         // gsDebug<<"Number of interior DoFs: "<<tmp<<"\n";
         m_size += tmp;
 
@@ -931,7 +890,8 @@ namespace gismo
         for(gsBoxTopology::const_biterator bit = m_patches.bBegin(); bit!= m_patches.bEnd(); bit++)
         {
             basis1 = &m_bases.basis(bit->patch);
-            tmp += 2*(basis1->boundary(bit->side()).size() - 4);
+            tmp += (basis1->boundaryOffset(bit->side(),0).size() - 4);
+            tmp += (basis1->boundaryOffset(bit->side(),1).size() - 4);
         }
         // gsDebug<<"Number of boundary DoFs: "<<tmp<<"\n";
         m_size += tmp;
@@ -942,7 +902,7 @@ namespace gismo
         std::fill(passed.begin(), passed.end(), false);
 
         std::vector<patchCorner> corners;
-        index_t corn = 0;
+        // index_t corn = 0;
         for (size_t p=0; p!=m_patches.nPatches(); p++)
             for (index_t c=1; c<=4; c++)
             {
@@ -960,7 +920,7 @@ namespace gismo
                     else
                         tmp += vdata.first; // valence;
 
-                    corn +=1;
+                    // corn +=1;
                 }
             }
         // gsDebug<<"Number of unique corners: "<<corn<<"\n";
@@ -968,8 +928,6 @@ namespace gismo
         // gsDebug<<"Number of vertex DoFs: "<<tmp<<"\n";
 
         m_size += tmp;
-
-        m_Bbases = m_bases = gsMultiBasis<T>(m_patches);
 
         m_mapModified = gsDofMapper(m_bases);
         m_mapOriginal = gsDofMapper(m_bases);
@@ -1059,8 +1017,7 @@ namespace gismo
 
                 std::vector<index_t> result(allIndices.size());
                 std::vector<index_t>::iterator it=std::set_difference (allIndices.begin(), allIndices.end(), selectedIndices.begin(), selectedIndices.end(), result.begin());
-                                                                //  5 15 25  0  0  0  0  0  0  0
-                result.resize(it-result.begin());                      //  5 15 25
+                result.resize(it-result.begin());
 
                 gsAsMatrix<index_t> indices(result,result.size(),1);
                 m_mapModified.markBoundary(patches[p], indices);
@@ -1119,8 +1076,9 @@ namespace gismo
                                 }
                                 else
                                 {
-                                    m_mapModified.markBoundary(pcorner.patch,_indicesFromVert(2,pcorner,psides[p]));
-                                    // gsDebug<<"Eliminated "<<_indicesFromVert(2,pcorner,psides[p]).transpose()<<" of basis "<<pcorner.patch<<"\n";
+                                    m_mapModified.eliminateDof(_indexFromVert(0,pcorner,psides[p],0),pcorner.patch);
+                                    m_mapModified.eliminateDof(_indexFromVert(1,pcorner,psides[p],0),pcorner.patch);
+                                    // gsDebug<<"Eliminated "<<_indexFromVert(1,pcorner,psides[p],0)<<" and "<<_indexFromVert(1,pcorner,psides[p],0)<<" of basis "<<pcorner.patch<<"\n";
                                 }
                             }
                         }
@@ -1214,8 +1172,8 @@ namespace gismo
                     pcorner.getContainingSides(d,psides);
                     for (size_t p=0; p!=psides.size(); p++)
                     {
-                        m_mapModified.markBoundary(pcorner.patch,_indicesFromVert(2,pcorner,psides[p]));
-                        // gsDebug<<"Eliminated "<<_indicesFromVert(2,pcorner,psides[p]).transpose()<<" of basis "<<pcorner.patch<<"\n";
+                        m_mapModified.eliminateDof(_indexFromVert(0,pcorner,psides[p],0),pcorner.patch);
+                        m_mapModified.eliminateDof(_indexFromVert(1,pcorner,psides[p],0),pcorner.patch);
                     }
                 }
 
@@ -1557,18 +1515,19 @@ namespace gismo
         std::vector<gsBasis<T> *> basis(2);
         std::vector<gsMatrix<index_t>> indices(2); // interface indices
         std::vector<gsMatrix<index_t>> oindices(2); // interface indices
-        gsVector<bool> dirOr;
+
+        // get the bases belonging to both patches
+        for (index_t p =0; p!=2; p++)
+            basis[p] = &m_bases.basis(iface[p].patch);
+
+        // this assumes the directions are handled correctly in matchWith (indices has the same direction as oindices)
+        basis[0]->matchWith(iface,*basis[1],indices[0],indices[1],0);
+        basis[0]->matchWith(iface,*basis[1],oindices[0],oindices[1],1);
 
         index_t np;
-        // for both vertices of the side, add the indices at the vertex and one inside
         for (index_t p =0; p!=2; p++)
         {
-            np = abs(p-1); // not index p;
-            // get the bases belonging to both patches
-            basis[p] = &m_bases.basis(iface[p].patch);
-            // now we treat the offset of the interface
-            indices[p] = basis[p]->boundaryOffset(iface[p].side(),0);
-            oindices[p] = basis[p]->boundaryOffset(iface[p].side(),1);
+            np = 1-p; // not index p;
 
             iface[p].getContainedCorners(d,pcorners);
             for (index_t c =0; c!=2; c++)
@@ -1580,40 +1539,35 @@ namespace gismo
                 selectedOIndices[p].push_back(_indexFromVert(1,pcorners[c],iface[p],1,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
             }
 
-            std::sort(selectedIndices[p].begin(),selectedIndices[p].end());
-            std::sort(selectedOIndices[p].begin(),selectedOIndices[p].end());
             std::vector<index_t> allIndices(indices[p].data(), indices[p].data() + indices[p].rows() * indices[p].cols());
-            std::vector<index_t> result(allIndices.size());
-            std::vector<index_t>::iterator it=std::set_difference (allIndices.begin(), allIndices.end(), selectedIndices[p].begin(), selectedIndices[p].end(), result.begin());
-            result.resize(it-result.begin());
+            std::vector<index_t> result;
+            std::copy_if(allIndices.begin(), allIndices.end(), std::back_inserter(result),
+                [&selectedIndices,&p] (index_t entry)
+                {
+                    std::vector<index_t>::const_iterator res = std::find(selectedIndices[p].begin(), selectedIndices[p].end(), entry);
+                    return (res == selectedIndices[p].end());
+                });
             indices[p] = gsAsMatrix<index_t>(result);
 
             std::vector<index_t> allOIndices(oindices[p].data(), oindices[p].data() + oindices[p].rows() * oindices[p].cols());
-            result.resize(allOIndices.size());
-            std::vector<index_t>::iterator ito=std::set_difference (allOIndices.begin(), allOIndices.end(), selectedOIndices[p].begin(), selectedOIndices[p].end(), result.begin());
-            result.resize(ito-result.begin());
+            result.clear();
+            std::copy_if(allOIndices.begin(), allOIndices.end(), std::back_inserter(result),
+                [&selectedOIndices,&p] (index_t entry)
+                {
+                    std::vector<index_t>::const_iterator res = std::find(selectedOIndices[p].begin(), selectedOIndices[p].end(), entry);
+                    return (res == selectedOIndices[p].end());
+                });
             oindices[p] = gsAsMatrix<index_t>(result);
         }
-        // Flip the index vector if the directions of the indices do not match
-        dirOr = iface.dirOrientation();
-        for (short_t k = 0; k<m_patches.dim(); ++k )
-        {
-            if ( k == iface[0].side().direction() ) // skip ?
-                continue;
 
-            if ( ! dirOr[k] ) // flip ?
-            {
-                // gsDebug<<"\t\tReversed direction\n";
-                indices[0].reverseInPlace();
-                oindices[0].reverseInPlace();
-            }
-        }
+        GISMO_ASSERT(indices[0].size()==indices[1].size(),"Indices do not have the right size, indices[0].size()="<<indices[0].size()<<",indices[1].size()="<<indices[1].size());
+        GISMO_ASSERT(oindices[0].size()==oindices[1].size(),"Offset indices do not have the right size, oindices[0].size()="<<oindices[0].size()<<",oindices[1].size()="<<oindices[1].size());
 
         index_t rowIdx,colIdx;
         // loop over adjacent patches and couple the DoFs.
         for (index_t p =0; p!= 2; p++)
         {
-            np = abs(p-1); // not index p;
+            np = 1-p; // not index p;
             for (index_t k=0; k!= indices[p].size(); k++ )
             {
                 rowIdx = m_mapModified.index(oindices[p].at(k),iface[p].patch);
@@ -1631,7 +1585,6 @@ namespace gismo
             }
             m_sideCheck[ _sideIndex(iface[p].patch, iface[p].side()) ] = true; // side finished
         }
-
     }
 
     template<short_t d,class T>
@@ -1676,8 +1629,9 @@ namespace gismo
                 rowIdx = m_mapModified.index(b,p);
                 // rowIdx = m_mapOriginal.index(b,p);
                 if ( (!m_mapModified.is_free(b,p)) || (m_basisCheck[rowIdx]) )
-                // if ( (m_basisCheck[rowIdx]) )
-                    continue;
+                    // if ( (m_basisCheck[rowIdx]) )
+                        continue;
+
                 colIdx = m_mapOriginal.index(b,p);
                 m_matrix(rowIdx,colIdx) = 1;
                 m_basisCheck[rowIdx] = true;
@@ -1707,7 +1661,6 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatch<d,T>::_computeSmoothMatrix()
     {
-
         m_basisCheck.resize(m_size);
         // m_basisCheck.resize(m_bases.totalSize());
         std::fill(m_basisCheck.begin(), m_basisCheck.end(), false);
@@ -1736,7 +1689,7 @@ namespace gismo
         bool checkVerts = std::all_of(m_vertCheck.begin(), m_vertCheck.end(), [](bool m_vertCheck) { return m_vertCheck; });
         GISMO_ASSERT(checkVerts,"Not all vertices are checked");
         bool checkBasis = std::all_of(m_basisCheck.begin(), m_basisCheck.end(), [](bool m_basisCheck) { return m_basisCheck; });
-        GISMO_ASSERT(checkBasis,"Not all vertices are checked");
+        GISMO_ASSERT(checkBasis,"Not all basis functions are checked");
     }
 
     // THIS FUNCTION IS LEGACY!!

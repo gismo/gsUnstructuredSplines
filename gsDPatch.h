@@ -231,20 +231,6 @@ class gsDPatch  //: public gsMappedGeom<d,T>
          */
         const index_t _indexFromSides(index_t index1, const patchSide side1, index_t index2, const patchSide side2);
 
-
-        /**
-         * @brief      Computes the index of a basis function taking one corner and one side as reference
-         *
-         * @param[in]  index   Offset of the basis function parallel to the side \a side, measured from \a corner
-         * @param[in]  corner  The corner to be measured from
-         * @param[in]  side    The side which contains \a corner
-         * @param[in]  offset  The offset from the side (orthogonal to the side)
-         *
-         * @return     Index of \a index places from \a corner along \a side, with offset \a offset
-         */
-        const gsVector<index_t> _indicesFromVert(index_t index, const patchCorner corner, const patchSide side, index_t offset = 0);
-
-
         /**
          * @brief      Computes the index of a basis function taking one corner and one side as reference
          *
