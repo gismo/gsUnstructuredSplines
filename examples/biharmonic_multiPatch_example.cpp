@@ -315,7 +315,10 @@ int main(int argc, char *argv[])
             mp.uniformRefine(1,degree-smoothness);
             dbasis.uniformRefine(1,degree-smoothness);
 
-            meshsize[r] = dbasis.basis(0).getMinCellLength();
+            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&dbasis.basis(0)))
+                meshsize[r] = test->tensorLevel(0).getMinCellLength();
+            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&dbasis.basis(0)))
+                meshsize[r] = test->getMinCellLength();
 
             gsSparseMatrix<real_t> global2local;
             gsAlmostC1<2,real_t> almostC1(mp);
