@@ -68,23 +68,24 @@ class MyDocument(Document):
         #        caption_list   [list] A list of captions for each tikz_file
 
         width = r'' + str(1 / col) + '\\textwidth'
-        for pages in range(len(tikz_list)//(col*row) +1):
+        for pages in range(len(tikz_list)//(col*row)):
             with self.create(Figure(position='h!')) as fig:
                 self.append(NoEscape(r"\centering"))
                 if not pages ==0:
                     self.append(NoEscape(r"\ContinuedFloat"))
                 for idx, tikz in enumerate(tikz_list[col*row*pages:col*row*(pages+1)]):
-                    with self.create(SubFigure(
-                            position='b',
-                            width=NoEscape(width))) as subfig:
-                        self.append(NoEscape(r"\centering"))
-                        if tikz[-3:] == "pdf":
-                            self.append(NoEscape(r'\resizebox{\textwidth}{!}{'
-                                                 r'\includegraphics[width=\textwidth]{tikz_figures/' + tikz + '}'))
-                            self.append(NoEscape(r'}'))
-                        else:
-                            self.append(NoEscape(r'\inputtikz{' + tikz + '}'))
-                        subfig.add_caption(caption_list[idx+col*row*pages])
+                    if not tikz == "":
+                        with self.create(SubFigure(
+                                position='b',
+                                width=NoEscape(width))) as subfig:
+                            self.append(NoEscape(r"\centering"))
+                            if tikz[-3:] == "pdf":
+                                self.append(NoEscape(r'\resizebox{\textwidth}{!}{'
+                                                     r'\includegraphics[width=\textwidth]{tikz_figures/' + tikz + '}'))
+                                self.append(NoEscape(r'}'))
+                            else:
+                                self.append(NoEscape(r'\inputtikz{' + tikz + '}'))
+                            subfig.add_caption(NoEscape(r'' + caption_list[idx+col*row*pages]))
                     if idx % col == col - 1:
                         self.append(NoEscape(r"\\"))
 
@@ -130,6 +131,9 @@ class MyTikz(Document):
 
     def setPlotOptions(self, options):
         self.opt_plot = options
+
+    def swapLinestyle(self, id):
+        self.opt_mat[0] = self.opt_mat[id]
 
     def setColor(self, color):
         for col, opt in zip(color, self.opt_plot):
@@ -234,8 +238,10 @@ class MyTikz(Document):
                         self.legend.append([",".join(new_list)])
 
                         if rate and abs(mat[col][-1][1]) > 1e-12:
-                            # rate_h2 = np.log(points[col][-2][1]/points[col][-1][1])/np.log(2.0)
-                            # print(np.around(rate_h2,2))
+                            #rate_h2 = np.log(points[col][-2][1]/points[col][-1][1])/np.log(2.0)
+                            #print(np.around(rate_h2,2))
+
+
                             if array:
                                 curve = Plot(options=opt_rate[idx],
                                              func=str(rates_list[idx]) + '*x^' + str(
