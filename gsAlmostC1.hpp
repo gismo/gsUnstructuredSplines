@@ -941,6 +941,8 @@ namespace gismo
                 thb = gsTHBSpline<2,real_t>(*geo);
                 m_patches.patch(k) = thb;
             }
+            else
+                gsWarn<<"No THB basis was constructed";
         }
 
 
