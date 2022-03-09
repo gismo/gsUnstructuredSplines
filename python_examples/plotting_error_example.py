@@ -54,7 +54,7 @@ class Method(Enum):
 geo_list = ["g1000", "g1020", "g1702", "g1021", "g1704"]  # Without .xml extension
 path_geo = "planar/geometries/"
 
-loop = 4
+loop = 3
 second = False
 
 deg_list = [
@@ -103,8 +103,6 @@ for idx, method in enumerate(method_list):
 
             file_coll.append(path_results_geo+argument_list)
 
-print(file_coll)
-
 list_dict = []
 for id in range(len(file_coll)):
     my_dict = {"Matrix": gs.io.gsFileData.getMatrix(file_coll[id]+".xml"), "Deg": None, "Reg": None,
@@ -122,8 +120,9 @@ for id in range(len(file_coll)):
 # Sorting values
 row_mat_coll = []
 name_mat_coll = []
-for idx, method in enumerate(method_list):
-    for deg in deg_list[idx]:  # Rows
+deg_mat_coll = []
+for geo in geo_list:  # Cols
+    for idx, method in enumerate(method_list):
         m_str = ""
         if method == Method.ApproxC1:
             m_str = "approxC1"
@@ -136,21 +135,24 @@ for idx, method in enumerate(method_list):
         else:
             print("METHOD NOT IMPLEMENTED!!!")
 
-        geo_mat_list = []
-        name_mat_list = []
+        #geo_mat_list = []
+        #name_mat_list = []
 
-        for geo in geo_list:  # Cols
+        for deg in deg_list[idx]:  # Rows
             mat_list = []
             for dict in list_dict:
-                if dict["Geo"] == geo and int(dict["Deg"]) == deg:
+                if dict["Geo"] == geo and int(dict["Deg"]) == deg and m_str in dict["Name"]:
                     mat_list.append(dict["Matrix"])
-            geo_mat_list.append(mat_list)
-            name_mat_list.append(m_str + "-" + geo + "-error-p" + str(deg) + "-s" + str(deg - 1) + "-r" + str(loop))
+            #geo_mat_list.append(mat_list)
+            #name_mat_list.append(m_str + "-" + geo + "-error-p" + str(deg) + "-s" + str(deg - 1) + "-r" + str(loop))
+            row_mat_coll.append([mat_list])
+            name_mat_coll.append([m_str + "-" + geo + "-error-p" + str(deg) + "-s" + str(deg - 1) + "-r" + str(loop)])
 
-        row_mat_coll.append(geo_mat_list)
-        name_mat_coll.append(name_mat_list)
+        #row_mat_coll.append(geo_mat_list)
+        #name_mat_coll.append(name_mat_list)
 
-def create_tikz_figures(geo_mat_list, name_mat_list, deg_list, opt_plot, shift=0):
+
+def create_tikz_figures(geo_mat_list, name_mat_list, deg_list, opt_plot, shift=0, id=0):
     list_tikz = []
     for idx, mat_list in enumerate(geo_mat_list):
         x_col = 0
@@ -185,6 +187,7 @@ def create_tikz_figures(geo_mat_list, name_mat_list, deg_list, opt_plot, shift=0
         fig.setDegree(deg_list)
         fig.setRateShift(shift)
         fig.setPlotOptions(opt_plot)
+        fig.swapLinestyle(id)
         fig.create_error_plot(x_list, M_list, False, rate=True)  # True since M is an array
         fig.generate_tikz(path_tikz + name_mat_list[idx])
 
@@ -201,16 +204,26 @@ opt_plot = [{'mark': 'diamond*', 'color': 'green', 'line width': '1pt'},
 
 tikz_coll = []
 legend_coll = []
-for idx, method in enumerate(method_list):
-    for deg in deg_list[idx]:
-        rate_list = [deg + 1, deg, deg - 1]
-        list_tikz2, legend_list2 = create_tikz_figures(row_mat_coll[idx], name_mat_coll[idx], rate_list, opt_plot)
-        for tikz in list_tikz2:
-            tikz_coll.append(tikz)
-        if idx == 0:
-            for legend in legend_list2:
-                legend_coll.append(legend)
 
+
+count = 0
+for geo in geo_list:
+    geo_name = geo.replace("/",":")
+    tikz_coll.append("geo/" + geo_name + "_mesh")
+    tikz_coll.append("")
+    tikz_coll.append("")
+    for idx, method in enumerate(method_list):
+        for deg in deg_list[idx]:
+            rate_list = [deg + 1, deg, deg - 1]
+
+            list_tikz2, legend_list2 = create_tikz_figures(row_mat_coll[count], name_mat_coll[count], rate_list, opt_plot, id=idx)
+            count += 1
+            for tikz in list_tikz2:
+                tikz_coll.append(tikz)
+        for legend in legend_list2:
+            legend_coll.append(legend)
+    tikz_coll.append("")
+    tikz_coll.append("")
 
 legend_list = []
 
@@ -247,14 +260,20 @@ fig.generate_tikz(path_tikz + "legend_error")
 legend_list.append(path_dir + "legend_error")
 
 
+
 caption_coll = []
-for idx, method in enumerate(method_list):
-    for deg in deg_list[idx]:
-        for geo in geo_list:
-            caption_coll.append("m" + str(method.value) + ", " + geo + ", p" + str(deg) + ", r" + str(deg - 1))
+for geo in geo_list:
+    caption_coll.append("Geometry: " + geo)
+    caption_coll.append("")
+    caption_coll.append("")
+    for idx, method in enumerate(method_list):
+        for deg in deg_list[idx]:
+            caption_coll.append("$p = " + str(deg) + "$, $r = " + str(deg - 1) + "$")
+    caption_coll.append("")
+    caption_coll.append("")
 
 doc = lib.MyDocument()
-doc.addTikzFigure(tikz_coll, caption_coll, row=3, col=4, legend=legend_list)
+doc.addTikzFigure(tikz_coll, caption_coll, row=4, col=3, legend=legend_list)
 doc.generate_pdf("error_example", compiler="pdflatex", compiler_args=["-shell-escape"], clean_tex=False)
 lib.clean_extensions(crop=legend_list)
 doc.generate_pdf("error_example", compiler="pdflatex", clean_tex=False)
