@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 """"
-    @file diss_library.py
+    @file library.py
     @brief Compute biharmonic2_example using pygismo and plot the output with pylatex to latex/tikz
     This file is part of the G+Smo library.
     This Source Code Form is subject to the terms of the Mozilla Public
@@ -118,13 +118,9 @@ class MyTikz(Document):
         self.legend = []
 
         self.deg_list = []
-        self.rate_shift = 0
 
     def setDegree(self, deg):
         self.deg_list = deg
-
-    def setRateShift(self, shift):
-        self.rate_shift = shift
 
     def setOptions(self, options):
         self.opt = options
@@ -196,7 +192,7 @@ class MyTikz(Document):
                 points_list.append(points)
                 if rate:
                     rates_list.append(
-                        np.exp(np.log(points_temp[-1][1]) - (int(self.deg_list[idx]) + self.rate_shift) * np.log(
+                        np.exp(np.log(points_temp[-1][1]) - (int(self.deg_list[idx])) * np.log(
                             points_temp[-1][0])))
                     opt_rate.append(
                         {NoEscape(r'domain={' + str(x_list[idx][-2]) + ':' + str(x_list[idx][-1]) + '}'), 'draw=black',
@@ -211,7 +207,7 @@ class MyTikz(Document):
                     points.append(points_temp)
                     if rate and idx == 0:
                         rates_list.append(
-                            np.exp(np.log(points_temp[-1][1]) - (int(self.deg_list[col]) + self.rate_shift) * np.log(
+                            np.exp(np.log(points_temp[-1][1]) - (int(self.deg_list[col])) * np.log(
                                 points_temp[-1][0])))
                         opt_rate.append(
                             {NoEscape(r'domain={' + str(x_list[idx][-2]) + ':' + str(x_list[idx][-1]) + '}'),
@@ -241,24 +237,23 @@ class MyTikz(Document):
                             #rate_h2 = np.log(points[col][-2][1]/points[col][-1][1])/np.log(2.0)
                             #print(np.around(rate_h2,2))
 
-
                             if array:
                                 curve = Plot(options=opt_rate[idx],
                                              func=str(rates_list[idx]) + '*x^' + str(
-                                                 int(self.deg_list[idx]) + self.rate_shift))
+                                                 int(self.deg_list[idx])))
 
                                 string_curve = curve.dumps()
                                 string_curve = string_curve[:string_curve.find(';%')]
                                 string_curve += NoEscape(r' node[right, pos=0.75] {\tiny{$h' + str(
-                                    int(self.deg_list[idx]) + self.rate_shift) + '$}};')
+                                    int(self.deg_list[idx])) + '$}};')
                                 axis.append(NoEscape(r'' + string_curve))
                             elif idx == 0:  # To avoid double printing
                                 curve = Plot(options=opt_rate[col],
                                              func=str(rates_list[col]) + '*x^' + str(
-                                                 int(self.deg_list[col]) + self.rate_shift))
+                                                 int(self.deg_list[col])))
 
                                 string_curve = curve.dumps()
                                 string_curve = string_curve[:string_curve.find(';%')]
                                 string_curve += NoEscape(r' node[right, pos=0.75] {\tiny{$h' + str(
-                                    int(self.deg_list[col]) + self.rate_shift) + '$}};')
+                                    int(self.deg_list[col])) + '$}};')
                                 axis.append(NoEscape(r'' + string_curve))

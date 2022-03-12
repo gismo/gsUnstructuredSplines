@@ -282,6 +282,7 @@ int main(int argc, char *argv[])
 {
     //! [Parse command line]
     bool plot = false;
+    bool mesh = false;
 
     index_t method = 0;
 
@@ -301,10 +302,9 @@ int main(int argc, char *argv[])
     real_t penalty_init = -1.0;
     std::string xml;
     std::string output;
+    std::string geometry = "g1000";
 
     std::string fn;
-
-    index_t geometry = 1000;
 
     gsCmdLine cmd("Tutorial on solving a Biharmonic problem with different spaces.");
     // Flags related to the method (default: Approx C1 method)
@@ -315,7 +315,7 @@ int main(int argc, char *argv[])
 
     // Flags related to the input/geometry
     cmd.addString( "f", "file", "Input geometry file from path (with .xml)", fn );
-    cmd.addInt( "g", "geometry", "Input geometry file",  geometry );
+    cmd.addString( "g", "geometry", "Input geometry file",  geometry );
     cmd.addString("x", "xml", "Use the input from the xml file", xml);
 
     // Flags related to the discrete settings
@@ -335,6 +335,7 @@ int main(int argc, char *argv[])
     // Flags related to the output
     cmd.addSwitch("last", "Solve solely for the last level of h-refinement", last);
     cmd.addSwitch("plot", "Create a ParaView visualization file with the solution", plot);
+    cmd.addSwitch("mesh", "Plot the mesh", mesh);
     //cmd.addSwitch("cond", "Estimate condition number (slow!)", cond);
 
     cmd.addString("o", "output", "Output in xml (for python)", output);
@@ -353,7 +354,7 @@ int main(int argc, char *argv[])
         //! [Read geometry]
         std::string string_geo;
         if (fn.empty())
-            string_geo = "planar/geometries/g" + util::to_string(geometry) + ".xml";
+            string_geo = "planar/geometries/" + geometry + ".xml";
         else
             string_geo = fn;
 
@@ -441,7 +442,7 @@ int main(int argc, char *argv[])
 
         //cond = optionList.getSwitch("cond");
         plot = optionList.getSwitch("plot");
-        info = optionList.getSwitch("info");
+        mesh = optionList.getSwitch("mesh");
         interpolation = optionList.getSwitch("interpolation");
     }
     //! [Read XML file]
@@ -479,8 +480,8 @@ int main(int argc, char *argv[])
     gsInfo<< "Available threads: "<< omp_get_max_threads() <<"\n";
 #endif
 
-    dbasis.basis(0).uniformRefine(1);
-    mp.patch(0).uniformRefine(1);
+//    dbasis.basis(0).uniformRefine(1);
+//    mp.patch(0).uniformRefine(1);
 
 //    gsWriteParaview(mp, "geom", 2000);
 //
@@ -522,15 +523,6 @@ int main(int argc, char *argv[])
     gsMappedBasis<2,real_t> bb2;
     auto u = method == MethodFlags::NITSCHE ? A.getSpace(dbasis) : A.getSpace(bb2);
 
-    // The approx. C1 space
-    gsApproxC1Spline<2,real_t> approxC1(mp,dbasis);
-    approxC1.options().setSwitch("info",info);
-    approxC1.options().setSwitch("plot",plot);
-    approxC1.options().setSwitch("interpolation",interpolation);
-    approxC1.options().setSwitch("second",second);
-    approxC1.options().setInt("gluingDataDegree",gluingDataDegree);
-    approxC1.options().setInt("gluingDataSmoothness",gluingDataSmoothness);
-
     // Solution vector and solution variable
     gsMatrix<real_t> solVector;
     auto u_sol = A.getSolution(u, solVector);
@@ -557,6 +549,15 @@ int main(int argc, char *argv[])
         {
             dbasis.uniformRefine(1,degree -smoothness);
             meshsize[r] = dbasis.basis(0).getMinCellLength();
+
+            // The approx. C1 space
+            gsApproxC1Spline<2,real_t> approxC1(mp,dbasis);
+            approxC1.options().setSwitch("info",info);
+            approxC1.options().setSwitch("plot",plot);
+            approxC1.options().setSwitch("interpolation",interpolation);
+            approxC1.options().setSwitch("second",second);
+            approxC1.options().setInt("gluingDataDegree",gluingDataDegree);
+            approxC1.options().setInt("gluingDataSmoothness",gluingDataSmoothness);
             approxC1.update(bb2);
         }
         else if (method == MethodFlags::NITSCHE)
@@ -858,7 +859,7 @@ int main(int argc, char *argv[])
     {
         gsInfo<<"Plotting in Paraview...\n";
         gsWriteParaview( mp, "geom",1000,true);
-        ev.options().setSwitch("plot.elements", false);
+        ev.options().setSwitch("plot.elements", mesh);
         ev.options().setInt   ("plot.npts"    , 1000);
         ev.writeParaview( u_sol   , G, "solution");
         //ev.writeParaview( u_ex    , G, "solution_ex");
