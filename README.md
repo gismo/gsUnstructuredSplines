@@ -1,4 +1,4 @@
 # gsUnstructuredSplines
 Module for unstructured splines
 
-![plot](./filedata/dictionary_geometries.png)
+![plot](./readMe/dictionary_geometries.png)
