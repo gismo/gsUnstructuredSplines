@@ -11,9 +11,9 @@ project(gsUnstructuredSplines)
 include(gsConfig)
 
 ## Collect files
-aux_header_directory     (${CMAKE_CURRENT_SOURCE_DIR} ${PROJECT_NAME}_H  )
-aux_cpp_directory        (${CMAKE_CURRENT_SOURCE_DIR} ${PROJECT_NAME}_CPP)
-aux_tmpl_header_directory(${CMAKE_CURRENT_SOURCE_DIR} ${PROJECT_NAME}_HPP)
+aux_header_directory     (${CMAKE_CURRENT_SOURCE_DIR}/src ${PROJECT_NAME}_H  )
+aux_cpp_directory        (${CMAKE_CURRENT_SOURCE_DIR}/src ${PROJECT_NAME}_CPP)
+aux_tmpl_header_directory(${CMAKE_CURRENT_SOURCE_DIR}/src ${PROJECT_NAME}_HPP)
 
 if( (NOT GISMO_BUILD_LIB) )
   aux_instance_directory (${CMAKE_CURRENT_SOURCE_DIR} ${PROJECT_NAME}_INS)
@@ -37,7 +37,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 set(gismo_MODULES ${gismo_MODULES} $<TARGET_OBJECTS:${PROJECT_NAME}>
   CACHE INTERNAL "G+Smo modules" )
 
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}"
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/src"
   DESTINATION include/gismo
   FILES_MATCHING PATTERN "*.h" )
 

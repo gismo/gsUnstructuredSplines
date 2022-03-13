@@ -13,9 +13,9 @@
 
 # include <gismo.h>
 
-#include <gsUnstructuredSplines/gsApproxC1Spline.h>
-#include <gsUnstructuredSplines/gsDPatch.h>
-#include <gsUnstructuredSplines/gsAlmostC1.h>
+#include <gsUnstructuredSplines/src/gsApproxC1Spline.h>
+#include <gsUnstructuredSplines/src/gsDPatch.h>
+#include <gsUnstructuredSplines/src/gsAlmostC1.h>
 
 /**
  * Smoothing method:
