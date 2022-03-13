@@ -26,10 +26,11 @@
  */
 enum MethodFlags
 {
-    APPROXC1       = 0 << 0, // Approx C1 Method
-    DPATCH         = 1 << 0, // D-Patch
-    ALMOSTC1       = 1 << 1, // Almost C1
-    SPLINE         = 1 << 2, // Tensor Spline (only for single Patch)
+    APPROXC1       = 0, // Approx C1 Method
+    DPATCH         = 1, // D-Patch
+    ALMOSTC1       = 2, // Almost C1
+    NITSCHE        = 3, // Nitsche
+    SPLINE         = 4, // Spline (only for single patch)
     // Add more [...]
 };
 
@@ -617,7 +618,10 @@ int main(int argc, char *argv[])
             mp.uniformRefine(1,degree-smoothness);
             basis.uniformRefine(1,degree-smoothness);
 
-            meshsize[r] = basis.basis(0).getMinCellLength();
+            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&basis.basis(0)))
+                meshsize[r] = test->tensorLevel(0).getMinCellLength();
+            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&basis.basis(0)))
+                meshsize[r] = test->getMinCellLength();
 
             gsSparseMatrix<real_t> global2local;
             gsDPatch<2,real_t> dpatch(mp);
@@ -633,7 +637,10 @@ int main(int argc, char *argv[])
             mp.uniformRefine(1,degree-smoothness);
             basis.uniformRefine(1,degree-smoothness);
 
-            meshsize[r] = basis.basis(0).getMinCellLength();
+            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&basis.basis(0)))
+                meshsize[r] = test->tensorLevel(0).getMinCellLength();
+            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&basis.basis(0)))
+                meshsize[r] = test->getMinCellLength();
 
             gsSparseMatrix<real_t> global2local;
             gsAlmostC1<2,real_t> almostC1(mp);
