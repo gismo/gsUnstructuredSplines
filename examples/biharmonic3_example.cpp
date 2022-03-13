@@ -31,10 +31,10 @@ using namespace gismo;
  */
 enum MethodFlags
 {
-    APPROXC1       = 0 << 0, // Approx C1 Method
-    DPATCH         = 1 << 0, // D-Patch
-    ALMOSTC1       = 1 << 1, // Almost C1
-    NITSCHE        = 1 << 2, // Nitsche
+    APPROXC1       = 0, // Approx C1 Method
+    DPATCH         = 1, // D-Patch
+    ALMOSTC1       = 2, // Almost C1
+    NITSCHE        = 3, // Nitsche
     //????      = 1 << 3, // ????
     // Add more [...]
 };
@@ -570,7 +570,10 @@ int main(int argc, char *argv[])
             mp.uniformRefine(1,degree-smoothness);
             dbasis.uniformRefine(1,degree-smoothness);
 
-            meshsize[r] = dbasis.basis(0).getMinCellLength();
+            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&dbasis.basis(0)))
+                meshsize[r] = test->tensorLevel(0).getMinCellLength();
+            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&dbasis.basis(0)))
+                meshsize[r] = test->getMinCellLength();
 
             gsSparseMatrix<real_t> global2local;
             gsDPatch<2,real_t> dpatch(mp);
@@ -585,7 +588,10 @@ int main(int argc, char *argv[])
             mp.uniformRefine(1,degree-smoothness);
             dbasis.uniformRefine(1,degree-smoothness);
 
-            meshsize[r] = dbasis.basis(0).getMinCellLength();
+            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&dbasis.basis(0)))
+                meshsize[r] = test->tensorLevel(0).getMinCellLength();
+            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&dbasis.basis(0)))
+                meshsize[r] = test->getMinCellLength();
 
             gsSparseMatrix<real_t> global2local;
             gsAlmostC1<2,real_t> almostC1(mp);
@@ -635,9 +641,9 @@ int main(int argc, char *argv[])
 
         if (method == MethodFlags::NITSCHE)
         {
-
-            if (r < 3) // From level 3 and more, the previous EW is used and devided by ḿesh-size (save computation time)
-                computeStabilityParameter(mp, dbasis, mu_interfaces);
+            if (penalty_init == -1.0)
+                if (r < 3) // From level 3 and more, the previous EW is used and devided by ḿesh-size (save computation time)
+                    computeStabilityParameter(mp, dbasis, mu_interfaces);
 
             index_t i = 0;
             for ( typename gsMultiPatch<real_t>::const_iiterator it = mp.iBegin(); it != mp.iEnd(); ++it, ++i)
@@ -647,8 +653,12 @@ int main(int argc, char *argv[])
                 real_t mu       = 2 * stab / m_h;
                 real_t alpha = 1;
 
-                mu = penalty_init == -1.0 ? mu : penalty_init / m_h;
-                mu = mu_interfaces(i,0) / m_h;
+                //mu = penalty_init == -1.0 ? mu : penalty_init / m_h;
+                if (penalty_init == -1.0)
+                    mu = mu_interfaces(i,0) / m_h;
+                else
+                    mu = penalty_init / m_h;
+
                 penalty(r,i) = mu;
 
                 std::vector<boundaryInterface> iFace;
