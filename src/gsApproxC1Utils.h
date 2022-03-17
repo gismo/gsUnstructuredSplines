@@ -622,17 +622,10 @@ public:
 
         // Geo data:
         gsMatrix<T> geo_jac, geo_der2;
-        if(m_geo.parDim() == m_geo.targetDim()) // Planar
-        {
-            geo_jac = m_geo.jacobian(zero);
-            geo_der2 = m_geo.deriv2(zero);
-        }
-        else if(m_geo.parDim() + 1 == m_geo.targetDim()) // Surface
-        {
-            geo_jac.setIdentity(2,2);
-            geo_der2.setZero(6,1);
-            gsDebugVar("TODO");
-        }
+        geo_jac = m_geo.jacobian(zero);
+        geo_der2 = m_geo.deriv2(zero);
+
+
 
         // Compute dd^^(i_k) and dd^^(i_k-1)
         gsMatrix<T> dd_ik_plus, dd_ik_minus;
@@ -643,13 +636,21 @@ public:
         dd_ik_plus = 1.0/(alpha_0[1](0,0)) * (geo_jac.col(0) +
                                             beta_0[1](0,0) * geo_jac.col(1));
 
-        gsMatrix<T> geo_deriv2_12(2,1), geo_deriv2_11(2,1), geo_deriv2_22(2,1);
+        gsMatrix<T> geo_deriv2_12(m_geo.targetDim(),1), geo_deriv2_11(m_geo.targetDim(),1), geo_deriv2_22(m_geo.targetDim(),1);
         geo_deriv2_12.row(0) = geo_der2.row(2);
         geo_deriv2_12.row(1) = geo_der2.row(5);
         geo_deriv2_11.row(0) = geo_der2.row(0);
         geo_deriv2_11.row(1) = geo_der2.row(3);
         geo_deriv2_22.row(0) = geo_der2.row(1);
         geo_deriv2_22.row(1) = geo_der2.row(4);
+
+        if(m_geo.parDim() + 1 == m_geo.targetDim()) // Surface
+        {
+            geo_deriv2_12.row(2) = m_geo.deriv2(zero).row(8);
+            geo_deriv2_11.row(2) = m_geo.deriv2(zero).row(6);
+            geo_deriv2_22.row(2) = m_geo.deriv2(zero).row(7);
+        }
+
         gsMatrix<T> alpha_squared_u = alpha_0[0]*alpha_0[0];
         gsMatrix<T> alpha_squared_v = alpha_0[1]*alpha_0[1];
 

@@ -74,6 +74,83 @@ public:
         Phi.col(4) *= sigma * sigma;
         Phi.col(5) *= sigma * sigma;
 
+        gsMultiPatch<> rotPatch;
+        if (m_auxPatches[0].getPatch().parDim() + 1 == m_auxPatches[0].getPatch().targetDim()) // Surface
+        {
+            gsMatrix<> zero;
+            zero.setZero(2, 1);
+            gsMatrix<> Jk = m_auxPatches[0].getPatch().jacobian(zero);
+            gsMatrix<> G = Jk.transpose() * Jk; // Symmetric
+            gsMatrix<> G_inv = G.cramerInverse(); // Symmetric
+
+
+            gsMatrix<> geoMapDeriv1 = m_auxPatches[0].getPatch()
+                    .deriv(zero); // First derivative of the geometric mapping with respect to the parameter coordinates
+            gsMatrix<> geoMapDeriv2 = m_auxPatches[0].getPatch()
+                    .deriv2(zero); // Second derivative of the geometric mapping with respect to the parameter coordinates
+
+            //Computing the normal vector to the tangent plane along the boundary curve
+            Eigen::Vector3d t1 = Jk.col(0);
+            Eigen::Vector3d t2 = Jk.col(1);
+
+            Eigen::Vector3d n = t1.cross(t2);
+
+            gsVector<> normal = n.normalized();
+            n = n.normalized();
+            Eigen::Vector3d z(0, 0, 1);
+
+            Eigen::Vector3d rotVec = n.cross(z);
+            rotVec = rotVec.normalized();
+
+            real_t cos_t = n.dot(z) / (n.norm() * z.norm());
+            real_t sin_t = (n.cross(z)).norm() / (n.norm() * z.norm());
+
+//                Rotation matrix
+            gsMatrix<> R(3, 3);
+            R.setZero();
+//                Row 0
+            R(0, 0) = cos_t + rotVec.x() * rotVec.x() * (1 - cos_t);
+            R(0, 1) = rotVec.x() * rotVec.y() * (1 - cos_t) - rotVec.z() * sin_t;
+            R(0, 2) = rotVec.x() * rotVec.z() * (1 - cos_t) + rotVec.y() * sin_t;
+//                Row 1
+            R(1, 0) = rotVec.x() * rotVec.y() * (1 - cos_t) + rotVec.z() * sin_t;
+            R(1, 1) = cos_t + rotVec.y() * rotVec.y() * (1 - cos_t);
+            R(1, 2) = rotVec.y() * rotVec.z() * (1 - cos_t) - rotVec.x() * sin_t;
+//                Row 2
+            R(2, 0) = rotVec.x() * rotVec.z() * (1 - cos_t) - rotVec.y() * sin_t;
+            R(2, 1) = rotVec.y() * rotVec.z() * (1 - cos_t) + rotVec.x() * sin_t;
+            R(2, 2) = cos_t + rotVec.z() * rotVec.z() * (1 - cos_t);
+
+            for (size_t np = 0; np < m_auxPatches.size(); np++)
+            {
+                gsMatrix<> coeffPatch = m_auxPatches[np].getPatch().coefs();
+
+                for (index_t i = 0; i < coeffPatch.rows(); i++)
+                {
+                    coeffPatch.row(i) =
+                            (coeffPatch.row(i) - coeffPatch.row(0)) * R.transpose() + coeffPatch.row(0);
+                }
+
+                rotPatch.addPatch(m_auxPatches[np].getPatch());
+                rotPatch.patch(np).setCoefs(coeffPatch);
+            }
+
+            Phi.resize(13, 6);
+            Phi.setZero();
+            Phi(0, 0) = 1;
+            Phi(1, 1) = sigma;
+            Phi(2, 2) = sigma;
+            Phi(4, 3) = sigma * sigma;
+            Phi(5, 4) = sigma * sigma;
+            Phi(7, 4) = sigma * sigma;
+            Phi(8, 5) = sigma * sigma;
+        }
+        else
+        {
+            for (size_t np = 0; np < m_auxPatches.size(); np++)
+                rotPatch.addPatch(m_auxPatches[np].getPatch());
+        }
+
 
         for(size_t i = 0; i < m_patchesAroundVertex.size(); i++)
         {
@@ -134,7 +211,8 @@ public:
             // Compute Gluing data
             gsApproxGluingData<d, T> approxGluingData(auxPatchSingle, m_optionList, containingSides, isInterface, basis_pm);
 
-            gsGeometry<T> & geo = auxPatchSingle[0].getPatchRotated();
+            //gsGeometry<T> & geo = auxPatchSingle[0].getPatchRotated();
+            gsGeometry<T> & geo = rotPatch.patch(i);
             gsMultiBasis<T> initSpace(auxPatchSingle[0].getBasisRotated().piece(0));
             for (size_t dir = 0; dir < containingSides.size(); ++dir)
             {
