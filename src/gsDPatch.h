@@ -220,18 +220,6 @@ class gsDPatch  //: public gsMappedGeom<d,T>
     protected:
 
         /**
-         * @brief      Computes the index of a basis function using sides as reference
-         *
-         * @param[in]  index1  The index of the basis function parallel to the first side
-         * @param[in]  side1   The first side
-         * @param[in]  index2  The index of the basis function parallel to the second side
-         * @param[in]  side2   The second side
-         *
-         * @return     Index that is \a index1 in direction of \a side1 and \a index2 in direction of \a side2
-         */
-        const index_t _indexFromSides(index_t index1, const patchSide side1, index_t index2, const patchSide side2);
-
-        /**
          * @brief      Computes the index of a basis function taking one corner and one side as reference
          *
          * @param[in]  bases   (optional) Multibasis to evaluate the index on
