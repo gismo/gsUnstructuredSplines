@@ -196,7 +196,7 @@ if not len(tikz_list) == len(caption_list):
     print("Something is wrong in tikz_list and caption_list!")
     exit()
 
-print(tikz_list)
+print(len(tikz_list))
 
 # Creating the tex and pdf file
 doc = lib.MyDocument()

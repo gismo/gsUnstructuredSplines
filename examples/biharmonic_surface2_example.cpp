@@ -16,6 +16,7 @@
 #include <gsUnstructuredSplines/src/gsApproxC1Spline.h>
 #include <gsUnstructuredSplines/src/gsDPatch.h>
 #include <gsUnstructuredSplines/src/gsAlmostC1.h>
+#include <gsUnstructuredSplines/src/gsC1SurfSpline.h>
 
 /**
  * Smoothing method:
@@ -31,6 +32,7 @@ enum MethodFlags
     ALMOSTC1       = 2, // Almost C1
     NITSCHE        = 3, // Nitsche
     SPLINE         = 4, // Spline (only for single patch)
+    SURFASG1       = 5, // Only for AS-G1 geometries
     // Add more [...]
 };
 
@@ -399,8 +401,36 @@ void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & 
 
     auto G = A.getMap(mp);
     auto uu = A.getSpace(bb2);
-    auto g_bdy = A.getBdrFunction(G);
     auto gg = pow(fform(G).det(),0.5);
+    auto g_bdy = A.getBdrFunction(G); // Bug?!?
+
+//    gsFunctionExpr<> ms("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1) + 0*z",3);
+//    // Neumann
+//    gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
+//                             "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)",
+//                             "0", 3);
+//    auto f_dir = A.getCoeff(ms, G);
+//    auto f_neu = A.getCoeff(sol1der, G);
+//
+//        gsExprEvaluator<real_t> ev(A);
+//        index_t N = 5;
+//        gsMatrix<> points;
+//        points.setZero(2,N);
+//        gsVector<> pp;
+//        pp.setLinSpaced(N,0,1);
+//        points.row(0) = pp;
+//
+//
+//
+//        for (index_t i = 0; i < points.cols(); i++)
+//        {
+//            gsDebugVar(f_dir.parDim());
+//            gsDebugVar(f_dir.targetDim());
+//            gsDebugVar(f_dir.rows());
+//            gsDebugVar(points.rows());
+//            gsDebugVar(ev.eval(f_dir, points.col(i)));
+//        }
+
 
     uu.setupMapper(mapperBdy);
     gsMatrix<real_t> & fixedDofs_A = const_cast<expr::gsFeSpace<real_t>&>(uu).fixedPart();
@@ -474,12 +504,6 @@ int main(int argc, char *argv[])
     gsReadFile<>(string_geo, mp);
     mp.clearTopology();
     mp.computeTopology();
-
-    if (mp.nPatches() != 1)
-    {
-        gsInfo << "The geometry has more than one patch. Run the code with a single patch!\n";
-        return EXIT_FAILURE;
-    }
     //! [Read geometry]
 
     gsFunctionExpr<>f("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
@@ -556,15 +580,6 @@ int main(int argc, char *argv[])
     gsMappedBasis<2,real_t> bb2;
     auto u = A.getSpace(bb2);
 
-    // The approx. C1 space
-    //gsApproxC1Spline<2,real_t> approxC1(mp,basis);
-    //approxC1.options().setSwitch("info",info);
-    //approxC1.options().setSwitch("plot",plot);
-    //approxC1.options().setSwitch("interpolation",true);
-    //approxC1.options().setSwitch("second",second);
-    //approxC1.options().setInt("gluingDataDegree",gluingDataDegree);
-    //approxC1.options().setInt("gluingDataSmoothness",gluingDataSmoothness);
-
     // Solution vector and solution variable
     gsMatrix<real_t> solVector;
     auto u_sol = A.getSolution(u, solVector);
@@ -607,12 +622,21 @@ int main(int argc, char *argv[])
             bb2.init(basis,global2local);
             gsInfo << "Spline basis created \n";
         }
-//        else if (method == MethodFlags::APPROXC1)
-//        {
-//            basis.uniformRefine(1,degree -smoothness);
-//            meshsize[r] = basis.basis(0).getMinCellLength();
-//            approxC1.update(bb2);
-//        }
+        else if (method == MethodFlags::APPROXC1)
+        {
+            basis.uniformRefine(1,degree -smoothness);
+            meshsize[r] = basis.basis(0).getMinCellLength();
+
+            // The approx. C1 space
+            gsApproxC1Spline<2,real_t> approxC1(mp,basis);
+            approxC1.options().setSwitch("info",true);
+            approxC1.options().setSwitch("plot",plot);
+            approxC1.options().setSwitch("interpolation",true);
+            approxC1.options().setSwitch("second",second);
+            approxC1.options().setInt("gluingDataDegree",-1);
+            approxC1.options().setInt("gluingDataSmoothness",-1);
+            approxC1.update(bb2);
+        }
         else if (method == MethodFlags::DPATCH)
         {
             mp.uniformRefine(1,degree-smoothness);
@@ -650,6 +674,21 @@ int main(int argc, char *argv[])
             basis = almostC1.localBasis();
             bb2.init(basis,global2local);
             gsInfo << "ALMOSTC1 basis created \n";
+        }
+        else if (method == MethodFlags::SURFASG1) // Andrea
+        {
+            mp.uniformRefine(1,degree-smoothness);
+            basis.uniformRefine(1,degree-smoothness);
+
+            gsC1SurfSpline<2,real_t> smoothC1(mp,basis);
+            smoothC1.init();
+            smoothC1.compute();
+
+            gsSparseMatrix<real_t> global2local;
+            global2local = smoothC1.getSystem();
+            global2local = global2local.transpose();
+            smoothC1.getMultiBasis(basis);
+            bb2.init(basis,global2local);
         }
 
         // Setup the Mapper

@@ -37,8 +37,6 @@ void gsApproxC1Spline<d,T>::defaultOptions()
             gsWarn << "Not suitable for different degrees! \n";
     }
 
-    gsDebugVar("Test\n");
-
     m_options.addSwitch("info","Print debug information",  false );
     m_options.addSwitch("plot","Print debug information",  false );
     m_options.addSwitch("interpolation","Compute the basis with interpolation",  false );

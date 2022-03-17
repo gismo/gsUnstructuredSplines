@@ -38,7 +38,8 @@ public:
     gsApproxGluingData(C1AuxPatchContainer const & auxPatchContainer,
                        gsOptionList const & optionList,
                        std::vector<patchSide> sidesContainer,
-                       std::vector<bool> isInterface = std::vector<bool>{})
+                       std::vector<bool> isInterface = std::vector<bool>{},
+                       gsTensorBSplineBasis<d, T> basis = gsTensorBSplineBasis<d, T>())
         : m_auxPatches(auxPatchContainer), m_optionList(optionList)
     {
         alphaSContainer.resize(2);
@@ -55,8 +56,15 @@ public:
                 index_t localSide = auxPatchContainer[0].getMapIndex(sidesContainer[dir].index());
                 //gsInfo << "Global: " << sidesContainer[dir] << " : " << localSide << "\n";
                 index_t localDir = localSide < 3 ? 1 : 0;
+
+                createGluingDataSpace(m_auxPatches[0].getPatchRotated(), basis,
+                                      localDir, bsp_gD, m_optionList.getInt("gluingDataDegree"), m_optionList.getInt("gluingDataSmoothness"));
+
                 if(isInterface[dir]) // West
+                {
                     setGlobalGluingData(0, localDir);
+                }
+
                 else
                 {
                     // empty
@@ -79,6 +87,8 @@ protected:
     // Spline space for the gluing data + multiPatch
     C1AuxPatchContainer m_auxPatches;
 
+    gsBSplineBasis<T> bsp_gD;
+
     const gsOptionList m_optionList;
 
     // Result
@@ -94,10 +104,19 @@ void gsApproxGluingData<d, T>::setGlobalGluingData(index_t patchID, index_t dir)
     bool interpolate_boundary = false;
     // Interpolate boundary yes or no //
 
-    // ======== Space for gluing data : S^(p_tilde, r_tilde) _k ========
-    gsBSplineBasis<T> bsp_gD;
-    createGluingDataSpace(m_auxPatches[patchID].getPatchRotated(), m_auxPatches[patchID].getBasisRotated().piece(0),
-                          dir, bsp_gD, m_optionList.getInt("gluingDataDegree"), m_optionList.getInt("gluingDataSmoothness"));
+    gsTensorBSplineBasis<d, T> basis = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(m_auxPatches[patchID].getBasisRotated().piece(0));;
+    if (m_auxPatches.size() == 2) // Interface
+    {
+        gsTensorBSplineBasis<d, real_t> basis2 = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(m_auxPatches[1-patchID].getBasisRotated().piece(0));
+        if (basis.component(dir).numElements() > basis2.component(1-dir).numElements())
+            basis.component(dir) = basis2.component(1-dir);
+
+        // ======== Space for gluing data : S^(p_tilde, r_tilde) _k ========
+        createGluingDataSpace(m_auxPatches[patchID].getPatchRotated(), basis,
+                              dir, bsp_gD, m_optionList.getInt("gluingDataDegree"), m_optionList.getInt("gluingDataSmoothness"));
+    }
+
+
 
     //! [Problem setup]
     gsSparseSolver<real_t>::LU solver;

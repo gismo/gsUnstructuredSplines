@@ -65,6 +65,15 @@ public:
 
         // Compute Sigma
         real_t sigma = computeSigma(m_vertexIndices);
+        gsMatrix<> Phi(6, 6);
+        Phi.setIdentity();
+
+        Phi.col(1) *= sigma;
+        Phi.col(2) *= sigma;
+        Phi.col(3) *= sigma * sigma;
+        Phi.col(4) *= sigma * sigma;
+        Phi.col(5) *= sigma * sigma;
+
 
         for(size_t i = 0; i < m_patchesAroundVertex.size(); i++)
         {
@@ -86,9 +95,6 @@ public:
             isInterface[0] = m_mp.isInterface(patchSide(m_patchesAroundVertex[i], containingSides.at(0).side()));
             isInterface[1] = m_mp.isInterface(patchSide(m_patchesAroundVertex[i], containingSides.at(1).side()));
 
-            // Compute Gluing data
-            gsApproxGluingData<d, T> approxGluingData(auxPatchSingle, m_optionList, containingSides, isInterface);
-
             //Problem setup
             std::vector<gsBSpline<T>> alpha, beta;
             std::vector<gsBSplineBasis<T>> basis_plus, basis_minus;
@@ -98,40 +104,35 @@ public:
             alpha.resize(2); beta.resize(2); basis_plus.resize(2); basis_minus.resize(2);
             kindOfEdge.resize(2);
 
-
             gsTensorBSplineBasis<d, real_t> basis = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(auxPatchSingle[0].getBasisRotated().piece(0));
-/*
-            std::vector<index_t> dir_vec(2);
-            index_t localdir = auxPatchSingle[0].getMapIndex(containingSides[0].index()) < 3 ? 1 : 0;
-            if (isInterface[localdir])
+            gsTensorBSplineBasis<d, real_t> basis_pm = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(auxPatchSingle[0].getBasisRotated().piece(0));
+            for (size_t dir = 0; dir < containingSides.size(); ++dir)
             {
-                patchSide result;
-                m_mp.getNeighbour(containingSides.at(0), result);
+                //index_t localdir = auxPatchSingle[0].getMapIndex(containingSides[dir].index()) < 3 ? 1 : 0;
+                if (isInterface[dir])
+                {
+                    patchSide result;
+                    m_mp.getNeighbour(containingSides[dir], result);
 
-                gsTensorBSplineBasis<d, real_t> basis2 = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(m_auxPatches[result.patch].getBasisRotated().piece(0));
-                index_t dir_1 = containingSides.at(0).side() < 3 ? 1 : 0;
-                index_t dir_2 = result.side().index() < 3 ? 1 : 0;
-                if (basis.component(dir_1).numElements() > basis2.component(dir_2).numElements())
-                    basis.component(dir_1) = basis2.component(dir_2);
+                    index_t patch2 = -1;
+                    for (size_t i_tmp = 0; i_tmp < m_patchesAroundVertex.size(); i_tmp++)
+                        if (m_patchesAroundVertex[i_tmp] == size_t(result.patch))
+                            patch2 = i_tmp;
 
-                dir_vec[localdir] = dir_1;
+                    GISMO_ASSERT(patch2 > -1, "Something went wrong");
+
+                    gsTensorBSplineBasis<d, real_t> basis2 = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(m_auxPatches[patch2].getBasisRotated().piece(
+                            0));
+                    index_t dir_1 = auxPatchSingle[0].getMapIndex(containingSides[dir].side()) < 3 ? 1 : 0;
+                    index_t dir_2 = m_auxPatches[patch2].getMapIndex(result.side().index()) < 3 ? 1 : 0;
+                    if (basis.component(dir_1).numElements() > basis2.component(dir_2).numElements())
+                        basis_pm.component(dir_1) = basis2.component(dir_2);
+
+                }
             }
-            localdir = auxPatchSingle[0].getMapIndex(containingSides[1].index()) < 3 ? 1 : 0;
-            if (isInterface[localdir])
-            {
-                patchSide result;
-                m_mp.getNeighbour(containingSides.at(1), result);
 
-                gsTensorBSplineBasis<d, real_t> basis2 = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(m_auxPatches[result.patch].getBasisRotated().piece(0));
-                index_t dir_1 = containingSides.at(1).side() < 3 ? 1 : 0;
-                index_t dir_2 = result.side().index() < 3 ? 1 : 0;
-                if (basis.component(dir_1).numElements() > basis2.component(dir_2).numElements())
-                    basis.component(dir_1) = basis2.component(dir_2);
-
-                index_t localdir = auxPatchSingle[0].getMapIndex(containingSides[1].index()) < 3 ? 1 : 0;
-                dir_vec[localdir] = dir_1;
-            }
-*/
+            // Compute Gluing data
+            gsApproxGluingData<d, T> approxGluingData(auxPatchSingle, m_optionList, containingSides, isInterface, basis_pm);
 
             gsGeometry<T> & geo = auxPatchSingle[0].getPatchRotated();
             gsMultiBasis<T> initSpace(auxPatchSingle[0].getBasisRotated().piece(0));
@@ -151,10 +152,10 @@ public:
                 if (isInterface[localdir])
                 {
                     // TODO FIX
-                    //createPlusSpace(geo, basis, dir_vec[localdir], b_plus);
-                    //createMinusSpace(geo, basis, dir_vec[localdir], b_minus);
-                    createPlusSpace(geo, initSpace.basis(0), dir, b_plus);
-                    createMinusSpace(geo, initSpace.basis(0), dir, b_minus);
+                    createPlusSpace(geo, basis_pm, localdir, b_plus);
+                    createMinusSpace(geo, basis_pm, localdir, b_minus);
+                    //createPlusSpace(geo, initSpace.basis(0), dir, b_plus);
+                    //createMinusSpace(geo, initSpace.basis(0), dir, b_minus);
                 }
                 else
                 {
@@ -162,6 +163,10 @@ public:
                     createMinusSpace(geo, initSpace.basis(0), dir, b_minus);
                 }
 
+//                gsDebugVar(b_plus);
+//                gsDebugVar(b_minus);
+//                gsDebugVar(dir);
+//                gsDebugVar(isInterface[localdir]);
                 basis_plus[dir] = b_plus;
                 basis_minus[dir] = b_minus;
             }
@@ -205,7 +210,7 @@ public:
             gsMultiPatch<T> result_1;
             for (index_t bfID = 0; bfID < 6; bfID++)
             {
-                gsVertexBasis<T> vertexBasis(geo, basis, alpha, beta, basis_plus, basis_minus, sigma,
+                gsVertexBasis<T> vertexBasis(geo, basis_pm, alpha, beta, basis_plus, basis_minus, Phi,
                                              kindOfEdge, bfID);
                 if (m_optionList.getSwitch("interpolation"))
                 {

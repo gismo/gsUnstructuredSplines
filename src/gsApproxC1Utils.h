@@ -80,18 +80,63 @@ public:
     {
         result.resize( targetDim() , u.cols() );
 
-        gsMatrix<T> uv, ev, D0;
-        uv.setZero(2,u.cols());
-        uv.row(m_uv) = u; // u
-
-        T gamma = 1.0;
-
-        for (index_t i = 0; i < uv.cols(); i++)
+        if(_geo.parDim() == _geo.targetDim()) // Planar
         {
-            _geo.jacobian_into(uv.col(i), ev);
-            uv(0, i) = gamma * ev.determinant();
+            gsMatrix<T> uv, ev, D0;
+            uv.setZero(2, u.cols());
+            uv.row(m_uv) = u; // u
+
+            T gamma = 1.0;
+
+            for (index_t i = 0; i < uv.cols(); i++) {
+                _geo.jacobian_into(uv.col(i), ev);
+                uv(0, i) = gamma * ev.determinant();
+            }
+            result = uv.row(0);
         }
-        result = uv.row(0);
+        else if(_geo.parDim() + 1 == _geo.targetDim()) // Surface
+        {
+            gsMatrix<T> uv, ev, D0, N, Duv;
+            uv.setZero(2, u.cols());
+            uv.row(m_uv) = u; // u
+
+            for (index_t i = 0; i < uv.cols(); i++) {
+                N.setZero(3,1);
+                _geo.deriv_into(uv.col(i), ev);
+                N.row(0) = ev.row(2) * ev.row(5) - ev.row(4) * ev.row(3);
+                N.row(1) = ev.row(4) * ev.row(1) - ev.row(0) * ev.row(5);
+                N.row(2) = ev.row(0) * ev.row(3) - ev.row(2) * ev.row(1);
+
+                D0.setZero(3,3);
+                Duv.setZero(3,1);
+                if (m_uv == 0) // u
+                {
+                    Duv.row(0) = ev.row(0);
+                    Duv.row(1) = ev.row(2);
+                    Duv.row(2) = ev.row(4);
+                    D0.col(0) = Duv;
+                    D0.col(2) = N;
+                    D0(0,1) = ev(1,0);
+                    D0(1,1) = ev(3,0);
+                    D0(2,1) = ev(5,0);
+                }
+                else if (m_uv == 1) // v
+                {
+                    Duv.row(0) = ev.row(1);
+                    Duv.row(1) = ev.row(3);
+                    Duv.row(2) = ev.row(5);
+                    D0.col(1) = Duv;
+                    D0.col(2) = N;
+                    D0(0,0) = ev(0,0);
+                    D0(1,0) = ev(2,0);
+                    D0(2,0) = ev(4,0);
+                }
+                uv(0, i) = 1.0 / Duv.norm() * Eigen::numext::sqrt(D0.determinant());
+            }
+            result = uv.row(0);
+            //gsDebugVar(result);
+            //gsDebugVar(m_uv);
+        }
     }
 };
 
@@ -141,21 +186,44 @@ public:
     {
         result.resize( targetDim() , u.cols() );
 
-        gsMatrix<T> uv, ev, D0;
-
-        uv.setZero(2,u.cols());
-        uv.row(m_uv) = u; // u
-
-        T gamma = 1.0;
-
-        for(index_t i = 0; i < uv.cols(); i++)
+        if(_geo.parDim() == _geo.targetDim()) // Planar
         {
-            _geo.jacobian_into(uv.col(i),ev);
-            D0  = ev.col(m_uv);
-            real_t D1 = T(1.0)/ D0.norm();
-            uv(0,i) = - gamma * D1 * D1 * ev.col(1).transpose() * ev.col(0);
+            gsMatrix<T> uv, ev, D0;
+
+            uv.setZero(2,u.cols());
+            uv.row(m_uv) = u; // u
+
+            T gamma = 1.0;
+
+            for(index_t i = 0; i < uv.cols(); i++)
+            {
+                _geo.jacobian_into(uv.col(i),ev);
+                D0  = ev.col(m_uv);
+                real_t D1 = T(1.0)/ D0.norm();
+                uv(0,i) = - gamma * D1 * D1 * ev.col(1).transpose() * ev.col(0);
+            }
+            result = uv.row(0);
         }
-        result = uv.row(0);
+        else if(_geo.parDim() + 1 == _geo.targetDim()) // Surface
+        {
+            gsMatrix<T> uv, ev, D0;
+
+            uv.setZero(2,u.cols());
+            uv.row(m_uv) = u; // u
+
+            T gamma = 1.0;
+
+            for(index_t i = 0; i < uv.cols(); i++)
+            {
+                _geo.jacobian_into(uv.col(i),ev);
+                D0  = ev.col(m_uv);
+                real_t D1 = T(1.0)/ D0.norm();
+                uv(0,i) = - gamma * D1 * D1 * ev.col(1).transpose() * ev.col(0);
+            }
+            result = uv.row(0);
+            //gsDebugVar(result);
+            //gsDebugVar(m_uv);
+        }
     }
 
 };
@@ -349,7 +417,7 @@ protected:
     std::vector<gsBSplineBasis<T>>       m_basis_plus;
     std::vector<gsBSplineBasis<T>>       m_basis_minus;
 
-    const real_t m_sigma;
+    const gsMatrix<> m_Phi;
     const std::vector<bool> m_kindOfEdge;
 
     const index_t m_bfID;
@@ -369,11 +437,11 @@ public:
                   std::vector<gsBSpline<T>> beta,
                   std::vector<gsBSplineBasis<T>> basis_plus,
                   std::vector<gsBSplineBasis<T>> basis_minus,
-                  const real_t sigma,
+                  const gsMatrix<> Phi,
                   const std::vector<bool> kindOfEdge,
                   const index_t bfID
             ) : m_geo(geo), m_basis(basis), m_alpha(alpha), m_beta(beta), m_basis_plus(basis_plus), m_basis_minus(basis_minus),
-            m_sigma(sigma), m_kindOfEdge(kindOfEdge), m_bfID(bfID),
+            m_Phi(Phi), m_kindOfEdge(kindOfEdge), m_bfID(bfID),
             _vertexBasis_piece(nullptr)
     {
 
@@ -402,16 +470,6 @@ public:
     {
         result.resize( targetDim() , u.cols() );
         result.setZero();
-
-        // Computing the basis functions at the vertex
-        gsMatrix<T> Phi(6,6);
-        Phi.setIdentity();
-
-        Phi.row(1) *= m_sigma;
-        Phi.row(2) *= m_sigma;
-        Phi.row(3) *= m_sigma * m_sigma;
-        Phi.row(4) *= m_sigma * m_sigma;
-        Phi.row(5) *= m_sigma * m_sigma;
 
         // Computing c, c+ and c-
         // Point zero
@@ -563,8 +621,18 @@ public:
         }
 
         // Geo data:
-        gsMatrix<T> geo_jac = m_geo.jacobian(zero);
-        gsMatrix<T> geo_der2 = m_geo.deriv2(zero);
+        gsMatrix<T> geo_jac, geo_der2;
+        if(m_geo.parDim() == m_geo.targetDim()) // Planar
+        {
+            geo_jac = m_geo.jacobian(zero);
+            geo_der2 = m_geo.deriv2(zero);
+        }
+        else if(m_geo.parDim() + 1 == m_geo.targetDim()) // Surface
+        {
+            geo_jac.setIdentity(2,2);
+            geo_der2.setZero(6,1);
+            gsDebugVar("TODO");
+        }
 
         // Compute dd^^(i_k) and dd^^(i_k-1)
         gsMatrix<T> dd_ik_plus, dd_ik_minus;
@@ -599,39 +667,39 @@ public:
 
         // Comupute d_(0,0)^(i_k), d_(1,0)^(i_k), d_(0,1)^(i_k), d_(1,1)^(i_k) ; i_k == 2
         std::vector<gsMatrix<T>> d_ik;
-        d_ik.push_back(Phi.col(0));
-        d_ik.push_back(Phi.block(0,1,6,2) * geo_jac.col(0) ); // deriv into u
-        d_ik.push_back(Phi.block(0,1,6,2) * geo_jac.col(1) ); // deriv into v
-        d_ik.push_back((geo_jac(0,0) * Phi.col(3) + geo_jac(1,0) * Phi.col(4))*geo_jac(0,1) +
-                       (geo_jac(0,0) * Phi.col(4) + geo_jac(1,0) * Phi.col(5))*geo_jac(1,1) +
-                       Phi.block(0,1,6,1) * geo_der2.row(2) +
-                       Phi.block(0,2,6,1) * geo_der2.row(5)); // Hessian
+        d_ik.push_back(m_Phi.col(0));
+        d_ik.push_back(m_Phi.block(0,1,6,2) * geo_jac.col(0) ); // deriv into u
+        d_ik.push_back(m_Phi.block(0,1,6,2) * geo_jac.col(1) ); // deriv into v
+        d_ik.push_back((geo_jac(0,0) * m_Phi.col(3) + geo_jac(1,0) * m_Phi.col(4))*geo_jac(0,1) +
+                       (geo_jac(0,0) * m_Phi.col(4) + geo_jac(1,0) * m_Phi.col(5))*geo_jac(1,1) +
+                       m_Phi.block(0,1,6,1) * geo_der2.row(2) +
+                       m_Phi.block(0,2,6,1) * geo_der2.row(5)); // Hessian
 
         // Compute d_(*,*)^(il,ik)
         std::vector<gsMatrix<T>> d_ilik_minus, d_ilik_plus;
-        d_ilik_minus.push_back(Phi.col(0));
-        d_ilik_minus.push_back(Phi.block(0,1,6,2) * geo_jac.col(0));
-        d_ilik_minus.push_back((geo_jac(0,0) * Phi.col(3) + geo_jac(1,0) * Phi.col(4))*geo_jac(0,0) +
-                               (geo_jac(0,0) * Phi.col(4) + geo_jac(1,0) * Phi.col(5))*geo_jac(1,0) +
-                               Phi.block(0,1,6,1) * geo_der2.row(0) +
-                               Phi.block(0,2,6,1) * geo_der2.row(3));
-        d_ilik_minus.push_back(Phi.block(0,1,6,2) * dd_ik_minus);
-        d_ilik_minus.push_back((geo_jac(0,0) * Phi.col(3) + geo_jac(1,0) * Phi.col(4))*dd_ik_minus(0,0) +
-                               (geo_jac(0,0) * Phi.col(4) + geo_jac(1,0) * Phi.col(5))*dd_ik_minus(1,0) +
-                               Phi.block(0,1,6,1) * dd_ik_minus_deriv.row(0) +
-                               Phi.block(0,2,6,1) * dd_ik_minus_deriv.row(1));
+        d_ilik_minus.push_back(m_Phi.col(0));
+        d_ilik_minus.push_back(m_Phi.block(0,1,6,2) * geo_jac.col(0));
+        d_ilik_minus.push_back((geo_jac(0,0) * m_Phi.col(3) + geo_jac(1,0) * m_Phi.col(4))*geo_jac(0,0) +
+                               (geo_jac(0,0) * m_Phi.col(4) + geo_jac(1,0) * m_Phi.col(5))*geo_jac(1,0) +
+                               m_Phi.block(0,1,6,1) * geo_der2.row(0) +
+                               m_Phi.block(0,2,6,1) * geo_der2.row(3));
+        d_ilik_minus.push_back(m_Phi.block(0,1,6,2) * dd_ik_minus);
+        d_ilik_minus.push_back((geo_jac(0,0) * m_Phi.col(3) + geo_jac(1,0) * m_Phi.col(4))*dd_ik_minus(0,0) +
+                               (geo_jac(0,0) * m_Phi.col(4) + geo_jac(1,0) * m_Phi.col(5))*dd_ik_minus(1,0) +
+                               m_Phi.block(0,1,6,1) * dd_ik_minus_deriv.row(0) +
+                               m_Phi.block(0,2,6,1) * dd_ik_minus_deriv.row(1));
 
-        d_ilik_plus.push_back(Phi.col(0));
-        d_ilik_plus.push_back(Phi.block(0,1,6,2) * geo_jac.col(1));
-        d_ilik_plus.push_back((geo_jac(0,1) * Phi.col(3) + geo_jac(1,1) * Phi.col(4))*geo_jac(0,1) +
-                              (geo_jac(0,1) * Phi.col(4) + geo_jac(1,1) * Phi.col(5))*geo_jac(1,1) +
-                              Phi.block(0,1,6,1) * geo_der2.row(1) +
-                              Phi.block(0,2,6,1) * geo_der2.row(4));
-        d_ilik_plus.push_back(Phi.block(0,1,6,2) * dd_ik_plus);
-        d_ilik_plus.push_back((geo_jac(0,1) * Phi.col(3) + geo_jac(1,1) * Phi.col(4))*dd_ik_plus(0,0) +
-                              (geo_jac(0,1) * Phi.col(4) + geo_jac(1,1) * Phi.col(5))*dd_ik_plus(1,0) +
-                              Phi.block(0,1,6,1) * dd_ik_plus_deriv.row(0) +
-                              Phi.block(0,2,6,1) * dd_ik_plus_deriv.row(1));
+        d_ilik_plus.push_back(m_Phi.col(0));
+        d_ilik_plus.push_back(m_Phi.block(0,1,6,2) * geo_jac.col(1));
+        d_ilik_plus.push_back((geo_jac(0,1) * m_Phi.col(3) + geo_jac(1,1) * m_Phi.col(4))*geo_jac(0,1) +
+                              (geo_jac(0,1) * m_Phi.col(4) + geo_jac(1,1) * m_Phi.col(5))*geo_jac(1,1) +
+                              m_Phi.block(0,1,6,1) * geo_der2.row(1) +
+                              m_Phi.block(0,2,6,1) * geo_der2.row(4));
+        d_ilik_plus.push_back(m_Phi.block(0,1,6,2) * dd_ik_plus);
+        d_ilik_plus.push_back((geo_jac(0,1) * m_Phi.col(3) + geo_jac(1,1) * m_Phi.col(4))*dd_ik_plus(0,0) +
+                              (geo_jac(0,1) * m_Phi.col(4) + geo_jac(1,1) * m_Phi.col(5))*dd_ik_plus(1,0) +
+                              m_Phi.block(0,1,6,1) * dd_ik_plus_deriv.row(0) +
+                              m_Phi.block(0,2,6,1) * dd_ik_plus_deriv.row(1));
 
 
 

@@ -58,8 +58,8 @@ namespace gismo
             gsBSplineBasis<T> basis_plus, basis_minus;
 
             gsMultiBasis<T> initSpace(m_auxPatches[patchID].getBasisRotated().piece(0));
-            createPlusSpace(m_auxPatches[patch].getPatchRotated(), basis, dir, basis_plus);
-            createMinusSpace(m_auxPatches[patch].getPatchRotated(), basis, dir, basis_minus);
+            createPlusSpace(m_auxPatches[patch].getPatchRotated(), basis, dir_pm, basis_plus);
+            createMinusSpace(m_auxPatches[patch].getPatchRotated(), basis, dir_pm, basis_minus);
 
             gsGeometry<T> &geo = m_auxPatches[patchID].getPatchRotated();
 

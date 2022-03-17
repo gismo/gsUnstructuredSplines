@@ -46,10 +46,13 @@ class Method(Enum):
            
 """
 """ -------------------------------------------------------------------------------------------------- """
-geo_list = ["g1121"]  # Without .xml extension
+#geo_list = ["g1000", "g1100", "g1510", "g1400"]
+#geo_list = ["g1021", "g1121", "g1500", "g1311"]  # Without .xml extension
+#geo_list = ["g1702","g1704","g1703"]
+geo_list = ["g1703"]
 path_geo = "planar/geometries/"
 
-NumRefinement = 2
+NumRefinement = 3
 second = False
 
 deg_list = [

@@ -67,13 +67,15 @@ class MyDocument(Document):
         # Input: tikz_list      [list] A list of tikz_files
         #        caption_list   [list] A list of captions for each tikz_file
 
+        pages = len(tikz_list)//(col*row) if len(tikz_list)%(col*row) == 0 else len(tikz_list)//(col*row) + 1
+
         width = r'' + str(1 / col) + '\\textwidth'
-        for pages in range(len(tikz_list)//(col*row)):
+        for page in range(pages):
             with self.create(Figure(position='h!')) as fig:
                 self.append(NoEscape(r"\centering"))
-                if not pages ==0:
+                if not page ==0:
                     self.append(NoEscape(r"\ContinuedFloat"))
-                for idx, tikz in enumerate(tikz_list[col*row*pages:col*row*(pages+1)]):
+                for idx, tikz in enumerate(tikz_list[col*row*page:col*row*(page+1)]):
                     if not tikz == "":
                         with self.create(SubFigure(
                                 position='b',
@@ -85,7 +87,7 @@ class MyDocument(Document):
                                 self.append(NoEscape(r'}'))
                             else:
                                 self.append(NoEscape(r'\inputtikz{' + tikz + '}'))
-                            subfig.add_caption(NoEscape(r'' + caption_list[idx+col*row*pages]))
+                            subfig.add_caption(NoEscape(r'' + caption_list[idx+col*row*page]))
                     if idx % col == col - 1:
                         self.append(NoEscape(r"\\"))
 
@@ -99,7 +101,7 @@ class MyDocument(Document):
                             self.append(NoEscape(r'\inputtikz{' + str(leg) + '}'))
                     self.append(NoEscape(r"\end{center}"))
 
-                fig.add_caption("Geometries " + str(pages))
+                fig.add_caption("Geometries " + str(page))
 
 
 class MyTikz(Document):

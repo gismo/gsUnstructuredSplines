@@ -134,8 +134,15 @@ void gsApproxC1Vertex<d, T>::computeKernel()
             if (!m_optionList.getSwitch("second"))
                 dim_mat += basisVertexResult[np].basis(0).component(0).size();
 
-            matrix_det.col(0) = m_auxPatches[np].getPatchRotated().jacobian(points).col(0); // u
-        }
+            if(m_mp.parDim() == m_mp.targetDim()) // Planar
+                matrix_det.col(0) = m_auxPatches[np].getPatchRotated().jacobian(points).col(0); // u
+            else if(m_mp.parDim() + 1 == m_mp.targetDim()) // Surface
+            {
+                matrix_det.setZero(2,2);
+                gsDebugVar("TODO");
+            }
+
+    }
         if (mp_vertex.isBoundary(np,1)) // v
         {
             side.push_back(1);
@@ -146,7 +153,13 @@ void gsApproxC1Vertex<d, T>::computeKernel()
             if (!m_optionList.getSwitch("second"))
                 dim_mat += basisVertexResult[np].basis(0).component(1).size();
 
-            matrix_det.col(1) = m_auxPatches[np].getPatchRotated().jacobian(points).col(1); // u
+            if(m_mp.parDim() == m_mp.targetDim()) // Planar
+                matrix_det.col(1) = m_auxPatches[np].getPatchRotated().jacobian(points).col(1); // u
+            else if(m_mp.parDim() + 1 == m_mp.targetDim()) // Surface
+            {
+                matrix_det.setZero(2,2);
+                gsDebugVar("TODO");
+            }
         }
         if(mp_vertex.isInterface(patchSide(np,1)) && mp_vertex.isInterface(patchSide(np,3)))
         {

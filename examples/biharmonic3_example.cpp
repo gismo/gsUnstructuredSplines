@@ -468,20 +468,26 @@ int main(int argc, char *argv[])
 
     // Assume that the condition holds for each patch TODO
     // Refine once
-    if (dbasis.basis(0).numElements() < 4)
-    {
-        dbasis.uniformRefine(1, degree-smoothness);
-        if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
-            mp.uniformRefine(1, degree-smoothness);
-    }
+    if (method == MethodFlags::APPROXC1)
+        if (dbasis.basis(0).numElements() < 4)
+        {
+            dbasis.uniformRefine(1, degree-smoothness);
+            if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
+                mp.uniformRefine(1, degree-smoothness);
+        }
 
     gsInfo << "Patches: "<< mp.nPatches() <<", degree: "<< dbasis.minCwiseDegree() <<"\n";
 #ifdef _OPENMP
     gsInfo<< "Available threads: "<< omp_get_max_threads() <<"\n";
 #endif
 
-//    dbasis.basis(0).uniformRefine(1);
-//    mp.patch(0).uniformRefine(1);
+
+    if (geometry == "g1012")
+    {
+        gsInfo << "ATTENTION: Patch 0 is one time uniform refined \n";
+        dbasis.basis(0).component(1).uniformRefine(1);
+    }
+
 
 //    gsWriteParaview(mp, "geom", 2000);
 //
@@ -875,7 +881,7 @@ int main(int argc, char *argv[])
         //ev.writeParaview( u_ex    , G, "solution_ex");
         //ev.writeParaview( grad(s), G, "solution_grad");
         //ev.writeParaview( grad(f), G, "solution_ex_grad");
-        //ev.writeParaview( (u_ex-u_sol), G, "error_pointwise");
+        ev.writeParaview( (u_ex-u_sol), G, "error_pointwise");
     }
     else
         gsInfo << "Done. No output created, re-run with --plot to get a ParaView "

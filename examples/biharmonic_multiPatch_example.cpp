@@ -226,12 +226,13 @@ int main(int argc, char *argv[])
 
     // Assume that the condition holds for each patch TODO
     // Refine once
-    if (dbasis.basis(0).numElements() < 4)
-    {
-        dbasis.uniformRefine(1, degree-smoothness);
-        if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
-            mp.uniformRefine(1, degree-smoothness);
-    }
+    if (method == MethodFlags::APPROXC1)
+        if (dbasis.basis(0).numElements() < 4)
+        {
+            dbasis.uniformRefine(1, degree-smoothness);
+            if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
+                mp.uniformRefine(1, degree-smoothness);
+        }
 
     gsInfo << "Patches: "<< mp.nPatches() <<", degree: "<< dbasis.minCwiseDegree() <<"\n";
 #ifdef _OPENMP
