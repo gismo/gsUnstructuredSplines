@@ -75,18 +75,18 @@ public:
         Phi.col(5) *= sigma * sigma;
 
         gsMultiPatch<> rotPatch;
-        if (m_auxPatches[0].getPatch().parDim() + 1 == m_auxPatches[0].getPatch().targetDim()) // Surface
+        if (m_auxPatches[0].getPatchRotated().parDim() + 1 == m_auxPatches[0].getPatchRotated().targetDim()) // Surface
         {
             gsMatrix<> zero;
             zero.setZero(2, 1);
-            gsMatrix<> Jk = m_auxPatches[0].getPatch().jacobian(zero);
+            gsMatrix<> Jk = m_auxPatches[0].getPatchRotated().jacobian(zero);
             gsMatrix<> G = Jk.transpose() * Jk; // Symmetric
             gsMatrix<> G_inv = G.cramerInverse(); // Symmetric
 
 
-            gsMatrix<> geoMapDeriv1 = m_auxPatches[0].getPatch()
+            gsMatrix<> geoMapDeriv1 = m_auxPatches[0].getPatchRotated()
                     .deriv(zero); // First derivative of the geometric mapping with respect to the parameter coordinates
-            gsMatrix<> geoMapDeriv2 = m_auxPatches[0].getPatch()
+            gsMatrix<> geoMapDeriv2 = m_auxPatches[0].getPatchRotated()
                     .deriv2(zero); // Second derivative of the geometric mapping with respect to the parameter coordinates
 
             //Computing the normal vector to the tangent plane along the boundary curve
@@ -123,7 +123,7 @@ public:
 
             for (size_t np = 0; np < m_auxPatches.size(); np++)
             {
-                gsMatrix<> coeffPatch = m_auxPatches[np].getPatch().coefs();
+                gsMatrix<> coeffPatch = m_auxPatches[np].getPatchRotated().coefs();
 
                 for (index_t i = 0; i < coeffPatch.rows(); i++)
                 {
@@ -131,7 +131,7 @@ public:
                             (coeffPatch.row(i) - coeffPatch.row(0)) * R.transpose() + coeffPatch.row(0);
                 }
 
-                rotPatch.addPatch(m_auxPatches[np].getPatch());
+                rotPatch.addPatch(m_auxPatches[np].getPatchRotated());
                 rotPatch.patch(np).setCoefs(coeffPatch);
             }
 
@@ -148,7 +148,7 @@ public:
         else
         {
             for (size_t np = 0; np < m_auxPatches.size(); np++)
-                rotPatch.addPatch(m_auxPatches[np].getPatch());
+                rotPatch.addPatch(m_auxPatches[np].getPatchRotated());
         }
 
 
