@@ -306,48 +306,6 @@ namespace gismo
                                     Output functions
     =====================================================================================*/
 
-    template<short_t d,class T>
-    const index_t gsDPatch<d,T>::_indexFromSides(index_t index1, const patchSide side1, index_t index2, const patchSide side2)
-    {
-        /*
-            Finds the index index1 away from side1 and index2 from side2
-            index 1 is the index parallel to side 1
-            index 2 is the index parallel to side 2
-        */
-        GISMO_ASSERT(side1.patch==side2.patch,"Sides must be from the same patch");
-        GISMO_ASSERT(side1.side().direction()!=side2.side().direction(),"Sides must have different direction");
-        index_t index;
-
-        gsBasis<T> * basis = &m_bases.basis(side1.patch);
-
-        gsVector<index_t> indices1 = static_cast<gsVector<index_t>>(basis->boundaryOffset(side1.side(),index2));
-
-        index_t n = indices1.rows();
-        if (side1.side()==1) //west
-            if (side2.side().parameter()==0) //south
-                index = indices1(index1);
-            else
-                index = indices1(n-1-index1); //north
-        else if (side1.side()==2) //east
-            if (side2.side().parameter()==0) //south
-                index = indices1(index1);
-            else
-                index = indices1(n-1-index1); //north
-        else if (side1.side()==3) //south
-            if (side2.side().parameter()==0) //west
-                index = indices1(index1);
-            else
-                index = indices1(n-1-index1); //east
-        else if (side1.side()==4) //north
-            if (side2.side().parameter()==0) //west
-                index = indices1(index1);
-            else
-                index = indices1(n-1-index1); //east
-        else
-            GISMO_ERROR("Side unknown. index = "<<side1.side());
-        return index;
-    }
-
     // TO DO: change this so that it works for all hierarchical levels (and does not depend on the storage of the boundary order)
     template<short_t d,class T>
     const index_t gsDPatch<d,T>::_indexFromVert(index_t index, const patchCorner corner, const patchSide side, index_t offset, index_t levelOffset)
@@ -392,45 +350,42 @@ namespace gismo
         // gsBasis<T> * basis = &bases.basis(corner.patch);
         gsHTensorBasis<2,T> *basis = dynamic_cast<gsHTensorBasis<2,T>*>(&bases.basis(corner.patch));
         index_t level = basis->levelAtCorner(corner.corner()) + levelOffset;
-
-        gsVector<index_t> indices = static_cast<gsVector<index_t>>(basis->boundaryOffset(side.side(),offset,level));
-        index_t end = indices.rows()-1;
-
+        gsTensorBSplineBasis<2,T> tbasis = basis->tensorLevel(level);
         for (size_t k=0; k!=index.size(); k++)
         {
             if (side.side()==1) //west
             {
                 if (corner.corner()==1)//southwest
-                    result[k] = indices.at(index[k]);
+                    result[k] = tbasis.index(tbasis.stride(0),0);
                 else if (corner.corner()==3) //northwest
-                    result[k] = indices.at(end-index[k]);
+                    result[k] = tbasis.index(tbasis.stride(0),tbasis.stride(1),0);
                 else
                     GISMO_ERROR(corner.corner() << " is not adjacent to side "<<side.side()<<"!");
             }
             else if (side.side()==2) //east
             {
                 if (corner.corner()==2)//southeast
-                    result[k] = indices.at(index[k]);
+                    result[k] = tbasis.index(0,0);
                 else if (corner.corner()==4) //northeast
-                    result[k] = indices.at(end-index[k]);
+                    result[k] = tbasis.index(0,tbasis.stride(1));
                 else
                     GISMO_ERROR(corner.corner() << " is not adjacent to side "<<side.side()<<"!");
             }
             else if (side.side()==3) //south
             {
                 if (corner.corner()==1)//southwest
-                    result[k] = indices.at(index[k]);
+                    result[k] = tbasis.index(tbasis.stride(0),0);
                 else if (corner.corner()==2) //southeast
-                    result[k] = indices.at(end-index[k]);
+                    result[k] = tbasis.index(0,0);
                 else
                     GISMO_ERROR(corner.corner() << " is not adjacent to side "<<side.side()<<"!");
             }
             else if (side.side()==4) //north
             {
                 if (corner.corner()==3)//northwest
-                    result[k] = indices.at(index[k]);
+                    result[k] = tbasis.index(tbasis.stride(0),tbasis.stride(1));
                 else if (corner.corner()==4) //northeast
-                    result[k] = indices.at(end-index[k]);
+                    result[k] = tbasis.index(0,tbasis.stride(1));
                 else
                     GISMO_ERROR(corner.corner() << " is not adjacent to side "<<side.side()<<"!");
 
@@ -1116,7 +1071,6 @@ namespace gismo
                             pcorners[c].getContainingSides(d,psides);
                             m_mapModified.eliminateDof(_indexFromVert(1,pcorners[c],psides[0]),pcorners[c].patch);
                             m_mapModified.eliminateDof(_indexFromVert(1,pcorners[c],psides[1]),pcorners[c].patch);
-                            // gsDebug<<"Eliminated "<<_indexFromSides(1,psides[0],1,psides[1])<<" of basis "<<pcorners[c].patch<<"\n";
 
                             // And match the 0,0 vertex (i.e. the corner) to the corner that is first in the list pcorners.
                             if (c!=0)
