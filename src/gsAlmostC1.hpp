@@ -646,41 +646,44 @@ namespace gismo
         gsHTensorBasis<2,T> *basis = dynamic_cast<gsHTensorBasis<2,T>*>(&bases.basis(corner.patch));
         index_t level = basis->levelAtCorner(corner.corner()) + levelOffset;
         gsTensorBSplineBasis<2,T> tbasis = basis->tensorLevel(level);
+
+        gsVector<index_t,2> sizes;
+        tbasis.size_cwise(sizes);
         for (size_t k=0; k!=index.size(); k++)
         {
             if (side.side()==1) //west
             {
                 if (corner.corner()==1)//southwest
-                    result[k] = tbasis.index(tbasis.stride(0),0);
+                    result[k] = tbasis.index(offset,index[k]);
                 else if (corner.corner()==3) //northwest
-                    result[k] = tbasis.index(tbasis.stride(0),tbasis.stride(1),0);
+                    result[k] = tbasis.index(offset,sizes[1]-1-index[k],0);
                 else
                     GISMO_ERROR(corner.corner() << " is not adjacent to side "<<side.side()<<"!");
             }
             else if (side.side()==2) //east
             {
                 if (corner.corner()==2)//southeast
-                    result[k] = tbasis.index(0,0);
+                    result[k] = tbasis.index(sizes[0]-1-offset,index[k]);
                 else if (corner.corner()==4) //northeast
-                    result[k] = tbasis.index(0,tbasis.stride(1));
+                    result[k] = tbasis.index(sizes[0]-1-offset,sizes[1]-1-index[k]);
                 else
                     GISMO_ERROR(corner.corner() << " is not adjacent to side "<<side.side()<<"!");
             }
             else if (side.side()==3) //south
             {
                 if (corner.corner()==1)//southwest
-                    result[k] = tbasis.index(tbasis.stride(0),0);
+                    result[k] = tbasis.index(index[k],offset);
                 else if (corner.corner()==2) //southeast
-                    result[k] = tbasis.index(0,0);
+                    result[k] = tbasis.index(sizes[0]-1-index[k],offset);
                 else
                     GISMO_ERROR(corner.corner() << " is not adjacent to side "<<side.side()<<"!");
             }
             else if (side.side()==4) //north
             {
                 if (corner.corner()==3)//northwest
-                    result[k] = tbasis.index(tbasis.stride(0),tbasis.stride(1));
+                    result[k] = tbasis.index(index[k],sizes[1]-1-offset,0);
                 else if (corner.corner()==4) //northeast
-                    result[k] = tbasis.index(0,tbasis.stride(1));
+                    result[k] = tbasis.index(sizes[0]-1-index[k],sizes[1]-1-offset);
                 else
                     GISMO_ERROR(corner.corner() << " is not adjacent to side "<<side.side()<<"!");
 
@@ -938,6 +941,8 @@ namespace gismo
                 thb = gsTHBSpline<2,real_t>(*geo);
                 m_patches.patch(k) = thb;
             }
+            else if (dynamic_cast< gsTHBSpline<2,real_t> * > (&m_patches.patch(k)))
+            { }
             else
                 gsWarn<<"No THB basis was constructed";
         }
