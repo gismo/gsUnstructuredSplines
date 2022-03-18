@@ -120,7 +120,7 @@ void gsApproxC1Vertex<d, T>::computeKernel()
     index_t dim_mat = 0;
     std::vector<index_t> dim_u, dim_v, side, patchID;
     std::vector<index_t> dim_u_iFace, patchID_iFace;
-    gsMatrix<> matrix_det(2,2), points(2,1);
+    gsMatrix<> matrix_det(m_mp.targetDim(), m_mp.targetDim()), points(m_mp.parDim(),1);
     points.setZero();
     for(size_t np = 0; np < mp_vertex.nPatches(); np++)
     {
@@ -138,11 +138,16 @@ void gsApproxC1Vertex<d, T>::computeKernel()
                 matrix_det.col(0) = m_auxPatches[np].getPatchRotated().jacobian(points).col(0); // u
             else if(m_mp.parDim() + 1 == m_mp.targetDim()) // Surface
             {
-                matrix_det.setZero(2,2);
-                gsDebugVar("TODO");
+                gsMatrix<> N, ev;
+                m_auxPatches[np].getPatchRotated().jacobian_into(points, ev);
+                N.setZero(3,1);
+                N(0,0) = ev(1,0)*ev(2,1)-ev(2,0)*ev(1,1);
+                N(1,0) = ev(2,0)*ev(0,1)-ev(0,0)*ev(2,1);
+                N(2,0) = ev(0,0)*ev(1,1)-ev(1,0)*ev(0,1);
+                matrix_det.col(0) = ev.col(0);
+                matrix_det.col(2) = N;
             }
-
-    }
+        }
         if (mp_vertex.isBoundary(np,1)) // v
         {
             side.push_back(1);
@@ -157,8 +162,13 @@ void gsApproxC1Vertex<d, T>::computeKernel()
                 matrix_det.col(1) = m_auxPatches[np].getPatchRotated().jacobian(points).col(1); // u
             else if(m_mp.parDim() + 1 == m_mp.targetDim()) // Surface
             {
-                matrix_det.setZero(2,2);
-                gsDebugVar("TODO");
+                gsMatrix<> N, ev;
+                m_auxPatches[np].getPatchRotated().jacobian_into(points, ev);
+                N.setZero(3,1);
+                N(0,0) = ev(1,0)*ev(2,1)-ev(2,0)*ev(1,1);
+                N(1,0) = ev(2,0)*ev(0,1)-ev(0,0)*ev(2,1);
+                N(2,0) = ev(0,0)*ev(1,1)-ev(1,0)*ev(0,1);
+                matrix_det.col(1) = ev.col(1);
             }
         }
         if(mp_vertex.isInterface(patchSide(np,1)) && mp_vertex.isInterface(patchSide(np,3)))
