@@ -622,17 +622,10 @@ public:
 
         // Geo data:
         gsMatrix<T> geo_jac, geo_der2;
-        if(m_geo.parDim() == m_geo.targetDim()) // Planar
-        {
-            geo_jac = m_geo.jacobian(zero);
-            geo_der2 = m_geo.deriv2(zero);
-        }
-        else if(m_geo.parDim() + 1 == m_geo.targetDim()) // Surface
-        {
-            geo_jac.setIdentity(2,2);
-            geo_der2.setZero(6,1);
-            gsDebugVar("TODO");
-        }
+        geo_jac = m_geo.jacobian(zero);
+        geo_der2 = m_geo.deriv2(zero);
+
+
 
         // Compute dd^^(i_k) and dd^^(i_k-1)
         gsMatrix<T> dd_ik_plus, dd_ik_minus;
@@ -643,13 +636,21 @@ public:
         dd_ik_plus = 1.0/(alpha_0[1](0,0)) * (geo_jac.col(0) +
                                             beta_0[1](0,0) * geo_jac.col(1));
 
-        gsMatrix<T> geo_deriv2_12(2,1), geo_deriv2_11(2,1), geo_deriv2_22(2,1);
+        gsMatrix<T> geo_deriv2_12(m_geo.targetDim(),1), geo_deriv2_11(m_geo.targetDim(),1), geo_deriv2_22(m_geo.targetDim(),1);
         geo_deriv2_12.row(0) = geo_der2.row(2);
         geo_deriv2_12.row(1) = geo_der2.row(5);
         geo_deriv2_11.row(0) = geo_der2.row(0);
         geo_deriv2_11.row(1) = geo_der2.row(3);
         geo_deriv2_22.row(0) = geo_der2.row(1);
         geo_deriv2_22.row(1) = geo_der2.row(4);
+
+        if(m_geo.parDim() + 1 == m_geo.targetDim()) // Surface
+        {
+            geo_deriv2_12.row(2) = m_geo.deriv2(zero).row(8);
+            geo_deriv2_11.row(2) = m_geo.deriv2(zero).row(6);
+            geo_deriv2_22.row(2) = m_geo.deriv2(zero).row(7);
+        }
+
         gsMatrix<T> alpha_squared_u = alpha_0[0]*alpha_0[0];
         gsMatrix<T> alpha_squared_v = alpha_0[1]*alpha_0[1];
 
@@ -668,39 +669,105 @@ public:
         // Comupute d_(0,0)^(i_k), d_(1,0)^(i_k), d_(0,1)^(i_k), d_(1,1)^(i_k) ; i_k == 2
         std::vector<gsMatrix<T>> d_ik;
         d_ik.push_back(m_Phi.col(0));
-        d_ik.push_back(m_Phi.block(0,1,6,2) * geo_jac.col(0) ); // deriv into u
-        d_ik.push_back(m_Phi.block(0,1,6,2) * geo_jac.col(1) ); // deriv into v
-        d_ik.push_back((geo_jac(0,0) * m_Phi.col(3) + geo_jac(1,0) * m_Phi.col(4))*geo_jac(0,1) +
-                       (geo_jac(0,0) * m_Phi.col(4) + geo_jac(1,0) * m_Phi.col(5))*geo_jac(1,1) +
-                       m_Phi.block(0,1,6,1) * geo_der2.row(2) +
-                       m_Phi.block(0,2,6,1) * geo_der2.row(5)); // Hessian
+        d_ik.push_back(m_Phi.block(1, 0, m_geo.targetDim(), 6).transpose() * geo_jac.col(0) ); // deriv into u
+        d_ik.push_back(m_Phi.block(1, 0, m_geo.targetDim(), 6).transpose() * geo_jac.col(1) ); // deriv into v
 
+        if(m_geo.parDim() + 1 == m_geo.targetDim()) // In the surface case the dimension of the second derivative vector is 9x1
+        {
+            d_ik.push_back( (geo_jac(0,0) * m_Phi.row(4).transpose() + geo_jac(1,0) * m_Phi.row(7).transpose() + geo_jac(2,0) * m_Phi.row(10).transpose()) * geo_jac(0,1) +
+                            (geo_jac(0,0) * m_Phi.row(5).transpose() + geo_jac(1,0) * m_Phi.row(8).transpose() + geo_jac(2,0) * m_Phi.row(11).transpose()) * geo_jac(1,1) +
+                            (geo_jac(0,0) * m_Phi.row(6).transpose() + geo_jac(1,0) * m_Phi.row(9).transpose() + geo_jac(2,0) * m_Phi.row(12).transpose()) * geo_jac(2,1) +
+                                    m_Phi.block(1, 0, 1, 6).transpose() * geo_der2.row(2) +
+                                    m_Phi.block(2, 0, 1, 6).transpose() * geo_der2.row(5) +
+                                    m_Phi.block(3, 0, 1, 6).transpose() * geo_der2.row(8) );
+
+        }
+        else
+        {
+            d_ik.push_back((geo_jac(0, 0) * m_Phi.col(3) + geo_jac(1, 0) * m_Phi.col(4)) * geo_jac(0, 1) +
+                           (geo_jac(0, 0) * m_Phi.col(4) + geo_jac(1, 0) * m_Phi.col(5)) * geo_jac(1, 1) +
+                           m_Phi.block(0, 1, 6, 1) * geo_der2.row(2) +
+                           m_Phi.block(0, 2, 6, 1) * geo_der2.row(5)); // Hessian
+        }
         // Compute d_(*,*)^(il,ik)
         std::vector<gsMatrix<T>> d_ilik_minus, d_ilik_plus;
         d_ilik_minus.push_back(m_Phi.col(0));
-        d_ilik_minus.push_back(m_Phi.block(0,1,6,2) * geo_jac.col(0));
-        d_ilik_minus.push_back((geo_jac(0,0) * m_Phi.col(3) + geo_jac(1,0) * m_Phi.col(4))*geo_jac(0,0) +
-                               (geo_jac(0,0) * m_Phi.col(4) + geo_jac(1,0) * m_Phi.col(5))*geo_jac(1,0) +
-                               m_Phi.block(0,1,6,1) * geo_der2.row(0) +
-                               m_Phi.block(0,2,6,1) * geo_der2.row(3));
-        d_ilik_minus.push_back(m_Phi.block(0,1,6,2) * dd_ik_minus);
-        d_ilik_minus.push_back((geo_jac(0,0) * m_Phi.col(3) + geo_jac(1,0) * m_Phi.col(4))*dd_ik_minus(0,0) +
-                               (geo_jac(0,0) * m_Phi.col(4) + geo_jac(1,0) * m_Phi.col(5))*dd_ik_minus(1,0) +
-                               m_Phi.block(0,1,6,1) * dd_ik_minus_deriv.row(0) +
-                               m_Phi.block(0,2,6,1) * dd_ik_minus_deriv.row(1));
+        d_ilik_minus.push_back(m_Phi.block(1, 0, m_geo.targetDim(), 6).transpose() * geo_jac.col(0));
+
+        if(m_geo.parDim() + 1 == m_geo.targetDim()) // In the surface case the dimension of the second derivative vector is 9x1
+        {
+            d_ilik_minus.push_back( (geo_jac(0,0) * m_Phi.row(4).transpose() + geo_jac(1,0) * m_Phi.row(7).transpose() + geo_jac(2,0) * m_Phi.row(10).transpose()) * geo_jac(0,0) +
+                                    (geo_jac(0,0) * m_Phi.row(5).transpose() + geo_jac(1,0) * m_Phi.row(8).transpose() + geo_jac(2,0) * m_Phi.row(11).transpose()) * geo_jac(1,0) +
+                                    (geo_jac(0,0) * m_Phi.row(6).transpose() + geo_jac(1,0) * m_Phi.row(9).transpose() + geo_jac(2,0) * m_Phi.row(12).transpose()) * geo_jac(2,0) +
+                                    m_Phi.block(1, 0, 1, 6).transpose() * geo_der2.row(0) +
+                                    m_Phi.block(2, 0, 1, 6).transpose() * geo_der2.row(3) +
+                                    m_Phi.block(3, 0, 1, 6).transpose() * geo_der2.row(6) );
+        }
+        else
+        {
+            d_ilik_minus.push_back((geo_jac(0, 0) * m_Phi.col(3) + geo_jac(1, 0) * m_Phi.col(4)) * geo_jac(0, 0) +
+                                   (geo_jac(0, 0) * m_Phi.col(4) + geo_jac(1, 0) * m_Phi.col(5)) * geo_jac(1, 0) +
+                                   m_Phi.block(0, 1, 6, 1) * geo_der2.row(0) +
+                                   m_Phi.block(0, 2, 6, 1) * geo_der2.row(3));
+        }
+
+        d_ilik_minus.push_back(m_Phi.block(1, 0, m_geo.targetDim(), 6).transpose() * dd_ik_minus);
+
+        if(m_geo.parDim() + 1 == m_geo.targetDim()) // In the surface case the dimension of the second derivative vector is 9x1
+        {
+            d_ilik_minus.push_back( (geo_jac(0,0) * m_Phi.row(4).transpose() + geo_jac(1,0) * m_Phi.row(7).transpose() + geo_jac(2,0) * m_Phi.row(10).transpose()) * dd_ik_minus(0,0) +
+                                    (geo_jac(0,0) * m_Phi.row(5).transpose() + geo_jac(1,0) * m_Phi.row(8).transpose() + geo_jac(2,0) * m_Phi.row(11).transpose()) * dd_ik_minus(1,0) +
+                                    (geo_jac(0,0) * m_Phi.row(6).transpose() + geo_jac(1,0) * m_Phi.row(9).transpose() + geo_jac(2,0) * m_Phi.row(12).transpose()) * dd_ik_minus(2,0) +
+                                    m_Phi.block(1, 0, 1, 6).transpose() * dd_ik_minus_deriv.row(0) +
+                                    m_Phi.block(2, 0, 1, 6).transpose() * dd_ik_minus_deriv.row(1) +
+                                    m_Phi.block(3, 0, 1, 6).transpose() * dd_ik_minus_deriv.row(2) );
+        }
+        else
+        {
+            d_ilik_minus.push_back((geo_jac(0, 0) * m_Phi.col(3) + geo_jac(1, 0) * m_Phi.col(4)) * dd_ik_minus(0, 0) +
+                                   (geo_jac(0, 0) * m_Phi.col(4) + geo_jac(1, 0) * m_Phi.col(5)) * dd_ik_minus(1, 0) +
+                                   m_Phi.block(0, 1, 6, 1) * dd_ik_minus_deriv.row(0) +
+                                   m_Phi.block(0, 2, 6, 1) * dd_ik_minus_deriv.row(1));
+        }
 
         d_ilik_plus.push_back(m_Phi.col(0));
-        d_ilik_plus.push_back(m_Phi.block(0,1,6,2) * geo_jac.col(1));
-        d_ilik_plus.push_back((geo_jac(0,1) * m_Phi.col(3) + geo_jac(1,1) * m_Phi.col(4))*geo_jac(0,1) +
-                              (geo_jac(0,1) * m_Phi.col(4) + geo_jac(1,1) * m_Phi.col(5))*geo_jac(1,1) +
-                              m_Phi.block(0,1,6,1) * geo_der2.row(1) +
-                              m_Phi.block(0,2,6,1) * geo_der2.row(4));
-        d_ilik_plus.push_back(m_Phi.block(0,1,6,2) * dd_ik_plus);
-        d_ilik_plus.push_back((geo_jac(0,1) * m_Phi.col(3) + geo_jac(1,1) * m_Phi.col(4))*dd_ik_plus(0,0) +
-                              (geo_jac(0,1) * m_Phi.col(4) + geo_jac(1,1) * m_Phi.col(5))*dd_ik_plus(1,0) +
-                              m_Phi.block(0,1,6,1) * dd_ik_plus_deriv.row(0) +
-                              m_Phi.block(0,2,6,1) * dd_ik_plus_deriv.row(1));
+        d_ilik_plus.push_back(m_Phi.block(1, 0, m_geo.targetDim(), 6).transpose() * geo_jac.col(1));
 
+        if(m_geo.parDim() + 1 == m_geo.targetDim()) // In the surface case the dimension of the second derivative vector is 9x1
+        {
+            d_ilik_plus.push_back( (geo_jac(0,1) * m_Phi.row(4).transpose() + geo_jac(1,1) * m_Phi.row(7).transpose() + geo_jac(2,1) * m_Phi.row(10).transpose()) * geo_jac(0,1) +
+                                   (geo_jac(0,1) * m_Phi.row(5).transpose() + geo_jac(1,1) * m_Phi.row(8).transpose() + geo_jac(2,1) * m_Phi.row(11).transpose()) * geo_jac(1,1) +
+                                   (geo_jac(0,1) * m_Phi.row(6).transpose() + geo_jac(1,1) * m_Phi.row(9).transpose() + geo_jac(2,1) * m_Phi.row(12).transpose()) * geo_jac(2,1) +
+                                   m_Phi.block(1, 0, 1, 6).transpose() * geo_der2.row(1) +
+                                   m_Phi.block(2, 0, 1, 6).transpose() * geo_der2.row(4) +
+                                   m_Phi.block(3, 0, 1, 6).transpose() * geo_der2.row(7) );
+        }
+        else
+        {
+            d_ilik_plus.push_back((geo_jac(0, 1) * m_Phi.col(3) + geo_jac(1, 1) * m_Phi.col(4)) * geo_jac(0, 1) +
+                                  (geo_jac(0, 1) * m_Phi.col(4) + geo_jac(1, 1) * m_Phi.col(5)) * geo_jac(1, 1) +
+                                  m_Phi.block(0, 1, 6, 1) * geo_der2.row(1) +
+                                  m_Phi.block(0, 2, 6, 1) * geo_der2.row(4));
+        }
+
+        d_ilik_plus.push_back(m_Phi.block(1, 0, m_geo.targetDim(), 6).transpose()  * dd_ik_plus);
+
+        if(m_geo.parDim() + 1 == m_geo.targetDim()) // In the surface case the dimension of the second derivative vector is 9x1
+        {
+            d_ilik_plus.push_back( (geo_jac(0,1) * m_Phi.row(4).transpose() + geo_jac(1,1) * m_Phi.row(7).transpose() + geo_jac(2,1) * m_Phi.row(10).transpose()) * dd_ik_plus(0,0) +
+                                   (geo_jac(0,1) * m_Phi.row(5).transpose() + geo_jac(1,1) * m_Phi.row(8).transpose() + geo_jac(2,1) * m_Phi.row(11).transpose()) * dd_ik_plus(1,0) +
+                                   (geo_jac(0,1) * m_Phi.row(6).transpose() + geo_jac(1,1) * m_Phi.row(9).transpose() + geo_jac(2,1) * m_Phi.row(12).transpose()) * dd_ik_plus(2,0) +
+                                   m_Phi.block(1, 0, 1, 6).transpose() * dd_ik_plus_deriv.row(0) +
+                                   m_Phi.block(2, 0, 1, 6).transpose() * dd_ik_plus_deriv.row(1) +
+                                   m_Phi.block(3, 0, 1, 6).transpose() * dd_ik_plus_deriv.row(2) );
+        }
+        else
+        {
+            d_ilik_plus.push_back((geo_jac(0, 1) * m_Phi.col(3) + geo_jac(1, 1) * m_Phi.col(4)) * dd_ik_plus(0, 0) +
+                                  (geo_jac(0, 1) * m_Phi.col(4) + geo_jac(1, 1) * m_Phi.col(5)) * dd_ik_plus(1, 0) +
+                                  m_Phi.block(0, 1, 6, 1) * dd_ik_plus_deriv.row(0) +
+                                  m_Phi.block(0, 2, 6, 1) * dd_ik_plus_deriv.row(1));
+        }
 
 
         result = d_ilik_minus.at(0)(m_bfID,0) * (c_0_plus.at(0).cwiseProduct(c_0.at(1)) -

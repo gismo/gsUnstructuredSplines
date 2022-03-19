@@ -465,6 +465,7 @@ int main(int argc, char *argv[])
     index_t numRefine  = 5;
     index_t degree = 3;
     index_t smoothness = 2;
+    bool info = false;
     bool last = false;
     bool second = false;
     bool residual = false;
@@ -482,6 +483,7 @@ int main(int argc, char *argv[])
     cmd.addString("f", "file", "Input geometry file (with .xml)", fn);
     cmd.addString( "g", "geometry", "Input geometry file",  geometry );
 
+    cmd.addSwitch("info", "Plot the information of the Approx C1 Basis", info);
     cmd.addSwitch("last", "Solve problem only on the last level of h-refinement", last);
     cmd.addSwitch("plot", "Create a ParaView visualization file with the solution", plot);
     cmd.addSwitch("mesh", "Plot the mesh", mesh);
@@ -596,7 +598,7 @@ int main(int argc, char *argv[])
     //! [Solver loop]
     gsSparseSolver<real_t>::SimplicialLDLT solver;
 
-    gsVector<real_t> l2err(numRefine+1), h1err(numRefine+1), h2err(numRefine+1),
+    gsVector<real_t> l2err(numRefine+1), h1err(numRefine+1), h2err(numRefine+1), IFaceErr(numRefine+1),
             dofs(numRefine+1), meshsize(numRefine+1);
     gsInfo<< "(dot1=assembled, dot2=solved, dot3=got_error)\n"
              "\nDoFs: ";
@@ -629,7 +631,7 @@ int main(int argc, char *argv[])
 
             // The approx. C1 space
             gsApproxC1Spline<2,real_t> approxC1(mp,basis);
-            approxC1.options().setSwitch("info",true);
+            approxC1.options().setSwitch("info",info);
             approxC1.options().setSwitch("plot",plot);
             approxC1.options().setSwitch("interpolation",true);
             approxC1.options().setSwitch("second",second);
@@ -777,6 +779,35 @@ int main(int argc, char *argv[])
             //h2err[r]= h1err[r] +
             //          math::sqrt(ev.integral( ( ihess(u_ex) - 1.0/gg * (deriv2(u_sol,G0inv)).tr() ).sqNorm() * meas(G) )); // /ev.integral( ihess(ff).sqNorm()*meas(G) )
         }
+
+        // Jump error
+        if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
+        {
+            gsMatrix<real_t> solFull;
+            u_sol.extractFull(solFull);
+            gsMappedSpline<2, real_t> mappedSpline(bb2, solFull);
+
+            auto ms_sol = A.getCoeff(mappedSpline);
+            IFaceErr[r] = math::sqrt(ev.integralInterface(((igrad(ms_sol.left(), G.left()) -
+                                                            igrad(ms_sol.right(), G.right())) *
+                                                           nv(G).normalized()).sqNorm() * meas(G)));
+        }
+        else if (method == MethodFlags::NITSCHE)
+        {
+            gsMultiPatch<> sol_nitsche;
+            u_sol.extract(sol_nitsche);
+            auto ms_sol = A.getCoeff(sol_nitsche);
+            IFaceErr[r] = math::sqrt(ev.integralInterface((( igrad(ms_sol.left(), G.left()) -
+                                                             igrad(ms_sol.right(), G.right())) *
+                                                           nv(G).normalized()).sqNorm() * meas(G)));
+
+            // This doesn't work yet. Bug?
+            //IFaceErr[r] = math::sqrt(ev.integralInterface((( igrad(u_sol.left(), G.left()) -
+            //                                                 igrad(u_sol.right(), G.right())) *
+            //                                               nv(G).normalized()).sqNorm() * meas(G)));
+        }
+
+
         err_time += timer.stop();
         gsInfo << ". " << std::flush; // Error computations done
     } //for loop
@@ -795,6 +826,7 @@ int main(int argc, char *argv[])
     gsInfo << "\nL2 error: "<<std::scientific<<std::setprecision(3)<<l2err.transpose()<<"\n";
     gsInfo << "H1 error: "<<std::scientific<<h1err.transpose()<<"\n";
     gsInfo << "H2 error: "<<std::scientific<<h2err.transpose()<<"\n";
+    gsInfo<< "Deriv Interface error: "<<std::scientific<<IFaceErr.transpose()<<"\n";
 
     if (numRefine>0)
     {
@@ -810,6 +842,10 @@ int main(int argc, char *argv[])
         gsInfo<<   "EoC (H2): "<< std::fixed<<std::setprecision(2)
               <<( h2err.head(numRefine).array() /
                   h2err.tail(numRefine).array() ).log().transpose() / std::log(2.0) <<"\n";
+
+        gsInfo<<   "EoC (Iface): "<< std::fixed<<std::setprecision(2)
+              <<( IFaceErr.head(numRefine).array() /
+                  IFaceErr.tail(numRefine).array() ).log().transpose() / std::log(2.0) <<"\n";
     }
     //! [Error and convergence rates]
 
