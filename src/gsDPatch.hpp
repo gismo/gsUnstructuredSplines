@@ -420,7 +420,6 @@ namespace gismo
     {
         m_RefPatches = gsMultiPatch<T>(m_patches);
         // gsMultiPatch<T> refPatches(m_patches);
-        typename gsBlockOp<T>::Ptr thbMat=gsBlockOp<T>::make(m_RefPatches.nPatches(),m_RefPatches.nPatches());
         // prepare the geometry
         std::vector<std::vector<patchCorner> > cornerLists;
         m_RefPatches.getEVs(cornerLists);
@@ -451,39 +450,28 @@ namespace gismo
                     // gsDebugVar(m_tMatrix.toDense());
                 }
 
-            std::vector<gsSparseMatrix<T>> xmatrices(m_RefPatches.nPatches());
             gsSparseMatrix<T> tmp;
             index_t rows = 0, cols = 0;
+            std::vector<Eigen::Triplet<T,index_t>> tripletList;
             for (size_t p=0; p!=m_RefPatches.nPatches(); p++)
             {
-
                 gsHTensorBasis<2,T> *basis = dynamic_cast<gsHTensorBasis<2,T>*>(&m_RefPatches.basis(p));
                 std::vector< gsSortedVector< index_t > > xmat = basis->getXmatrix();
 
                 m_RefPatches.patch(p).refineElements(elVec[p]);
 
                 basis->transfer(xmat,tmp);
-                xmatrices[p] = tmp;
+
+                for (index_t i = 0; i<tmp.outerSize(); ++i)
+                    for (typename gsSparseMatrix<T>::iterator it(tmp,i); it; ++it)
+                        tripletList.push_back(Eigen::Triplet<T,index_t>(it.row()+rows,it.col()+cols,it.value()));
 
                 rows += tmp.rows();
                 cols += tmp.cols();
-
-                thbMat->addOperator(p,p,makeMatrixOp(tmp) );
             }
 
-            index_t rowOffset = 0, colOffset = 0;
             m_tMatrix.resize(rows,cols);
-            for (size_t p=0; p!=m_RefPatches.nPatches(); p++)
-            {
-                for (index_t i = 0; i!=xmatrices[p].rows(); i++)
-                    for (index_t j = 0; j!=xmatrices[p].cols(); j++)
-                    {
-                        if ( 0 == xmatrices[p](i,j) ) continue;
-                        m_tMatrix.coeffRef(rowOffset + i,colOffset + j) = xmatrices[p](i,j);
-                    }
-                rowOffset += xmatrices[p].rows();
-                colOffset += xmatrices[p].cols();
-            }
+            m_tMatrix.setFromTriplets(tripletList.begin(), tripletList.end());
 
             m_tMatrix.makeCompressed();
             m_bases = gsMultiBasis<T>(m_RefPatches);
