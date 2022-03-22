@@ -402,7 +402,7 @@ void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & 
     auto G = A.getMap(mp);
     auto uu = A.getSpace(bb2);
     auto gg = pow(fform(G).det(),0.5);
-    auto g_bdy = A.getBdrFunction(); // Bug?!?
+    auto g_bdy = A.getBdrFunction(G); // Bug?!?
 
 //    gsFunctionExpr<> ms("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1) + 0*z",3);
 //    // Neumann
@@ -446,7 +446,7 @@ void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & 
                   lambda * ((jac(G) * fform(G).inv() * igrad(uu).tr()).tr() * nv(G).normalized())
                                * ((jac(G) * fform(G).inv() * igrad(uu).tr()).tr() * nv(G).normalized()).tr() * gg);
     A.assembleBdr(bc.get("Neumann"),
-                  lambda *  ((jac(G) * fform(G).inv() * igrad(uu).tr()).tr() * nv(G).normalized()) * (g_bdy.tr() * jac(G).tr() * nv(G).normalized()) * gg);
+                  lambda *  ((jac(G) * fform(G).inv() * igrad(uu).tr()).tr() * nv(G).normalized()) * (g_bdy.tr() * nv(G).normalized()) * gg);
 
     gsSparseSolver<real_t>::SimplicialLDLT solver;
     solver.compute( A.matrix() );
@@ -638,12 +638,12 @@ int main(int argc, char *argv[])
 
     //gsFunctionExpr<>f("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
     //gsFunctionExpr<>f("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
-    gsFunctionExpr<>f("5",2);
+    gsFunctionExpr<>f("5",3);
     gsInfo << "Source function: " << f << "\n";
 
     //gsFunctionExpr<> ms("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",3);
     //gsFunctionExpr<> ms("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",2);
-    gsFunctionExpr<> ms("0",2);
+    gsFunctionExpr<> ms("0",3);
     gsInfo << "Exact function: " << ms << "\n";
 
     //! [Refinement]
@@ -681,7 +681,7 @@ int main(int argc, char *argv[])
     // Laplace
     //gsFunctionExpr<> laplace ("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
     //gsFunctionExpr<> laplace ("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
-    gsFunctionExpr<> laplace ("0",2);
+    gsFunctionExpr<> laplace ("0",3);
     // Neumann
 //    gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
 //                     "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)",
@@ -689,7 +689,8 @@ int main(int argc, char *argv[])
 //    gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
 //                     "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)",2);
     gsFunctionExpr<> sol1der("0",
-                     "0", 2);
+                     "0",
+                     "0", 3);
 
     gsBoundaryConditions<> bc;
     for (gsMultiPatch<>::const_biterator bit = mp.bBegin(); bit != mp.bEnd(); ++bit)
@@ -716,7 +717,7 @@ int main(int argc, char *argv[])
     auto G = A.getMap(mp);
 
     // Set the source term
-    auto ff = A.getCoeff(f); // Laplace example
+    auto ff = A.getCoeff(f, G); // Laplace example
 
     // Set the discretization space
     gsMappedBasis<2,real_t> bb2;
@@ -877,7 +878,7 @@ int main(int argc, char *argv[])
         //gsInfo << "Finished \n";
         // Enforce Laplace conditions to right-hand side
         // auto g_L = A.getBdrFunction(G); // Set the laplace bdy value  // Bug, doesnt work
-        auto g_L = A.getCoeff(laplace);
+        auto g_L = A.getCoeff(laplace, G);
         A.assembleBdr(bc.get("Laplace"), ((jac(G) * fform(G).inv() * igrad(u).tr()).tr() * nv(G).normalized()) * g_L.tr() * gg );
 
         if (method == MethodFlags::NITSCHE)
