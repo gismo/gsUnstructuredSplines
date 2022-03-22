@@ -54,26 +54,29 @@ class Method(Enum):
            
 """
 """ -------------------------------------------------------------------------------------------------- """
-geo_list = ["g1000", "g1100", "g1400", "g1510"]  # Without .xml extension
-path_geo = "planar/geometries/"
+#domain = "planar"
+domain = "surfaces"
 
-numRefinement = 3
+#geo_list = ["g1000", "g1100", "g1400", "g1510"]  # Without .xml extension
+geo_list = ["g1001", "g1021", "g1030", "g1031"]  # Without .xml extension
+path_geo = domain + "/geometries/"
+
+numRefinement = 5
 degree = 3
 
 second = False
 
-compute = True
-
 h = -1
-N = 5
+N = 100
 
 penalty = np.linspace(-10, 20, num=N)
 penalty = np.around(np.power(2, penalty), decimals=5)
 
-path_example = "../build/bin/biharmonic3_example"
+path_example = "../build/bin/biharmonic3_example" if domain == "planar" else "../build/bin/biharmonic_surface2_example"
 """ -------------------------------------------------------------------------------------------------- """
+residual = True if domain == "surfaces" else False  # For surface residual computation
 
-path_dir = "nitsche/"
+path_dir = domain + "/nitsche/"
 path_tikz = "tikz_files/" + path_dir
 path_fig = "tikz_figures/" + path_dir
 
@@ -84,69 +87,22 @@ if not os.path.exists(path_fig):
 
 
 file_col = []
-if compute:
-    for geo in geo_list:
-
-        # Making new folder if there exist no folder.
-        path_results = "results/nitsche/" + geo + "/"
-        if not os.path.exists(path_results):
-            os.makedirs(path_results)
-
-        for pen in penalty:
-            argument_list = "nitsche-g" + geo + "-p" + str(degree) + "-s" + str(degree - 1) + "-r" + str(numRefinement) \
-                            + "-m" + str(Method.Nitsche.value) + ("-second" if second else "") + "-y" + str(pen)
-
-            # [!Run biharmonic2_example]
-            proc = subprocess.Popen([path_example, "-g", geo, "-p", str(degree), "-s", str(degree - 1), "-r", str(numRefinement),
-                                     "-m", str(Method.Nitsche.value), ("--second" if second else ""), "", "-y", str(pen),
-                                     "-o", path_results + argument_list])
-            proc.wait()
-            # [!Run biharmonic2_example]
-            file_col.append(path_results + argument_list)
-
-        print("Geometry: ", geo, " finished!")
-
-        # Approx C1
-        argument_list = "approxC1-g" + geo + "-p" + str(degree) + "-s" + str(degree - 1) + "-r" + str(numRefinement) \
-                        + "-m" + str(Method.ApproxC1.value) + ("-second" if second else "")
-
-        # [!Run biharmonic2_example]
-        proc = subprocess.Popen([path_example, "-g", geo, "-p", str(degree), "-s", str(degree - 1), "-r", str(numRefinement),
-                                 "-m", str(Method.ApproxC1.value), ("--second" if second else ""), "", "-y", str(pen),
-                                 "-o", path_results + argument_list])
-        proc.wait()
-        # [!Run biharmonic2_example]
-        file_col.append(path_results + argument_list)
-
-        # Nitsche with EW
+for geo in geo_list:
+    path_results = "results/" + path_dir + geo + "/"
+    for pen in penalty:
         argument_list = "nitsche-g" + geo + "-p" + str(degree) + "-s" + str(degree - 1) + "-r" + str(numRefinement) \
-                        + "-m" + str(Method.Nitsche.value) + ("-second" if second else "") + "-y" + str(-1)
-
-        # [!Run biharmonic2_example]
-        proc = subprocess.Popen([path_example, "-g", geo, "-p", str(degree), "-s", str(degree - 1), "-r", str(numRefinement),
-                                 "-m", str(Method.Nitsche.value), ("--second" if second else ""), "", "-y", str(-1),
-                                 "-o", path_results + argument_list])
-        proc.wait()
-        # [!Run biharmonic2_example]
-        file_col.append(path_results + argument_list)
-    print("Finished!")
-else:
-    for geo in geo_list:
-        path_results = "results/nitsche/" + geo + "/"
-        for pen in penalty:
-            argument_list = "nitsche-g" + geo + "-p" + str(degree) + "-s" + str(degree - 1) + "-r" + str(numRefinement) \
-                            + "-m" + str(Method.Nitsche.value) + ("-second" if second else "") + "-y" + str(pen)
-            file_col.append(path_results + argument_list)
-
-        # Approx C1
-        argument_list = "approxC1-g" + geo + "-p" + str(degree) + "-s" + str(degree - 1) + "-r" + str(numRefinement) \
-                        + "-m" + str(Method.ApproxC1.value) + ("-second" if second else "")
+                        + "-m" + str(Method.Nitsche.value) + ("--second" if second else "") + ("--residual" if residual else "") + "-y" + str(pen)
         file_col.append(path_results + argument_list)
 
-        # Nitsche with EW
-        argument_list = "nitsche-g" + geo + "-p" + str(degree) + "-s" + str(degree - 1) + "-r" + str(numRefinement) \
-                        + "-m" + str(Method.Nitsche.value) + ("-second" if second else "") + "-y" + str(-1)
-        file_col.append(path_results + argument_list)
+    # Approx C1
+    argument_list = "approxC1-g" + geo + "-p" + str(degree) + "-s" + str(degree - 1) + "-r" + str(numRefinement) \
+                    + "-m" + str(Method.ApproxC1.value) + ("--second" if second else "") + ("--residual" if residual else "")
+    file_col.append(path_results + argument_list)
+
+    # Nitsche with EW
+    argument_list = "nitsche-g" + geo + "-p" + str(degree) + "-s" + str(degree - 1) + "-r" + str(numRefinement) \
+                    + "-m" + str(Method.Nitsche.value) + ("--second" if second else "") + ("--residual" if residual else "") + "-y" + str(-1)
+    file_col.append(path_results + argument_list)
 
 
 list_dict = []
@@ -155,7 +111,7 @@ for idx in range(len(file_col)):
                "Geo": None, "Name": None}
 
     path_name = file_col[idx]
-    name = path_name[path_name.find('/results/nitsche/') + 17:]
+    name = path_name[path_name.find("results/" + path_dir) + len("results/" + path_dir):]
     my_dict["Name"] = name
 
     my_dict["Geo"] = path_name[path_name.find('/g') + 1:path_name.find('/g') + 6]
@@ -242,7 +198,7 @@ for idx, mat_list in enumerate(geo_mat_list):  # idx = geo
     fig.create_error_plot(x_list, M_list, False, False)
     fig.generate_tikz(path_tikz + name_mat_list[idx])
 
-    list_tikz.append("nitsche/" + name_mat_list[idx])
+    list_tikz.append(path_dir + name_mat_list[idx])
 
 for idx, mat_list in enumerate(geo_mat_list):
 
@@ -292,7 +248,7 @@ for idx, mat_list in enumerate(geo_mat_list):
     fig.create_error_plot(x_list, M_list, False, False)
     fig.generate_tikz(path_tikz + name_mat_list2[idx])
 
-    list_tikz.append("nitsche/" + name_mat_list2[idx])
+    list_tikz.append(path_dir + name_mat_list2[idx])
 
 caption_list = []
 caption_list.append('Ex. I: $p=' + str(degree) + '$, $r=' + str(degree-1) + '$')

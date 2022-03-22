@@ -46,18 +46,22 @@ class Method(Enum):
            
 """
 """ -------------------------------------------------------------------------------------------------- """
+#domain = "planar"
+domain = "surfaces"
+
 #geo_list = ["g1000", "g1100", "g1510", "g1400"]
 #geo_list = ["g1021", "g1121", "g1500", "g1311"]  # Without .xml extension
-#geo_list = ["g1702","g1704","g1703"]
-geo_list = ["g1703"]
-path_geo = "planar/geometries/"
+#geo_list = ["g1121", "g1702", "g1704", "g1703"]
+geo_list = ["g1001", "g1021", "g1030", "g1031"]  # Without .xml extension
 
-NumRefinement = 3
+path_geo = domain + "/geometries/"
+
+NumRefinement = 4
 second = False
 
 deg_list = [
-    [3, 4, 5],
-    [3, 4, 5],
+    [3, 4],
+    [3, 4],
     [3, 4, 5],
 ]
 
@@ -70,20 +74,21 @@ method_list = [
 ]
 
 compute_list = [
-    False,
+    True,
     True,
     False
 ]
 
-path_example = "../build/bin/biharmonic3_example"
+path_example = "../build/bin/biharmonic3_example" if domain == "planar" else "../build/bin/biharmonic_surface2_example"
 """ -------------------------------------------------------------------------------------------------- """
+residual = True if domain == "surfaces" else False  # For surface residual computation
 
 for idx, compute in enumerate(compute_list):
     if compute:
         for geo in geo_list:
 
             # Making new folder if there exist no folder.
-            path_results = "results/error/" + geo + "/"
+            path_results = "results/" + domain + "/error/" + geo + "/"
             if not os.path.exists(path_results):
                 os.makedirs(path_results)
 
@@ -101,12 +106,12 @@ for idx, compute in enumerate(compute_list):
                     print("METHOD NOT IMPLEMENTED!!!")
 
                 argument_list = m_str + "-g" + geo + "-p" + str(deg) + "-s" + str(deg - 1) + "-r" + str(NumRefinement) \
-                                + "-m" + str(method_list[idx].value) + ("-second" if second else "")
+                                + "-m" + str(method_list[idx].value) + ("--second" if second else "") + ("--residual" if residual else "")
 
                 # [!Run biharmonic2_example]
                 proc = subprocess.Popen([path_example, "-g", geo, "-p", str(deg), "-s", str(deg - 1), "-r", str(NumRefinement),
-                                         "-m", str(method_list[idx].value), ("--second" if second else ""), "", "-o",
-                                         path_results + argument_list])
+                                         "-m", str(method_list[idx].value), ("--second" if second else ""), "", ("--residual" if residual else ""), "",
+                                         "-o", path_results + argument_list])
                 proc.wait()
                 # [!Run biharmonic2_example]
         print("Geometry: ", geo, " finished!")

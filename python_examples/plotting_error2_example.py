@@ -54,27 +54,36 @@ class Method(Enum):
            
 """
 """ -------------------------------------------------------------------------------------------------- """
-geo_list = ["g1000", "g1100", "g1021","g1121"]  # Without .xml extension
-path_geo = "planar/geometries/"
+#domain = "planar"
+domain = "surfaces"
 
-NumRefinement = 2
+#geo_list = ["g1000", "g1100", "g1021","g1121"]  # Without .xml extension
+#geo_list = ["g1121", "g1702", "g1704","g1703"]  # Without .xml extension
+geo_list = ["g1001", "g1021", "g1030", "g1031"]  # Without .xml extension
+path_geo = domain + "/geometries/"
+
+NumRefinement = 4
 second = False
 
-deg_list = [3, 4, 5]  # For all methods the same
-
+deg_list = [3, 4]  # For all methods the same
 
 # Approx C1: gluing data set to default: \tilde{p} = p-1, \tilde{r} = p-2,
 # Nitsche: penalty set to default: via Eigenvalue-problem
 method_list = [
     Method.ApproxC1,
     Method.DPatch,
-    Method.Nitsche
+    #Method.Nitsche
 ]
 
-path_example = "../build/bin/biharmonic3_example"
-""" -------------------------------------------------------------------------------------------------- """
+# 0 == mesh_size
+# 1 == Dofs
+x_col = 1
 
-path_dir = "error/"
+path_example = "../build/bin/biharmonic3_example" if domain == "planar" else "../build/bin/biharmonic_surface2_example"
+""" -------------------------------------------------------------------------------------------------- """
+residual = True if domain == "surfaces" else False  # For surface residual computation
+
+path_dir = domain + "/error/"
 path_tikz = "tikz_files/" + path_dir
 path_fig = "tikz_figures/" + path_dir
 
@@ -99,9 +108,9 @@ for method in method_list:
             else:
                 print("METHOD NOT IMPLEMENTED!!!")
 
-            path_results_geo = "results/error/" + geo + "/"
+            path_results_geo = "results/" + path_dir + geo + "/"
             argument_list = m_str + "-g" + geo + "-p" + str(deg) + "-s" + str(deg - 1) + "-r" + str(NumRefinement) \
-                            + "-m" + str(method.value) + ("-second" if second else "")
+                            + "-m" + str(method.value) + ("-second" if second else "") + ("--residual" if residual else "")
 
             file_coll.append(path_results_geo + argument_list)
 
@@ -146,8 +155,6 @@ for geo in geo_list:  # Cols
 
 def create_tikz_figure(geo_mat, name_mat, deg_list, opt_plot):
     list_tikz = []
-
-    x_col = 0
 
     M_list = []
     x_list = []
@@ -233,8 +240,8 @@ legend_image.append(["empty legend"])
 legend_entry.append([r'\hspace{+0.5cm}Approx. $C^1$'])
 legend_image.append(["empty legend"])
 legend_entry.append([r'\hspace{+0.5cm}D-Patch'])
-legend_image.append(["empty legend"])
-legend_entry.append([r'\hspace{+0.5cm}Nitsche'])
+# legend_image.append(["empty legend"])
+# legend_entry.append([r'\hspace{+0.5cm}Nitsche'])
 # ADD MORE METHODS
 
 fig = lib.MyTikz()
