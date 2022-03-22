@@ -202,8 +202,8 @@ public:
                             0));
                     index_t dir_1 = auxPatchSingle[0].getMapIndex(containingSides[dir].side()) < 3 ? 1 : 0;
                     index_t dir_2 = m_auxPatches[patch2].getMapIndex(result.side().index()) < 3 ? 1 : 0;
-                    if (basis.component(dir_1).numElements() > basis2.component(dir_2).numElements())
-                        basis_pm.component(dir_1) = basis2.component(dir_2);
+                    //if (basis.component(dir_1).numElements() > basis2.component(dir_2).numElements())
+                    //    basis_pm.component(dir_1) = basis2.component(dir_2);
 
                 }
             }
@@ -230,10 +230,10 @@ public:
                 if (isInterface[localdir])
                 {
                     // TODO FIX
-                    createPlusSpace(geo, basis_pm, localdir, b_plus);
-                    createMinusSpace(geo, basis_pm, localdir, b_minus);
-                    //createPlusSpace(geo, initSpace.basis(0), dir, b_plus);
-                    //createMinusSpace(geo, initSpace.basis(0), dir, b_minus);
+                    //createPlusSpace(geo, basis_pm, localdir, b_plus);
+                    //createMinusSpace(geo, basis_pm, localdir, b_minus);
+                    createPlusSpace(geo, initSpace.basis(0), dir, b_plus);
+                    createMinusSpace(geo, initSpace.basis(0), dir, b_minus);
                 }
                 else
                 {

@@ -17,7 +17,7 @@ import sys
 
 path_module = "data-private/"
 print("Module path:", path_module, "(change if needed).")
-os.chdir(os.path.join(os.path.dirname(__file__), "../../../"+path_module))
+os.chdir(os.path.join(os.path.dirname(__file__), "../../../" + path_module))
 
 gismo_path = "../build/lib"
 print("G+Smo path:", os.getcwd() + "/" + gismo_path, "(change if needed).")
@@ -47,57 +47,58 @@ import library.library as lib
            
 """
 """ -------------------------------------------------------------------------------------------------- """
-#geo_list = ["g1000", "g1100", "g1510", "g1400"]  # Without .xml extension
-#geo_list = ["g1021", "g1121", "g1500", "g1311"]  # Without .xml extension
-#geo_list = ["g1000", "g1100", "g1510", "g1400","g1021", "g1121", "g1501", "g1311"]
-#geo_list = [f[:f.find(".xml")] for f in os.listdir("../filedata/") ]
+domain = "planar"
+#domain = "surfaces"
+
+# geo_list = ["g1000", "g1100", "g1510", "g1400"]  # Without .xml extension
+# geo_list = ["g1021", "g1121", "g1500", "g1311"]  # Without .xml extension
+# geo_list = ["g1000", "g1100", "g1510", "g1400","g1021", "g1121", "g1501", "g1311"]
+# geo_list = ["g1121", "g1702", "g1704", "g1703"]
+geo_list = ["g1001", "g1021", "g1030", "g1031"]  # Without .xml extension
 
 from glob import glob
 
+path_geo = "../filedata/" + domain + "/geometries/"
 
-#path_geo = "../filedata/planar/"
-path_geo = "../filedata/planar/geometries/"
-path_geo_global = os.path.join(os.path.dirname(__file__), path_geo)
-#path_geo = "../filedata/"
-#path_geo_global = path_geo
-geo_list = [y for x in os.walk(path_geo_global) for y in glob(os.path.join(x[0], '*.xml'))]
-geo_list_temp = []
-for geo in geo_list:
-    geo_list_temp.append(geo[geo.find(path_geo)+len(path_geo):geo.find(".xml")])
+# path_geo_global = os.path.join(os.path.dirname(__file__), path_geo)
+# geo_list = [y for x in os.walk(path_geo_global) for y in glob(os.path.join(x[0], '*.xml'))]
+# geo_list_temp = []
+# for geo in geo_list:
+#     geo_list_temp.append(geo[geo.find(path_geo)+len(path_geo):geo.find(".xml")])
+# geo_list = geo_list_temp
+# print(geo_list)
 
-geo_list = geo_list_temp
 caption_list = geo_list
 
+# numData = 50
 numData = 50
-
-compute_mesh = True
 """ -------------------------------------------------------------------------------------------------- """
 # Here the tikz files and the corresponding pdf are stored
 # Change if necessary
-path_dir = "geo/"
+path_dir = domain + "/geo/"
 path_tikz = "tikz_files/" + path_dir
 path_fig = "tikz_figures/" + path_dir
 
 tikz_list = []
-if compute_mesh:
-    for idgeo, geo in enumerate(geo_list):
-        # Making new folder if there exist no folder.
-        if not os.path.exists(path_tikz):
-            os.makedirs(path_tikz)
-        if not os.path.exists(path_fig):
-            os.makedirs(path_fig)
+crop_list = []
+for idgeo, geo in enumerate(geo_list):
+    # Making new folder if there exist no folder.
+    if not os.path.exists(path_tikz):
+        os.makedirs(path_tikz)
+    if not os.path.exists(path_fig):
+        os.makedirs(path_fig)
 
-        mp = gs.core.gsMultiPatch()
-        file = gs.io.gsFileData(path_geo_global + geo + ".xml")
-        if not file.getAnyFirst(mp):  # Assume that there exist only one gsMultiPatch
-            caption_list.pop(idgeo)
-            continue
+    mp = gs.core.gsMultiPatch()
+    file = gs.io.gsFileData(domain + '/geometries/' + geo + ".xml")
+    if not file.getAnyFirst(mp):  # Assume that there exist only one gsMultiPatch
+        caption_list.pop(idgeo)
+        continue
 
-        if not mp.domainDim() == 2:
-            print("Surfaces/Volumes are not plotted yet!")
-            caption_list.pop(idgeo)
-            continue
-
+    # if not mp.domainDim() == 2:
+    #     print("Surfaces/Volumes are not plotted yet!")
+    #     caption_list.pop(idgeo)
+    #     continue
+    if mp.targetDim() == 2:
         uv_list = []
 
         u0 = np.zeros((2, numData))
@@ -124,14 +125,24 @@ if compute_mesh:
 
             while len(points_list) > 0:
                 for idx, p in enumerate(points_list):
-                    if points[0, -1] == p[0, 0] and points[1, -1] == p[1, 0]:
-                        points = np.append(points, p, axis=1)
-                        points_list = points_list[:idx] + points_list[idx + 1:]
-                        break
-                    elif points[0, -1] == p[0, -1] and points[1, -1] == p[1, -1]:
-                        points = np.append(points, np.flip(p, axis=1), axis=1)
-                        points_list = points_list[:idx] + points_list[idx + 1:]
-                        break
+                    if mp.targetDim() == 2:
+                        if points[0, -1] == p[0, 0] and points[1, -1] == p[1, 0]:
+                            points = np.append(points, p, axis=1)
+                            points_list = points_list[:idx] + points_list[idx + 1:]
+                            break
+                        elif points[0, -1] == p[0, -1] and points[1, -1] == p[1, -1]:
+                            points = np.append(points, np.flip(p, axis=1), axis=1)
+                            points_list = points_list[:idx] + points_list[idx + 1:]
+                            break
+                    elif mp.targetDim() == 3:
+                        if points[0, -1] == p[0, 0] and points[1, -1] == p[1, 0] and points[2, -1] == p[2, 0]:
+                            points = np.append(points, p, axis=1)
+                            points_list = points_list[:idx] + points_list[idx + 1:]
+                            break
+                        elif points[0, -1] == p[0, -1] and points[1, -1] == p[1, -1] and points[2, -1] == p[2, -1]:
+                            points = np.append(points, np.flip(p, axis=1), axis=1)
+                            points_list = points_list[:idx] + points_list[idx + 1:]
+                            break
 
             points = np.transpose(points)
             points_patchwise.append(points)
@@ -154,8 +165,8 @@ if compute_mesh:
 
                     # Adding the mesh line:
                     # Works only for uniform refinement
-                    for el in range(mp.basis(idx).component(0).numElements()-1):
-                        u1 = np.ones((2, numData)) * (el+1) / mp.basis(idx).component(0).numElements()
+                    for el in range(mp.basis(idx).component(0).numElements() - 1):
+                        u1 = np.ones((2, numData)) * (el + 1) / mp.basis(idx).component(0).numElements()
                         u1[1, :] = np.linspace(0, 1, numData)
                         points = mp.patch(idx).eval(u1)
                         points = points.T
@@ -163,15 +174,15 @@ if compute_mesh:
                         axis.append(curve)
 
                     # Works only for uniform refinement
-                    for el in range(mp.basis(idx).component(1).numElements()-1):
-                        v1 = np.ones((2, numData)) * (el+1) / mp.basis(idx).component(1).numElements()
+                    for el in range(mp.basis(idx).component(1).numElements() - 1):
+                        v1 = np.ones((2, numData)) * (el + 1) / mp.basis(idx).component(1).numElements()
                         v1[0, :] = np.linspace(0, 1, numData)
                         points = mp.patch(idx).eval(v1)
                         points = points.T
                         curve = Plot(options=opt_mesh, coordinates=points)
                         axis.append(curve)
 
-        geo_name = geo.replace("/",":")
+        geo_name = geo.replace("/", ":")
         tikz_list.append(path_dir + geo_name + "_mesh")
         tex = doc.dumps()  # The document as string in LaTeX syntax
         with open(path_tikz + geo_name + "_mesh.tikz", 'w') as f:
@@ -182,25 +193,78 @@ if compute_mesh:
                 if begin and idx != len(tex.splitlines()) - 1:
                     f.write(line)
                     f.write("\n")
-else:
-    for geo in geo_list:
-        mp = gs.core.gsMultiPatch()
-        file = gs.io.gsFileData(path_geo_global + geo + ".xml")
-        if not file.getAnyFirst(mp):  # Assume that there exist only one gsMultiPatch
-           continue
 
-        geo_name = geo.replace("/",":")
-        tikz_list.append(path_dir + geo_name + "_mesh")
+    elif mp.targetDim() == 3:
+        nx, ny = (numData, numData)  # If you need a "smoother" picture, increase the number of points
+
+        x = np.linspace(0, 1, nx)
+        y = np.linspace(0, 1, ny)
+        xv, yv = np.meshgrid(x, y)
+
+        fig = plt.figure()
+        ax = plt.axes(projection='3d')
+
+        x = xv
+        y = yv
+        for idx in range(mp.nPatches()):
+            Z = np.zeros((nx, ny))
+            X = np.zeros((nx, ny))
+            Y = np.zeros((nx, ny))
+            for i in range(nx):
+                for j in range(ny):
+                    uv = [x[i, j], y[i, j]]
+                    xyz = mp.patch(idx).eval(uv)
+                    X[i, j] = xyz[0]
+                    Y[i, j] = xyz[1]
+                    Z[i, j] = xyz[2]
+
+            surf = ax.plot_surface(X, Y, Z, edgecolor='none')
+            surf._facecolors2d = surf._facecolor3d
+            #surf._edgecolors2d = surf._edgecolor3d
+
+            # add the mesh line
+            # Works only for uniform refinement
+            for el in range(mp.basis(idx).component(0).numElements() - 1):
+                u1 = np.ones((2, numData)) * (el + 1) / mp.basis(idx).component(0).numElements()
+                u1[1, :] = np.linspace(0, 1, numData)
+                points = mp.patch(idx).eval(u1)
+                points = points.T
+
+                X = points[:,0]
+                Y = points[:,1]
+                Z = points[:,2]
+                ax.plot3D(X, Y, Z, 'b')
+
+            for el in range(mp.basis(idx).component(1).numElements() - 1):
+                v1 = np.ones((2, numData)) * (el + 1) / mp.basis(idx).component(1).numElements()
+                v1[0, :] = np.linspace(0, 1, numData)
+                points = mp.patch(idx).eval(v1)
+                points = points.T
+
+                X = points[:,0]
+                Y = points[:,1]
+                Z = points[:,2]
+                ax.plot3D(X, Y, Z,'b')
+
+        geo_name = geo.replace("/", ":")
+        tikz_list.append(path_dir + geo_name + "_mesh" + '.pdf')
+        plt.savefig(path_fig + geo_name + "_mesh" + '.pdf')
+        crop_list.append(path_dir + geo_name + "_mesh")
+        #plt.show()
+        plt.close(fig)
 
 if not len(tikz_list) == len(caption_list):
     print("Something is wrong in tikz_list and caption_list!")
     exit()
 
-print(len(tikz_list))
+
 
 # Creating the tex and pdf file
 doc = lib.MyDocument()
-doc.addTikzFigure(tikz_list, caption_list, col=4)
+doc.addTikzFigure(tikz_list, caption_list, col=4, row=7)
 doc.generate_pdf("geo_example", compiler="pdflatex", compiler_args=["-shell-escape"], clean_tex=False)
+if not len(crop_list) == 0:
+    lib.clean_extensions(crop=crop_list)
+    doc.generate_pdf("geo_example", compiler="pdflatex", clean_tex=False)
 lib.clean_extensions()
 print("Finished: pdf saved to geo_example.pdf")

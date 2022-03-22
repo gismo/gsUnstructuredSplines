@@ -390,7 +390,9 @@ void gsApproxC1Spline<d,T>::compute()
                 index_t jj = 0;
                 for (index_t j = begin_col; j < end_col; ++j, ++jj) {
                     if (basisVertex[np].patch(ii).coef(jj, 0) * basisVertex[np].patch(ii).coef(jj, 0) > 1e-20)
+                    {
                         m_matrix.insert(shift_row + ii, shift_col + j) = basisVertex[np].patch(ii).coef(jj, 0);
+                    }
                 }
             }
         }
