@@ -30,6 +30,9 @@ namespace gismo
 template<short_t d,class T>
 class gsAlmostC1  //: public gsMappedGeom<d,T>
 {
+protected:
+    typedef typename std::vector<std::tuple<index_t,index_t,T>> tuple_t;
+
     protected:
         const gsMultiPatch<T> & m_patches;
         gsMultiPatch<T> m_RefPatches;
@@ -380,6 +383,12 @@ class gsAlmostC1  //: public gsMappedGeom<d,T>
         void _getLowestCorners(std::vector<patchCorner> & pcorners, index_t n = 3) const;
         void _removeLowestCorners(std::vector<patchCorner> & pcorners, index_t n = 3) const;
 
+        void _getLowestIndices(std::vector<std::pair<index_t,index_t>> & indices, index_t n = 3) const;
+        void _removeLowestIndices(std::vector<std::pair<index_t,index_t>> & indices, index_t n = 3) const;
+
+        std::vector<std::pair<index_t,index_t>> _getInterfaceIndices(patchCorner pcorner, index_t depth, const gsMultiBasis<T> & mbasis) const;
+        std::vector<std::pair<index_t,index_t>> _getAllInterfaceIndices(patchCorner pcorner, index_t depth, const gsMultiBasis<T> & mbasis) const;
+
     protected:
         /**
          * @brief      Prepares the THB basis if needed.
@@ -426,6 +435,78 @@ class gsAlmostC1  //: public gsMappedGeom<d,T>
          */
         void _computeMapper(); // also initialize the mappers!
 
+    protected:
+
+        void _pushToMatrix(tuple_t entries)
+        {
+            index_t rowIdx,colIdx;
+            T weight;
+            for (typename tuple_t::const_iterator it=entries.begin(); it!=entries.end(); it++)
+            {
+                std::tie(rowIdx,colIdx,weight) = *it;
+                m_matrix(rowIdx,colIdx) = weight;
+                m_basisCheck[rowIdx] = true;
+            }
+        }
+
+        void _computeInterfaceMapper(boundaryInterface iface);
+
+        void _computeBoundaryMapper(patchSide boundary);
+
+        void _computeVertexMapper(patchCorner pcorner);
+
+        // Boundary vertex of valence 1
+        template<bool _boundary, index_t _v> // valence=2
+        typename std::enable_if<  _boundary && _v==1, void>::type
+        _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+
+        // Boundary vertex of valence 2 with C1 smoothness
+        template<bool _boundary, index_t _v, bool _smooth> // valence=2
+        typename std::enable_if<  _boundary && _v==2 && _smooth, void>::type
+        _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+
+        // Boundary vertex of valence 2 with C0 smoothness
+        template<bool _boundary, index_t _v, bool _smooth> // valence=2
+        typename std::enable_if<  _boundary && _v==2 && (!_smooth), void>::type
+        _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+
+        // Boundary vertex of valence 3 with C1 smoothness
+        template<bool _boundary, index_t _v, bool _smooth> // valence=2
+        typename std::enable_if<  _boundary && _v==3 && _smooth, void>::type
+        _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+
+        // Boundary vertex of valence 3 with C0 smoothness
+        template<bool _boundary, index_t _v, bool _smooth> // valence=2
+        typename std::enable_if<  _boundary && _v==3 && (!_smooth), void>::type
+        _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+
+        // Boundary vertex of valence !(1,2,3) with C1 smoothness
+        template<bool _boundary, index_t _v, bool _smooth>
+        typename std::enable_if<  _boundary && _v==-1 && _smooth, void>::type
+        _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+
+        // Boundary vertex of valence !(1,2,3) with C0 smoothness
+        template<bool _boundary, index_t _v, bool _smooth>
+        typename std::enable_if<  _boundary && _v==-1 && (!_smooth), void>::type
+        _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+
+        // Extraordinary interior vertex of valence 3 (special case)
+        template<bool _boundary, index_t _v> // valence=2
+        typename std::enable_if<  (!_boundary) && _v==3, void>::type
+        _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+
+        // Ordinary interior vertex
+        template<bool _boundary, index_t _v> // valence=2
+        typename std::enable_if<  (!_boundary) && _v==4, void>::type
+        _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+
+        // Extraordinary interior vertex
+        template<bool _boundary, index_t _v>
+        typename std::enable_if<  (!_boundary) && _v==-1, void>::type
+        _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+
+    public:
+
         /**
          * @brief      Handles a vertex in the global matrix
          *
@@ -456,6 +537,29 @@ class gsAlmostC1  //: public gsMappedGeom<d,T>
          * @param[in]  pcorner  The patchcorner
          */
         void _handleVertex(patchCorner pcorner);
+
+    protected:
+
+        void _handleRegularCorner(patchCorner pcorner);
+
+        template<bool _regular, bool _smooth> // valence=2
+        typename std::enable_if<  _regular  &&   _smooth    , void>::type
+        _handleBoundaryVertex(patchCorner pcorner, index_t valence);
+
+        // THIS FUNCTION IS WRONG???
+        template<bool _regular, bool _smooth> // valence > 2
+        typename std::enable_if<(!_regular) &&   _smooth    , void>::type
+        _handleBoundaryVertex(patchCorner pcorner, index_t valence);
+
+        template<bool _regular, bool _smooth> // valence > 1
+        typename std::enable_if<(!_regular) && (!_smooth)   , void>::type
+        _handleBoundaryVertex(patchCorner pcorner, index_t valence);
+
+        // interior vertices
+        void _handleInteriorVertex(patchCorner pcorner, index_t valence);
+
+    public:
+
         /**
          * @brief      Handles an interface in the global matrix
          *
