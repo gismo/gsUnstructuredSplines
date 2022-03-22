@@ -36,17 +36,23 @@ namespace gismo
         index_t p_geo = kv_geo.degree();
 
         std::vector<real_t> unique_geo = kv_geo.unique();
+        //gsDebugVar(kv_gluingData.asMatrix());
         for (size_t i = 1; i < unique_geo.size()-1; i++) // First and last are ignored
         {
             real_t knot_geo = unique_geo.at(i);
             index_t r_geo = p_geo - kv_geo.multiplicities().at(i) - 1;
+            r_geo = r_geo == 0 ? 1 : r_geo;
+            if (r_geo == 0)
+                gsInfo << "The Assumption for the geometry might not be fulfilled!\n";
+
             //index_t p_basis = kv_gluingData.degree();
             //index_t r_basis = p_basis - kv_gluingData.multiplicities().at(kv_gluingData.uFind(knot_geo).uIndex());
             if (r_tilde > r_geo)
                 kv_gluingData.insert(knot_geo, r_tilde-r_geo);
-            else if (r_tilde < r_geo && r_tilde != 1)
-                kv_gluingData.remove(knot_geo, r_geo-r_tilde);
+            else if (r_tilde < r_geo)
+                kv_gluingData.remove(kv_gluingData.uFind(knot_geo), r_geo-r_tilde);
         }
+        //gsDebugVar(kv_gluingData.asMatrix());
         result = gsBSplineBasis<real_t>(kv_gluingData); // S(\tilde{p},\tilde{r},h)
     }
 
@@ -75,11 +81,13 @@ namespace gismo
         {
             real_t knot_geo = unique_geo.at(i);
             index_t r_geo = p_geo - kv_geo.multiplicities().at(i);
-            index_t r_basis = p_basis - kv_basis.multiplicities().at(kv_basis.uFind(knot_geo).uIndex());
+
+            typename gsKnotVector<real_t>::uiterator knot_it = kv_basis.uFind(knot_geo);
+            index_t r_basis = p_basis - kv_basis.multiplicities().at(knot_it.uIndex());
             if (r_basis > r_geo)
                 kv_basis.insert(knot_geo, r_basis-r_geo);
             else if (r_basis < r_geo)
-                kv_basis.remove(knot_geo, r_geo-r_basis);
+                kv_basis.remove(knot_it, r_geo-r_basis);
         }
 
         result = gsBSplineBasis<real_t>(kv_basis);
@@ -99,7 +107,6 @@ namespace gismo
         if (m != 1)
             result.elevateContinuity(1);
 
-
         // Geometry check
         const gsBSplineBasis<real_t> basis_geo = dynamic_cast<const gsBSplineBasis<real_t> &>(patch.basis().component(dir));
         gsKnotVector<real_t> kv_geo = dynamic_cast<const gsKnotVector<real_t> &>(basis_geo.knots());
@@ -112,13 +119,18 @@ namespace gismo
         {
             real_t knot_geo = unique_geo.at(i);
             index_t r_geo = p_geo - kv_geo.multiplicities().at(i) - 1;
-            index_t r_basis = p_basis - kv_basis.multiplicities().at(kv_basis.uFind(knot_geo).uIndex());
+            //if (r_geo == 0)
+            //    gsInfo << "The Assumption for the geometry might not be fulfilled!\n";
+            typename gsKnotVector<real_t>::uiterator knot_it = kv_basis.uFind(knot_geo);
+            index_t r_basis = p_basis - kv_basis.multiplicities().at(knot_it.uIndex());
             if (r_basis > r_geo)
                 kv_basis.insert(knot_geo, r_basis-r_geo);
             else if (r_basis < r_geo)
-                kv_basis.remove(knot_geo, r_geo-r_basis);
+                kv_basis.remove(knot_it, r_geo-r_basis);
+            else if (r_basis == 0 && r_geo == 0)
+                kv_basis.remove(knot_it, 1);
         }
-
+        //gsDebugVar(kv_basis.asMatrix());
         result = gsBSplineBasis<real_t>(kv_basis);
     }
 
@@ -141,6 +153,27 @@ namespace gismo
             basis_edge.component(dir).reduceContinuity(r_edge - r);
         else if (r_edge < r)
             basis_edge.component(dir).elevateContinuity(r - r_edge);
+
+        // Geometry check
+        const gsBSplineBasis<real_t> basis_geo = dynamic_cast<const gsBSplineBasis<real_t> &>(patch.basis().component(dir));
+        gsKnotVector<real_t> kv_geo = dynamic_cast<const gsKnotVector<real_t> &>(basis_geo.knots());
+        index_t p_geo = kv_geo.degree();
+
+        gsKnotVector<real_t> kv_basis = dynamic_cast<const gsKnotVector<real_t> &>(basis_edge.knots(dir));
+        index_t p_basis = kv_basis.degree();
+        std::vector<real_t> unique_geo = kv_geo.unique();
+        for (size_t i = 1; i < unique_geo.size()-1; i++) // First and last are ignored
+        {
+            real_t knot_geo = unique_geo.at(i);
+            index_t r_geo = p_geo - kv_geo.multiplicities().at(i);
+            typename gsKnotVector<real_t>::uiterator knot_it = kv_basis.uFind(knot_geo);
+            index_t r_basis = p_basis - kv_basis.multiplicities().at(knot_it.uIndex());
+            if (r_basis > r_geo)
+                kv_basis.insert(knot_geo, r_basis-r_geo);
+            //else if (r_basis < r_geo)
+            //    kv_basis.remove(knot_it, r_geo-r_basis);
+        }
+        basis_edge.knots(dir) = kv_basis;
 
         result = gsTensorBSplineBasis<2, real_t>(basis_edge);
     }
@@ -172,19 +205,22 @@ namespace gismo
         gsKnotVector<real_t> kv_geo = dynamic_cast<const gsKnotVector<real_t> &>(basis_geo.knots());
         index_t p_geo = kv_geo.degree();
 
-        gsKnotVector<real_t> & kv_basis = dynamic_cast<gsKnotVector<real_t> &>(basis_edge.knots(dir));
+        gsKnotVector<real_t> kv_basis = dynamic_cast<const gsKnotVector<real_t> &>(basis_edge.knots(dir));
         index_t p_basis = kv_basis.degree();
         std::vector<real_t> unique_geo = kv_geo.unique();
         for (size_t i = 1; i < unique_geo.size()-1; i++) // First and last are ignored
         {
             real_t knot_geo = unique_geo.at(i);
-            index_t r_geo = p_geo - kv_geo.multiplicities().at(i) - 1;
-            index_t r_basis = p_basis - kv_basis.multiplicities().at(kv_basis.uFind(knot_geo).uIndex());
+            index_t r_geo = p_geo - kv_geo.multiplicities().at(i);
+            typename gsKnotVector<real_t>::uiterator knot_it = kv_basis.uFind(knot_geo);
+            index_t r_basis = p_basis - kv_basis.multiplicities().at(knot_it.uIndex());
             if (r_basis > r_geo)
                 kv_basis.insert(knot_geo, r_basis-r_geo);
-            else if (r_basis < r_geo)
-                kv_basis.remove(knot_geo, r_geo-r_basis);
+            //else if (r_basis < r_geo)
+            //    kv_basis.remove(knot_it, r_geo-r_basis);
         }
+        basis_edge.knots(dir) = kv_basis;
+
         result = gsTensorBSplineBasis<2, real_t>(basis_edge);
     }
 
@@ -216,6 +252,27 @@ namespace gismo
                     basis_vertex.component(dir).reduceContinuity(r_edge - r);
                 else if (r_edge < r)
                     basis_vertex.component(dir).elevateContinuity(r - r_edge);
+
+                // Geometry check
+                const gsBSplineBasis<real_t> basis_geo = dynamic_cast<const gsBSplineBasis<real_t> &>(patch.basis().component(dir));
+                gsKnotVector<real_t> kv_geo = dynamic_cast<const gsKnotVector<real_t> &>(basis_geo.knots());
+                index_t p_geo = kv_geo.degree();
+
+                gsKnotVector<real_t> kv_basis = dynamic_cast<const gsKnotVector<real_t> &>(basis_vertex.knots(dir));
+                index_t p_basis = kv_basis.degree();
+                std::vector<real_t> unique_geo = kv_geo.unique();
+                for (size_t i = 1; i < unique_geo.size()-1; i++) // First and last are ignored
+                {
+                    real_t knot_geo = unique_geo.at(i);
+                    index_t r_geo = p_geo - kv_geo.multiplicities().at(i);
+                    typename gsKnotVector<real_t>::uiterator knot_it = kv_basis.uFind(knot_geo);
+                    index_t r_basis = p_basis - kv_basis.multiplicities().at(knot_it.uIndex());
+                    if (r_basis > r_geo)
+                        kv_basis.insert(knot_geo, r_basis-r_geo);
+                    //else if (r_basis < r_geo)
+                    //    kv_basis.remove(knot_it, r_geo-r_basis);
+                }
+                basis_vertex.knots(dir) = kv_basis;
             }
             else
             {

@@ -468,7 +468,7 @@ int main(int argc, char *argv[])
 
     // Assume that the condition holds for each patch TODO
     // Refine once
-    if (method == MethodFlags::APPROXC1)
+    if (method == MethodFlags::APPROXC1 || method == MethodFlags::NITSCHE)
         if (dbasis.basis(0).numElements() < 4)
         {
             dbasis.uniformRefine(1, degree-smoothness);

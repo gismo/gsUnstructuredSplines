@@ -438,6 +438,7 @@ void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & 
 
     real_t lambda = 1e-5;
 
+    // Mapped Spline
     A.initSystem();
     A.assembleBdr(bc.get("Dirichlet"), uu * uu.tr() * gg);
     A.assembleBdr(bc.get("Dirichlet"), uu * g_bdy * gg);
@@ -453,6 +454,94 @@ void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & 
     fixedDofs = solver.solve(A.rhs());
 }
 
+void setMapperForBiharmonic(gsBoundaryConditions<> & bc, gsMultiBasis<> & dbasis, gsDofMapper & mapper)
+{
+    mapper.init(dbasis);
+
+    for (gsBoxTopology::const_iiterator it = dbasis.topology().iBegin();
+         it != dbasis.topology().iEnd(); ++it) // C^0 at the interface
+    {
+        dbasis.matchInterface(*it, mapper);
+    }
+
+    gsMatrix<index_t> bnd;
+    for (typename gsBoundaryConditions<real_t>::const_iterator
+                 it = bc.begin("Dirichlet"); it != bc.end("Dirichlet"); ++it)
+    {
+        bnd = dbasis.basis(it->ps.patch).boundary(it->ps.side());
+        mapper.markBoundary(it->ps.patch, bnd, 0);
+    }
+
+    for (typename gsBoundaryConditions<real_t>::const_iterator
+                 it = bc.begin("Neumann"); it != bc.end("Neumann"); ++it)
+    {
+        bnd = dbasis.basis(it->ps.patch).boundaryOffset(it->ps.side(),1);
+        mapper.markBoundary(it->ps.patch, bnd, 0);
+    }
+    mapper.finalize();
+}
+
+void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & dbasis, gsBoundaryConditions<> & bc, const expr::gsFeSpace<real_t> & u)
+{
+    gsDofMapper mapper = u.mapper();
+    gsDofMapper mapperBdy(dbasis, u.dim());
+    for (gsBoxTopology::const_iiterator it = dbasis.topology().iBegin();
+         it != dbasis.topology().iEnd(); ++it) // C^0 at the interface
+    {
+        dbasis.matchInterface(*it, mapperBdy);
+    }
+    for (size_t np = 0; np < mp.nPatches(); np++)
+    {
+        gsMatrix<index_t> bnd = mapper.findFree(np);
+        mapperBdy.markBoundary(np, bnd, 0);
+    }
+    mapperBdy.finalize();
+
+    gsExprAssembler<real_t> A(1,1);
+    A.setIntegrationElements(dbasis);
+
+    auto G = A.getMap(mp);
+    auto uu = A.getSpace(dbasis);
+    auto gg = pow(fform(G).det(),0.5);
+    auto g_bdy = A.getBdrFunction(G); // Bug?!?
+
+    uu.setupMapper(mapperBdy);
+    gsMatrix<real_t> & fixedDofs_A = const_cast<expr::gsFeSpace<real_t>&>(uu).fixedPart();
+    fixedDofs_A.setZero( uu.mapper().boundarySize(), 1 );
+
+    real_t lambda = 1e-5;
+
+    // Standard Spline
+    A.initSystem();
+    A.assembleBdr(bc.get("Dirichlet"), uu * uu.tr() * gg);
+    A.assembleBdr(bc.get("Dirichlet"), uu * g_bdy * gg);
+    A.assembleBdr(bc.get("Neumann"),
+                  lambda * ((jac(G) * fform(G).inv() * igrad(uu).tr()).tr() * nv(G).normalized())
+                  * ((jac(G) * fform(G).inv() * igrad(uu).tr()).tr() * nv(G).normalized()).tr() * gg);
+    A.assembleBdr(bc.get("Neumann"),
+                  lambda *  ((jac(G) * fform(G).inv() * igrad(uu).tr()).tr() * nv(G).normalized()) * (g_bdy.tr()  * nv(G).normalized()) * gg);
+
+    gsSparseSolver<real_t>::SimplicialLDLT solver;
+    solver.compute( A.matrix() );
+    gsMatrix<real_t> & fixedDofs = const_cast<expr::gsFeSpace<real_t>& >(u).fixedPart();
+    gsMatrix<real_t> fixedDofs_temp = solver.solve(A.rhs());
+
+    // Reordering the dofs of the boundary
+    fixedDofs.setZero(mapper.boundarySize(),1);
+    index_t sz = 0;
+    for (size_t np = 0; np < mp.nPatches(); np++)
+    {
+        gsMatrix<index_t> bnd = mapperBdy.findFree(np);
+        bnd.array() += sz;
+        for (index_t i = 0; i < bnd.rows(); i++)
+        {
+            index_t ii = mapperBdy.asVector()(bnd(i,0));
+            fixedDofs(mapper.global_to_bindex(mapper.asVector()(bnd(i,0))),0) = fixedDofs_temp(ii,0);
+        }
+        sz += mapperBdy.patchSize(np,0);
+    }
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -465,11 +554,15 @@ int main(int argc, char *argv[])
     index_t numRefine  = 5;
     index_t degree = 3;
     index_t smoothness = 2;
+
+    real_t penalty_init = -1;
+
     bool info = false;
     bool last = false;
     bool second = false;
     bool residual = false;
 
+    std::string output;
     std::string fn = "surfaces/surface_roof.xml";
     std::string geometry;
 
@@ -483,6 +576,9 @@ int main(int argc, char *argv[])
     cmd.addString("f", "file", "Input geometry file (with .xml)", fn);
     cmd.addString( "g", "geometry", "Input geometry file",  geometry );
 
+    // Flags related to Nitsche's method
+    cmd.addReal( "y", "penalty", "Fixed Penalty value for Nitsche's method",  penalty_init);
+
     cmd.addSwitch("info", "Plot the information of the Approx C1 Basis", info);
     cmd.addSwitch("last", "Solve problem only on the last level of h-refinement", last);
     cmd.addSwitch("plot", "Create a ParaView visualization file with the solution", plot);
@@ -491,6 +587,8 @@ int main(int argc, char *argv[])
 
     cmd.addSwitch("second", "Compute second biharmonic problem with u = g1 and Delta u = g2 "
                             "(default first biharmonic problem: u = g1 and partial_n u = g2)", second);
+
+    cmd.addString("o", "output", "Output in xml (for python)", output);
     try { cmd.getValues(argc,argv); } catch (int rv) { return rv; }
     //! [Parse command line]
 
@@ -508,10 +606,44 @@ int main(int argc, char *argv[])
     mp.computeTopology();
     //! [Read geometry]
 
-    gsFunctionExpr<>f("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
+//    gsFunctionExpr<> laplace ("(1/((1 + 4 * x^2 + 4 * y^2)^2) ) * (-8 * cos(8 * x) * ( (25 + 144 * x^4 + 164 * y^2 + 256 * y^4 + \n"
+//                              "        8 * x^2 * (17 + 50 * y^2) ) * cos(1 - 6 * y) + 12 * y * (1 + 2 * x^2 + 2 * y^2) * sin(1 - 6 * y)) + \n"
+//                              "  128 * x * sin(8 * x) * ( (1 + 2 * x^2 + 2 * y^2) * cos(1 - 6 * y) + 6 * y * (1 + 4 * x^2 + 4 * y^2) * sin(1 - 6 * y)))",3);
+//
+//    gsFunctionExpr<> ms("2 * cos(8 * x) * cos(1 - 6 * y)",3);
+//
+//    gsFunctionExpr<>sol1der ("-((16 * ( (1 + 4 * y^2) * cos(1 - 6 * y) * sin(8 * x) + 3 * x * y * cos(8 * x) * sin(1 - 6 * y) ) ) / (1 + 4 * x^2 + 4 * y^2))",
+//                             "(64 * x * y * cos(1 - 6 * y) * sin(8 * x) + 12 * (1 + 4 * x^2) * cos(8 * x) * sin(1 - 6 * y) ) / (1 + 4 * x^2 + 4 * y^2)",
+//                             "(8 * (4 * x * cos(1 - 6 * y) * sin(8 * x) - 3 * y * cos(8 * x) * sin(1 - 6 * y) ) ) / (1 + 4 * x^2 + 4 * y^2)",3);
+//
+//
+////    gsFunctionExpr<>sol2der ("-( ( 2 * x * (1 + x^2) * y ) / (1 + x^2 + y^2)^2)",
+////                             "-( ( 2 * x * y * (1 + y^2) ) / (1 + x^2 + y^2)^2)",
+////                             "(2 * x * y ) / (1 + x^2 + y^2)^2",
+////                             "(1 + y^2 + x^2 * (1 + 2 * y^2) ) / (1 + x^2 + y^2)^2",
+////                             "(x * (1 + x^2 - y^2) ) / (1 + x^2 + y^2)^2",
+////                             "(y * (1 - x^2 + y^2) ) / (1 + x^2 + y^2)^2", 3);
+//
+//
+//    gsFunctionExpr<> f  ("(1 / ( (1 + 4 * x^2 + 4 * y^2)^5) ) * 8 * ( (1 + 4 * x^2 + 4 * y^2) * (5005 + 55732 * y^2 + \n"
+//                              "      4 * (38416 * x^8 + 67765 * y^4 + 24 * y^6 * (5815 + 4374 * y^2) + 8 * x^6 * (8677 + 57232 * y^2) + \n"
+//                              "         x^4 * (43637 + 397208 * y^2 + 905440 * y^4) + x^2 * (10637 + 126254 * y^2 + 467352 * y^4 + 590976 * y^6) ) ) * cos(9 * x) * cos(1 - 7 * y) - \n"
+//                              "   288 * x * (36 + 367 * x^2 + 1521 * x^4 + 2880 * x^6 + 2352 * x^8 + 4 * (67 + 513 * x^2 + 1368 * x^4 + 1560 * x^6) * y^2 + \n"
+//                              "      9 * (59 + 256 * (x^2 + 2 * x^4) ) * y^4 - 96 * (3 + x^2) * y^6 - 816 * y^8) * cos(1 - 7 * y) * sin(9 * x) + \n"
+//                              "   56 * y * (4 * (36 - 5424 * x^8 + 415 * y^2 + 2001 * y^4 + 4416 * y^6 + 3888 * y^8 - 288 * x^6 * (17 + 43 * y^2) + \n"
+//                              "         4 * x^2 * (31 + 273 * y^2 + 984 * y^4 + 1560 * y^6) - 3 * x^4 * (303 + 256 * y^2 * (7 + 6 * y^2) ) ) * cos(9 * x) - \n"
+//                              "      9 * x * (1 + 4 * x^2 + 4 * y^2) * (103 + 1568 * x^6 + 786 * y^2 + 2448 * y^4 + 2592 * y^6 + 16 * x^4 * (121 + 358 * y^2) + \n"
+//                              "         x^2 * (722 + 4384 * y^2 + 6752 * y^4) ) * sin(9 * x) ) * sin(1 - 7 * y) )",3);
+
+
+    //gsFunctionExpr<>f("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
+    //gsFunctionExpr<>f("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
+    gsFunctionExpr<>f("5",3);
     gsInfo << "Source function: " << f << "\n";
 
-    gsFunctionExpr<> ms("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",3);
+    //gsFunctionExpr<> ms("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",3);
+    //gsFunctionExpr<> ms("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",2);
+    gsFunctionExpr<> ms("0",3);
     gsInfo << "Exact function: " << ms << "\n";
 
     //! [Refinement]
@@ -543,12 +675,21 @@ int main(int argc, char *argv[])
     }
     //! [Refinement]
 
+    gsInfo << "OptionList: " << cmd << "\n";
+
     //! [Boundary condition]
     // Laplace
-    gsFunctionExpr<> laplace ("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
+    //gsFunctionExpr<> laplace ("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
+    //gsFunctionExpr<> laplace ("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
+    gsFunctionExpr<> laplace ("0",3);
     // Neumann
-    gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
-                     "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)",
+//    gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
+//                     "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)",
+//                     "0", 3);
+//    gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
+//                     "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)",2);
+    gsFunctionExpr<> sol1der("0",
+                     "0",
                      "0", 3);
 
     gsBoundaryConditions<> bc;
@@ -580,12 +721,13 @@ int main(int argc, char *argv[])
 
     // Set the discretization space
     gsMappedBasis<2,real_t> bb2;
-    auto u = A.getSpace(bb2);
+    auto u = method == MethodFlags::NITSCHE ? A.getSpace(basis) : A.getSpace(bb2);
 
     // Solution vector and solution variable
-    gsMatrix<real_t> solVector;
+    gsMatrix<real_t> solVector, solVec2;
     auto u_sol = A.getSolution(u, solVector);
     gsMappedSpline<2, real_t> ms_coarse;
+    gsMultiPatch<real_t> sol_nitsche_coarse;
 
     // Recover manufactured solution
     auto u_ex = ev.getVariable(ms, G);
@@ -600,6 +742,7 @@ int main(int argc, char *argv[])
 
     gsVector<real_t> l2err(numRefine+1), h1err(numRefine+1), h2err(numRefine+1), IFaceErr(numRefine+1),
             dofs(numRefine+1), meshsize(numRefine+1);
+    gsMatrix<real_t> penalty(numRefine+1, mp.nInterfaces());
     gsInfo<< "(dot1=assembled, dot2=solved, dot3=got_error)\n"
              "\nDoFs: ";
     double setup_time(0), ma_time(0), slv_time(0), err_time(0);
@@ -677,6 +820,11 @@ int main(int argc, char *argv[])
             bb2.init(basis,global2local);
             gsInfo << "ALMOSTC1 basis created \n";
         }
+        else if (method == MethodFlags::NITSCHE)
+        {
+            basis.uniformRefine(1,degree-smoothness);
+            meshsize[r] = basis.basis(0).getMinCellLength();
+        }
         else if (method == MethodFlags::SURFASG1) // Andrea
         {
             mp.uniformRefine(1,degree-smoothness);
@@ -693,13 +841,26 @@ int main(int argc, char *argv[])
             bb2.init(basis,global2local);
         }
 
-        // Setup the Mapper
-        gsDofMapper map;
-        setMapperForBiharmonic(bc, bb2,map);
+        // Setup the mapper
+        if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1
+                                                                                || method == MethodFlags::SURFASG1) // MappedBasis
+        {
+            gsDofMapper map;
+            setMapperForBiharmonic(bc, bb2,map);
 
-        // Setup the system
-        u.setupMapper(map);
-        gsDirichletNeumannValuesL2Projection(mp, basis, bc, bb2, u);
+            // Setup the system
+            u.setupMapper(map);
+            gsDirichletNeumannValuesL2Projection(mp, basis, bc, bb2, u);
+        }
+        else if (method == MethodFlags::NITSCHE) // Nitsche
+        {
+            gsDofMapper map;
+            setMapperForBiharmonic(bc, basis,map);
+
+            // Setup the system
+            u.setupMapper(map);
+            gsDirichletNeumannValuesL2Projection(mp, basis, bc, u);
+        }
 
         // Initialize the system
         A.initSystem();
@@ -719,6 +880,71 @@ int main(int argc, char *argv[])
         // auto g_L = A.getBdrFunction(G); // Set the laplace bdy value  // Bug, doesnt work
         auto g_L = A.getCoeff(laplace, G);
         A.assembleBdr(bc.get("Laplace"), ((jac(G) * fform(G).inv() * igrad(u).tr()).tr() * nv(G).normalized()) * g_L.tr() * gg );
+
+        if (method == MethodFlags::NITSCHE)
+        {
+            index_t i = 0;
+            for ( typename gsMultiPatch<real_t>::const_iiterator it = mp.iBegin(); it != mp.iEnd(); ++it, ++i)
+            {
+                real_t stab     = 4 * ( basis.maxCwiseDegree() + basis.dim() ) * ( basis.maxCwiseDegree() + 1 );
+                real_t m_h      = basis.basis(0).getMinCellLength(); //*dbasis.basis(0).getMinCellLength();
+                real_t mu       = 2 * stab / m_h;
+                real_t alpha = 1;
+
+                if (penalty_init != -1.0)
+                    mu = penalty_init / m_h;
+
+                penalty(r,i) = mu;
+
+                auto ggL = pow(fform(G.left()).det(),0.5);
+                auto G0L = 1.0/ggL * fform(G.left());
+                auto G0invL = G0L.inv();
+
+                auto ggR = pow(fform(G.right()).det(),0.5);
+                auto G0R = 1.0/ggR * fform(G.right());
+                auto G0invR = G0R.inv();
+
+                std::vector<boundaryInterface> iFace;
+                iFace.push_back(*it);
+                A.assembleIfc(iFace,
+                        //B11
+                              -alpha * 0.5 * ((jac(G.left()) * fform(G.left()).inv() * igrad(u.left()).tr()).tr() * nv(G.left()).normalized()) *
+                              (deriv2(u.left(),G0invL)).tr() * gg,
+                              -alpha * 0.5 *
+                                      (((jac(G.left()) * fform(G.left()).inv() * igrad(u.left()).tr()).tr() * nv(G.left()).normalized())
+                              * (deriv2(u.left(),G0invL)).tr()).tr() *
+                              gg,
+                        //B12
+                              -alpha * 0.5 * ((jac(G.left()) * fform(G.left()).inv() * igrad(u.left()).tr()).tr() * nv(G.left()).normalized()) *
+                              (deriv2(u.right(),G0invR)).tr() * gg,
+                              -alpha * 0.5 * (((jac(G.left()) * fform(G.left()).inv() * igrad(u.left()).tr()).tr() * nv(G.left()).normalized()) *
+                                              (deriv2(u.right(),G0invR)).tr()).tr() * gg,
+                        //B21
+                              alpha * 0.5 * ((jac(G.right()) * fform(G.right()).inv() * igrad(u.right()).tr()).tr() * nv(G.left()).normalized()) *
+                              (deriv2(u.left(),G0invL)).tr() * gg,
+                              alpha * 0.5 * (((jac(G.right()) * fform(G.right()).inv() * igrad(u.right()).tr()).tr() * nv(G.left()).normalized()) *
+                                             (deriv2(u.left(),G0invL)).tr()).tr() * gg,
+                        //B22
+                              alpha * 0.5 * ((jac(G.right()) * fform(G.right()).inv() * igrad(u.right()).tr()).tr() * nv(G.left()).normalized()) *
+                              (deriv2(u.right(),G0invR)).tr() * gg,
+                              alpha * 0.5 * (((jac(G.right()) * fform(G.right()).inv() * igrad(u.right()).tr()).tr() * nv(G.left()).normalized()) *
+                                             (deriv2(u.right(),G0invR)).tr()).tr() * gg,
+
+                        // E11
+                              mu * ((jac(G.left()) * fform(G.left()).inv() * igrad(u.left()).tr()).tr() * nv(G.left()).normalized()) *
+                              (((jac(G.left()) * fform(G.left()).inv() * igrad(u.left()).tr()).tr() * nv(G.left()).normalized())).tr() * gg,
+                        //-E12
+                              -mu * (((jac(G.left()) * fform(G.left()).inv() * igrad(u.left()).tr()).tr() * nv(G.left()).normalized())) *
+                              (((jac(G.right()) * fform(G.right()).inv() * igrad(u.right()).tr()).tr() * nv(G.left()).normalized())).tr() * gg,
+                        //-E21
+                              -mu * (((jac(G.right()) * fform(G.right()).inv() * igrad(u.right()).tr()).tr() * nv(G.left()).normalized())) *
+                              (((jac(G.left()) * fform(G.left()).inv() * igrad(u.left()).tr()).tr() * nv(G.left()).normalized())).tr() * gg,
+                        // E22
+                              mu * ((jac(G.right()) * fform(G.right()).inv() * igrad(u.right()).tr()).tr() * nv(G.left()).normalized()) *
+                              (((jac(G.right()) * fform(G.right()).inv() * igrad(u.right()).tr()).tr() * nv(G.left()).normalized())).tr() * gg
+                );
+            }
+        }
 
         dofs[r] = A.numDofs();
         ma_time += timer.stop();
@@ -749,26 +975,49 @@ int main(int argc, char *argv[])
         //linferr[r] = ev.max( f-s ) / ev.max(f);
         if (residual)
         {
-            if (r!=0)
-            {
-                auto u_coarse = A.getCoeff(ms_coarse);
-                l2err[r] = math::sqrt( ev.integral( (u_coarse - u_sol).sqNorm() * gg ) ); // / ev.integral(ff.sqNorm()*meas(G)) );
-                h1err[r]= l2err[r] +
-                    math::sqrt(ev.integral( ( igrad(u_coarse) - igrad(u_sol) ).sqNorm() * gg )); // /ev.integral( igrad(f).sqNorm()*meas(G) ) );
+            if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1) {
+                if (r != 0) {
+                    auto u_coarse = A.getCoeff(ms_coarse);
+                    l2err[r] = math::sqrt(
+                            ev.integral((u_coarse - u_sol).sqNorm() * gg)); // / ev.integral(ff.sqNorm()*meas(G)) );
+                    h1err[r] = l2err[r] +
+                               math::sqrt(ev.integral((igrad(u_coarse) - igrad(u_sol)).sqNorm() *
+                                                      gg)); // /ev.integral( igrad(f).sqNorm()*meas(G) ) );
 
-                h2err[r]= h1err[r] +
-                         math::sqrt(ev.integral( ( ihess(u_coarse) - ihess(u_sol) ).sqNorm() * gg )); // /ev.integral( ihess(f).sqNorm()*meas(G) )
-            }
-            else
-            {
-                l2err[r] = 0;
-                h1err[r] = 0;
-                h2err[r] = 0;
+                    h2err[r] = h1err[r] +
+                               math::sqrt(ev.integral((ihess(u_coarse) - ihess(u_sol)).sqNorm() *
+                                                      gg)); // /ev.integral( ihess(f).sqNorm()*meas(G) )
+                } else {
+                    l2err[r] = 0;
+                    h1err[r] = 0;
+                    h2err[r] = 0;
 
+                }
+                gsMatrix<real_t> solFull_coarse;
+                u_sol.extractFull(solFull_coarse);
+                ms_coarse.init(bb2, solFull_coarse);
             }
-            gsMatrix<real_t> solFull_coarse;
-            u_sol.extractFull(solFull_coarse);
-            ms_coarse.init(bb2, solFull_coarse);
+            else if (method == MethodFlags::NITSCHE)
+            {
+                if (r != 0) {
+                    auto u_coarse = A.getCoeff(sol_nitsche_coarse);
+                    l2err[r] = math::sqrt(
+                            ev.integral((u_coarse - u_sol).sqNorm() * gg)); // / ev.integral(ff.sqNorm()*meas(G)) );
+                    h1err[r] = l2err[r] +
+                               math::sqrt(ev.integral((igrad(u_coarse) - igrad(u_sol)).sqNorm() *
+                                                      gg)); // /ev.integral( igrad(f).sqNorm()*meas(G) ) );
+
+                    h2err[r] = h1err[r] +
+                               math::sqrt(ev.integral((ihess(u_coarse) - ihess(u_sol)).sqNorm() *
+                                                      gg)); // /ev.integral( ihess(f).sqNorm()*meas(G) )
+                } else {
+                    l2err[r] = 0;
+                    h1err[r] = 0;
+                    h2err[r] = 0;
+
+                }
+                u_sol.extract(sol_nitsche_coarse);
+            }
         }
         else
         {
@@ -781,30 +1030,33 @@ int main(int argc, char *argv[])
         }
 
         // Jump error
-        if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
+        if (residual)
         {
-            gsMatrix<real_t> solFull;
-            u_sol.extractFull(solFull);
-            gsMappedSpline<2, real_t> mappedSpline(bb2, solFull);
+            if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
+            {
+                gsMatrix<real_t> solFull;
+                u_sol.extractFull(solFull);
+                gsMappedSpline<2, real_t> mappedSpline(bb2, solFull);
+                auto ms_sol = A.getCoeff(mappedSpline);
 
-            auto ms_sol = A.getCoeff(mappedSpline);
-            IFaceErr[r] = math::sqrt(ev.integralInterface(((igrad(ms_sol.left(), G.left()) -
-                                                            igrad(ms_sol.right(), G.right())) *
-                                                           nv(G).normalized()).sqNorm() * meas(G)));
-        }
-        else if (method == MethodFlags::NITSCHE)
-        {
-            gsMultiPatch<> sol_nitsche;
-            u_sol.extract(sol_nitsche);
-            auto ms_sol = A.getCoeff(sol_nitsche);
-            IFaceErr[r] = math::sqrt(ev.integralInterface((( igrad(ms_sol.left(), G.left()) -
-                                                             igrad(ms_sol.right(), G.right())) *
-                                                           nv(G).normalized()).sqNorm() * meas(G)));
+                IFaceErr[r] = math::sqrt(ev.integralInterface(
+                        (((jac(G.left()) * fform(G.left()).inv() * igrad(ms_sol.left()).tr()).tr() -
+                          (jac(G.right()) * fform(G.right()).inv() * igrad(ms_sol.right()).tr()).tr()) *
+                         nv(G).normalized()).sqNorm() * gg));
+            }
+            else if (method == MethodFlags::NITSCHE)
+            {
+                auto ms_sol = A.getCoeff(sol_nitsche_coarse);
+                IFaceErr[r] = math::sqrt(ev.integralInterface(
+                        (((jac(G.left()) * fform(G.left()).inv() * igrad(ms_sol.left()).tr()).tr() -
+                          (jac(G.right()) * fform(G.right()).inv() * igrad(ms_sol.right()).tr()).tr()) *
+                         nv(G).normalized()).sqNorm() * gg));
 
-            // This doesn't work yet. Bug?
-            //IFaceErr[r] = math::sqrt(ev.integralInterface((( igrad(u_sol.left(), G.left()) -
-            //                                                 igrad(u_sol.right(), G.right())) *
-            //                                               nv(G).normalized()).sqNorm() * meas(G)));
+                // This doesn't work yet. Bug?
+                //IFaceErr[r] = math::sqrt(ev.integralInterface((( igrad(u_sol.left(), G.left()) -
+                //                                                 igrad(u_sol.right(), G.right())) *
+                //                                               nv(G).normalized()).sqNorm() * meas(G)));
+            }
         }
 
 
@@ -827,6 +1079,8 @@ int main(int argc, char *argv[])
     gsInfo << "H1 error: "<<std::scientific<<h1err.transpose()<<"\n";
     gsInfo << "H2 error: "<<std::scientific<<h2err.transpose()<<"\n";
     gsInfo<< "Deriv Interface error: "<<std::scientific<<IFaceErr.transpose()<<"\n";
+    if (method == MethodFlags::NITSCHE)
+        gsInfo<< "\nStabilization: " << penalty.transpose() << "\n";
 
     if (numRefine>0)
     {
@@ -856,13 +1110,38 @@ int main(int argc, char *argv[])
         gsInfo << "Plotting in Paraview...\n";
         ev.options().setSwitch("plot.elements", mesh);
         ev.writeParaview( u_sol   , G, "solution");
-        ev.writeParaview( u_ex - u_sol   , G, "solution_pointwise");
+        //ev.writeParaview( u_ex - u_sol   , G, "solution_pointwise");
         gsInfo << "Saved with solution.pvd \n";
     }
     else
         gsInfo << "Done. No output created, re-run with --plot to get a ParaView "
                   "file containing the solution.\n";
     //! [Export visualization in ParaView]
+
+    //! [Export data to xml]
+    if (!output.empty())
+    {
+        index_t cols = method == MethodFlags::NITSCHE ? 7+penalty.cols() : 7;
+        gsMatrix<real_t> error_collection(l2err.rows(), cols);
+        error_collection.col(0) = meshsize;
+        error_collection.col(1) = dofs;
+        error_collection.col(2) = l2err;
+        error_collection.col(3) = h1err;
+        error_collection.col(4) = h2err;
+        error_collection.col(5) = IFaceErr;
+        //error_collection.col(6) = cond_num;
+        if (method == MethodFlags::NITSCHE)
+            error_collection.block(0,7,penalty.rows(),penalty.cols()) = penalty;
+
+        gsFileData<real_t> xml_out;
+        xml_out << error_collection;
+        xml_out.addString("Meshsize, dofs, l2err, h1err, h2err, iFaceErr, (penalty)");
+        // Add solution
+        // [...]
+        xml_out.save(output);
+        gsInfo << "XML saved to " + output << "\n";
+    }
+    //! [Export data to xml]
 
     return  EXIT_SUCCESS;
 }
