@@ -29,8 +29,10 @@ namespace gismo
         this->_initialize();
         this->_computeMapper();
         this->_computeSmoothMatrix();
+        GISMO_ASSERT(this->_checkMatrix(m_matrix),"Mapper does not have column sum equal to 1");
         this->_makeTHB();
         this->_computeDPatch();
+        GISMO_ASSERT(this->_checkMatrix(m_matrix),"Mapper does not have column sum equal to 1");
     }
 
     // Constructors
@@ -38,7 +40,7 @@ namespace gismo
     gsDPatch<d,T>::gsDPatch(const gsMultiPatch<T> & patches,
                             const std::vector<patchCorner> & C0_corners)
     :
-    m_patches(patches)
+    gsDPatch(patches)
     {
         std::vector<patchCorner> otherCorners;
         for (std::vector<patchCorner>::const_iterator it = C0_corners.begin(); it != C0_corners.end(); it++)
@@ -48,12 +50,6 @@ namespace gismo
         }
         std::vector<patchCorner>::iterator it = std::unique(m_C0s.begin(),m_C0s.end());
         m_C0s.resize( std::distance(m_C0s.begin(),it) );
-
-        this->_initialize();
-        this->_computeMapper();
-        this->_computeSmoothMatrix();
-        this->_makeTHB();
-        this->_computeDPatch();
     }
 
     template<short_t d,class T>
@@ -658,15 +654,15 @@ namespace gismo
                                 corners[j].getContainingSides(d,sides);
                                 colIdx = _indexFromVert(0,corners[j],sides[0],0,0); // 0,0
                                 colIdx = m_mapOriginal.index(colIdx,corners[j].patch);
-                                m_matrix(rowIndices(i+k*N,0),colIdx) = m_matrix(rowIndices(i+k*N,0),c11(i,0)); // by construction
+                                m_matrix(rowIndices(i+k*N,0),colIdx) = m_matrix.coeff(rowIndices(i+k*N,0),c11(i,0)); // by construction >>>> PROBLEMATIC
 
                                 colIdx = _indexFromVert(1,corners[j],sides[0],0,0); // 1,0
                                 colIdx = m_mapOriginal.index(colIdx,corners[j].patch);
-                                m_matrix(rowIndices(i+k*N,0),colIdx) = m_matrix(rowIndices(i+k*N,0),c11(i,0)); // by construction
+                                m_matrix(rowIndices(i+k*N,0),colIdx) = m_matrix.coeff(rowIndices(i+k*N,0),c11(i,0)); // by construction >>>> PROBLEMATIC
 
                                 colIdx = _indexFromVert(1,corners[j],sides[1],0,0); // 0,1
                                 colIdx = m_mapOriginal.index(colIdx,corners[j].patch);
-                                m_matrix(rowIndices(i+k*N,0),colIdx) = m_matrix(rowIndices(i+k*N,0),c11(i,0)); // by construction
+                                m_matrix(rowIndices(i+k*N,0),colIdx) = m_matrix.coeff(rowIndices(i+k*N,0),c11(i,0)); // by construction >>>> PROBLEMATIC
                             }
                         }
                     }
@@ -693,12 +689,12 @@ namespace gismo
                             idx = _indexFromVert(k,otherCorner,otherSide,1,0);         // point (k,0)
                             index_t j1k = m_mapOriginal.index(idx,otherSide.patch); // point (k,0)
 
-
+                            index_t row;
                             for (index_t r=0; r!=rowIndices.rows(); r++)
                             {
-                                index_t row = rowIndices(r,0);
-                                m_matrix(row,j0k) =
-                                m_matrix(row,jk0) = 0.5 * ( m_matrix(row,jk1) + m_matrix(row,j1k) );
+                                row = rowIndices(r,0);
+                                m_matrix(row,j0k) = 0.5 * ( m_matrix.coeff(row,jk1) + m_matrix.coeff(row,j1k) );
+                                m_matrix(row,jk0) = 0.5 * ( m_matrix.coeff(row,jk1) + m_matrix.coeff(row,j1k) ); //  >>>> PROBLEMATIC
                             }
 
                         }
@@ -1635,6 +1631,8 @@ namespace gismo
         GISMO_ASSERT(checkVerts,"Not all vertices are checked");
         bool checkBasis = std::all_of(m_basisCheck.begin(), m_basisCheck.end(), [](bool m_basisCheck) { return m_basisCheck; });
         GISMO_ASSERT(checkBasis,"Not all basis functions are checked");
+
+        m_matrix.makeCompressed();
     }
 
     // THIS FUNCTION IS LEGACY!!

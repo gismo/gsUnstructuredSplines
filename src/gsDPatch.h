@@ -445,6 +445,18 @@ class gsDPatch  //: public gsMappedGeom<d,T>
             void _computeSmoothMatrix2();
         */
 
+protected:
+    bool _checkMatrix(const gsSparseMatrix<T> & matrix) const // ! makes a deep copy (otherwise the contents of m_matrix get destroyed somehow...)
+    {
+        GISMO_ASSERT(matrix.cols()==matrix.outerSize(),"is the matrix ColMajor?");
+        gsVector<T> colSums(matrix.cols());
+        colSums.setZero();
+        for (index_t i = 0; i<matrix.outerSize(); ++i)
+            for (typename gsSparseMatrix<T>::iterator it = matrix.begin(i); it; ++it)
+                colSums.at(i) += it.value();
+
+        return (colSums.array() < 1+1e-8).any() && (colSums.array() > 1-1e-8).any();
+    }
 
 };
 
