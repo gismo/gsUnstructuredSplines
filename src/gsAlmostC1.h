@@ -72,6 +72,8 @@ protected:
         // This will store the triangles as soon as they are computed
         std::map<patchCorner,gsMatrix<T,3,3>> m_triangles;
 
+        bool m_C0;
+
     public:
 
         /// Shared pointer for gsAlmostC1
@@ -470,16 +472,6 @@ protected:
         typename std::enable_if<  _boundary && _v==2 && (!_smooth), void>::type
         _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
 
-        // Boundary vertex of valence 3 with C1 smoothness
-        template<bool _boundary, index_t _v, bool _smooth> // valence=2
-        typename std::enable_if<  _boundary && _v==3 && _smooth, void>::type
-        _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
-
-        // Boundary vertex of valence 3 with C0 smoothness
-        template<bool _boundary, index_t _v, bool _smooth> // valence=2
-        typename std::enable_if<  _boundary && _v==3 && (!_smooth), void>::type
-        _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
-
         // Boundary vertex of valence !(1,2,3) with C1 smoothness
         template<bool _boundary, index_t _v, bool _smooth>
         typename std::enable_if<  _boundary && _v==-1 && _smooth, void>::type
@@ -488,11 +480,6 @@ protected:
         // Boundary vertex of valence !(1,2,3) with C0 smoothness
         template<bool _boundary, index_t _v, bool _smooth>
         typename std::enable_if<  _boundary && _v==-1 && (!_smooth), void>::type
-        _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
-
-        // Extraordinary interior vertex of valence 3 (special case)
-        template<bool _boundary, index_t _v> // valence=2
-        typename std::enable_if<  (!_boundary) && _v==3, void>::type
         _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
 
         // Ordinary interior vertex
@@ -543,10 +530,13 @@ protected:
         void _handleRegularCorner(patchCorner pcorner);
 
         template<bool _regular, bool _smooth> // valence=2
-        typename std::enable_if<  _regular  &&   _smooth    , void>::type
+        typename std::enable_if<  _regular  &&   _smooth   , void>::type
         _handleBoundaryVertex(patchCorner pcorner, index_t valence);
 
-        // THIS FUNCTION IS WRONG???
+        template<bool _regular, bool _smooth> // valence=2
+        typename std::enable_if<  _regular  && (!_smooth)   , void>::type
+        _handleBoundaryVertex(patchCorner pcorner, index_t valence);
+
         template<bool _regular, bool _smooth> // valence > 2
         typename std::enable_if<(!_regular) &&   _smooth    , void>::type
         _handleBoundaryVertex(patchCorner pcorner, index_t valence);
