@@ -37,12 +37,11 @@ namespace gismo
         this->_initialize();
         this->_computeMapper();
         this->_computeSmoothMatrix();
-        gsDebugVar(m_matrix.toDense());
-        _whichHandled();
+        GISMO_ASSERT(this->_checkMatrix(m_matrix),"Mapper does not have column sum equal to 1");
         m_RefPatches = m_patches;
-        // this->_makeTHB();
-        // this->_computeEVs();
-        // gsDebugVar(m_matrix.toDense());
+        this->_makeTHB();
+        this->_computeEVs();
+        GISMO_ASSERT(this->_checkMatrix(m_matrix),"Mapper does not have column sum equal to 1");
     }
 
     template<short_t d,class T>
@@ -338,6 +337,7 @@ namespace gismo
     {
         GISMO_ASSERT(m_mapModified.isFinalized(),"Mapper is not finalized, run XXXX first");
 
+        GISMO_ASSERT((size_t)m_mapModified.freeSize()==m_size,"Size does not match predicted size, m_mapModified.freeSize()="<<m_mapModified.freeSize()<<"; m_size="<<m_size);
         gsMatrix<T> coefs(m_mapModified.freeSize(),m_patches.geoDim());
 
         index_t size;
@@ -374,6 +374,7 @@ namespace gismo
                     continue;
 
                 pcorner = patchCorner(p,c);
+                m_patches.getCornerList(pcorner,pcorners);
                 std::pair<index_t,bool> vdata = _vertexData(pcorner); // corner c
                 if (vdata.first > 2-m_C0 && !(vdata.first==4 && vdata.second)) // valence must be 3 or larger, but it must not be an interior vertex with v=4
                 {
@@ -404,10 +405,12 @@ namespace gismo
                         m_vertCheck[ _vertIndex(pcorners[k].patch, pcorners[k].corner()) ] = true;
                 }
                 else
+                {
+                    m_vertCheck[ _vertIndex(pcorner.patch, pcorner.corner()) ] = true;
                     continue;
+                }
             }
         }
-
         return coefs;
     }
 
@@ -833,7 +836,26 @@ namespace gismo
     {
         // prepare the geometry
         std::vector<std::vector<patchCorner> > cornerLists;
-        m_RefPatches.getEVs(cornerLists,true);
+        // m_RefPatches.getEVs(cornerLists,true);
+
+        // get the corners that need refinement
+        std::vector<patchCorner> cornerList;
+        patchCorner c;
+        for(index_t i = 0;i<m_RefPatches.nPatches();++i)
+        {
+            for(int j=1;j<=4;++j)
+            {
+                c=patchCorner(i,j);
+                bool isCycle = m_RefPatches.getCornerList(c,cornerList);
+                bool alreadyReached = false;
+                for(size_t k = 0;k<cornerList.size();++k)
+                    if(cornerList[k].patch<i)
+                        alreadyReached = true;
+
+                if(((isCycle&&cornerList.size()!=4)||((!isCycle)&&cornerList.size()>2-m_C0))&&!alreadyReached)
+                    cornerLists.push_back(cornerList);
+            }
+        }
 
         if (cornerLists.size()!=0)
         {
@@ -895,7 +917,6 @@ namespace gismo
         }
 
         // redefine the mappers
-        // m_mapModified = gsDofMapper(m_bases);
         m_mapOriginal = gsDofMapper(m_bases);
         m_mapOriginal.finalize();
 
@@ -912,11 +933,32 @@ namespace gismo
         */
 
         std::vector<std::vector<patchCorner> > cornerLists;
-        m_patches.getEVs(cornerLists);
+        // m_patches.getEVs(cornerLists);
+
+        // get the corners that need refinement
+        std::vector<patchCorner> cornerList;
+        patchCorner c;
+        for(index_t i = 0;i<m_RefPatches.nPatches();++i)
+        {
+            for(int j=1;j<=4;++j)
+            {
+                c=patchCorner(i,j);
+                bool isCycle = m_RefPatches.getCornerList(c,cornerList);
+                bool alreadyReached = false;
+                for(size_t k = 0;k<cornerList.size();++k)
+                    if(cornerList[k].patch<i)
+                        alreadyReached = true;
+
+                if(((isCycle&&cornerList.size()!=4)||((!isCycle)&&cornerList.size()>2-m_C0))&&!alreadyReached)
+                    cornerLists.push_back(cornerList);
+            }
+        }
 
         std::fill(m_vertCheck.begin(), m_vertCheck.end(), false);
         if (cornerLists.size()!=0)
         {
+            m_matrix = m_matrix * m_tMatrix.transpose();
+
             std::vector<patchCorner> pcorners;
             patchCorner pcorner;
             gsMatrix<T> Cg;         // coefficients
@@ -924,89 +966,63 @@ namespace gismo
             gsMatrix<index_t> uind; // column indices of baricentric coordinates
             index_t cidx;
 
-            m_matrix = m_matrix * m_tMatrix.transpose();
-
-            for (size_t p=0; p!=m_patches.nPatches(); p++)
+            for (std::vector<std::vector<patchCorner> >::iterator it=cornerLists.begin(); it!=cornerLists.end(); it++)
             {
-                for (index_t c=1; c<=4; c++)
+
+                std::vector<patchCorner> pcorners = *it;
+                pcorner = it->at(0);
+                cidx = _vertIndex(pcorner.patch,pcorner.corner());
+                if (m_vertCheck.at(cidx))
+                    continue;
+
+                std::pair<index_t,bool> vdata = _vertexData(pcorner); // corner c
+
+                // get the triangle
+                gsMatrix<T> Cg;
+                std::tie(Cg,ub,uind) = _makeTriangle(pcorner);
+
+                // The barycentric coordinates will be attached to the matrix rows corresponding to the 0,0 corners (and the three lowest patch index corners whenever valence > 3)
+                // We use _getLowestIndices such that the corners are assigned to increasing patch corners
+                // We need the index on the old basis (the unrefined basis), because we plug it into the mapModified (which maps the local DoFs to the global ones)
+                std::vector<std::pair<index_t,index_t>> indices  = _getAllInterfaceIndices(pcorner,1,m_Bbases);
+
+                _getLowestIndices(indices,3);
+
+                std::vector<index_t> rowIndices;
+                rowIndices.reserve(3);
+                index_t idx;
+                for (std::vector<std::pair<index_t,index_t>>::iterator it=indices.begin(); it!=indices.end(); it++)
                 {
-                    cidx = _vertIndex(p,c);
-                    if (m_vertCheck.at(cidx))
-                        continue;
-
-                    pcorner = patchCorner(p,c);
-                    std::pair<index_t,bool> vdata = _vertexData(pcorner); // corner c
-                    if (vdata.first > 2 && !(vdata.first==4 && vdata.second)) // valence must be 3 or larger, but it must not be an interior vertex with v=4
-                    {
-                        // m_RefPatches.getCornerList(pcorner,pcorners);
-
-                        // get the triangle
-                        std::tie(std::ignore,ub,uind) = _makeTriangle(pcorner);
-
-                        // // The barycentric coordinates will be attached to the matrix rows corresponding to the 0,0 corners (and the three lowest patch index corners whenever valence > 3)
-                        // // We use _getLowestCorners such that the corners are assigned to increasing patch corners
-                        // _getLowestCorners(pcorners,3);
-
-                        // std::vector<index_t> rowIndices;
-                        // rowIndices.reserve(3);
-                        // index_t idx;
-                        // std::vector<patchSide> sides(2);
-                        // for (size_t k=0; k!=pcorners.size(); k++ )
-                        // {
-                        //     pcorners[k].getContainingSides(d,sides);
-                        //     // We need the index on the old basis (the unrefined basis), because we plug it into the mapModified (which maps the local DoFs to the global ones)
-                        //     idx = _indexFromVert(m_Bbases,0,pcorners[k],sides[0],0); // On the 'old' (unrefined) multibasis
-                        //     GISMO_ASSERT(m_mapModified.is_free(idx,pcorners[k].patch),"This DoF must be free!");
-                        //     rowIndices.push_back(m_mapModified.index(idx,pcorners[k].patch));
-                        // }
-
-                        // The barycentric coordinates will be attached to the matrix rows corresponding to the 0,0 corners (and the three lowest patch index corners whenever valence > 3)
-                        // We use _getLowestIndices such that the corners are assigned to increasing patch corners
-                        // We need the index on the old basis (the unrefined basis), because we plug it into the mapModified (which maps the local DoFs to the global ones)
-                        std::vector<std::pair<index_t,index_t>> indices  = _getAllInterfaceIndices(pcorner,1,m_Bbases);
-
-                        _getLowestIndices(indices,3);
-
-                        std::vector<index_t> rowIndices;
-                        rowIndices.reserve(3);
-                        index_t idx;
-                        for (std::vector<std::pair<index_t,index_t>>::iterator it=indices.begin(); it!=indices.end(); it++)
-                        {
-                            // We need the index on the old basis (the unrefined basis), because we plug it into the mapModified (which maps the local DoFs to the global ones)
-                            GISMO_ASSERT(m_mapModified.is_free(it->second,it->first),"This DoF must be free! patch = "<<it->first<<"; index = "<<it->first);
-                            rowIndices.push_back(m_mapModified.index(it->second,it->first));
-                        }
-
-                        index_t rowIdx,colIdx;
-                        // set the colums related to the barycentric columns equal to zero
-                        for (index_t j=0; j!=ub.cols(); j++)
-                        {
-                            colIdx = uind(0,j);
-                            m_matrix.prune(
-                                            [&colIdx](index_t i, index_t j, T)
-                                            { return j!=colIdx; }
-                                            );
-                        }
-
-                        for (index_t i=0; i!=ub.rows(); i++)
-                            for (index_t j=0; j!=ub.cols(); j++)
-                            {
-                                rowIdx = rowIndices[i];
-                                colIdx = uind(0,j);
-                                m_matrix(rowIdx,colIdx) = ub(i,j);
-                            }
-
-                        for (size_t k = 0; k!=pcorners.size(); k++)
-                            m_vertCheck[ _vertIndex(pcorners[k].patch, pcorners[k].corner()) ] = true;
-                    }
-                    else
-                        continue;
+                    // We need the index on the old basis (the unrefined basis), because we plug it into the mapModified (which maps the local DoFs to the global ones)
+                    GISMO_ASSERT(m_mapModified.is_free(it->second,it->first),"This DoF must be free! patch = "<<it->first<<"; index = "<<it->first);
+                    rowIndices.push_back(m_mapModified.index(it->second,it->first));
                 }
-            }
-        }
-        m_matrix.makeCompressed();
-    }
 
+                index_t rowIdx,colIdx;
+                // set the colums related to the barycentric columns equal to zero
+                for (index_t j=0; j!=ub.cols(); j++)
+                {
+                    colIdx = uind(0,j);
+                    m_matrix.prune(
+                                    [&colIdx](index_t i, index_t j, T)
+                                    { return j!=colIdx; }
+                                    );
+                }
+
+                for (index_t i=0; i!=ub.rows(); i++)
+                    for (index_t j=0; j!=ub.cols(); j++)
+                    {
+                        rowIdx = rowIndices[i];
+                        colIdx = uind(0,j);
+                        m_matrix(rowIdx,colIdx) = ub(i,j);
+                    }
+
+                for (size_t k = 0; k!=pcorners.size(); k++)
+                    m_vertCheck[ _vertIndex(pcorners[k].patch, pcorners[k].corner()) ] = true;
+            }
+            m_matrix.makeCompressed();
+        }
+    }
     template<short_t d,class T>
     void gsAlmostC1<d,T>::_initialize() // also initialize the mappers!
     {
@@ -1080,41 +1096,43 @@ namespace gismo
         size_t tmp;
         m_size = tmp = 0;
 
-        // number of interior basis functions (denoted by x)
-        for (size_t k=0; k!=m_patches.nPatches(); k++)
+        // number of interior basis functions
+        for (size_t p=0; p!=m_patches.nPatches(); p++)
         {
-            tmp += m_bases.basis(k).size();
-            tmp -= m_bases.basis(k).boundary(boxSide(1)).size();
-            tmp -= m_bases.basis(k).boundary(boxSide(2)).size();
-            tmp -= m_bases.basis(k).boundary(boxSide(3)).size()-2;
-            tmp -= m_bases.basis(k).boundary(boxSide(4)).size()-2;
+            tmp += m_bases.basis(p).size();
+            for (index_t k=0; k!=2; k++)
+            {
+                tmp -= m_bases.basis(p).boundaryOffset(boxSide(1),k).size();
+                tmp -= m_bases.basis(p).boundaryOffset(boxSide(2),k).size();
+                tmp -= m_bases.basis(p).boundaryOffset(boxSide(3),k).size()-4;
+                tmp -= m_bases.basis(p).boundaryOffset(boxSide(4),k).size()-4;
+            }
         }
         // gsDebug<<"Number of interior DoFs: "<<tmp<<"\n";
         m_size += tmp;
 
-        // we don't add the DoFs on the interfaces (denoted by i)
-
-        // // interfaces (denoted by i)
+        // interfaces
         gsBasis<T> * basis1;
-        // gsBasis<T> * basis2;
-        // gsVector<index_t> indices1,indices2;
-        // tmp = 0;
-        // for(gsBoxTopology::const_iiterator iit = m_patches.iBegin(); iit!= m_patches.iEnd(); iit++)
-        // {
-        //     basis1 = &m_bases.basis(iit->first().patch);
-        //     basis2 = &m_bases.basis(iit->second().patch);
-        //     tmp += basis1->boundary(iit->first().side()).size() - 2;
-        //     tmp += basis2->boundary(iit->second().side()).size() - 2;
-        // }
+        gsBasis<T> * basis2;
+        gsVector<index_t> indices1,indices2;
+        tmp = 0;
+        for(gsBoxTopology::const_iiterator iit = m_patches.iBegin(); iit!= m_patches.iEnd(); iit++)
+        {
+            basis1 = &m_bases.basis(iit->first().patch);
+            basis2 = &m_bases.basis(iit->second().patch);
+            tmp += basis1->boundary(iit->first().side()).size() - 4;
+            tmp += basis2->boundary(iit->second().side()).size() - 4;
+        }
         // gsDebug<<"Number of interface DoFs: "<<tmp<<"\n";
-        // m_size += tmp;
+        m_size += tmp;
 
-        // add the DoFs on the boundaries boundaries (denoted by b)
+        // boundaries
         tmp = 0;
         for(gsBoxTopology::const_biterator bit = m_patches.bBegin(); bit!= m_patches.bEnd(); bit++)
         {
             basis1 = &m_bases.basis(bit->patch);
-            tmp += (basis1->boundary(bit->side()).size() - 2);
+            tmp += (basis1->boundaryOffset(bit->side(),0).size() - 4);
+            tmp += (basis1->boundaryOffset(bit->side(),1).size() - 4);
         }
         // gsDebug<<"Number of boundary DoFs: "<<tmp<<"\n";
         m_size += tmp;
@@ -1135,17 +1153,38 @@ namespace gismo
                 index_t idx = _vertIndex(p,c);
                 if (!passed.at(idx))
                 {
-                    // If we pass a corner, we get all connected corners and mark them so that we don't pass them again
                     m_patches.getCornerList(patchCorner(p,c),corners);
                     for (size_t k=0; k!=corners.size(); k++)
                         passed.at(_vertIndex(corners[k].patch,corners[k])) = true;
 
-                    if (corners.size()==1) // valence = 1, must be a boundary vertex
-                        tmp += 1;
-                    else if (corners.size()>2 && corners.size()!=4)
-                        tmp += 3;
+                    std::pair<index_t,bool> vdata = _vertexData(patchCorner(p,c)); // corner c
+
+                    // 1,1; 0,0; 0,1; 1,0 DoFs
+                    if ((!vdata.second) && vdata.first==1) // valence = 1, must be a boundary vertex
+                        tmp += 4;
+
+                    // both 1,1 DoFs + 2 for the boundary 1,0 or 0,1 DoFs
+                    else if ((!vdata.second) && vdata.first==2 && !m_C0) // valence = 1, must be a boundary vertex
+                        tmp += 4;
+
+                    // all 1,1 DoFs + 3 for the triangle + 2 for the boundary 1,0 or 0,1 DoFs
+                    else if ((!vdata.second) && vdata.first>2 && !m_C0)
+                        tmp += vdata.first+3+2;
+
+                    // all 1,1 DoFs + 3 for the triangle + 2 for the boundary 1,0 or 0,1 DoFs
+                    else if ((!vdata.second) && vdata.first>1 && m_C0)
+                        tmp += vdata.first+3+2;
+
+                    // all 1,1 DoFs
+                    else if (( vdata.second) && vdata.first==4) // valence = 1, must be a boundary vertex
+                        tmp += 4;
+
+                    // all 1,1 DoFs + 3 for the triangle
+                    else
+                        tmp += vdata.first+3;
                 }
             }
+
         // gsDebug<<"Number of vertex DoFs: "<<tmp<<"\n";
         m_size += tmp;
 
@@ -1444,7 +1483,8 @@ namespace gismo
         m_mapModified.finalize();
         m_mapOriginal.finalize();
 
-        m_matrix.resize( m_mapModified.freeSize(), m_mapOriginal.freeSize() );
+        GISMO_ASSERT((size_t)m_mapModified.freeSize()==m_size,"Size does not match predicted size, m_mapModified.freeSize()="<<m_mapModified.freeSize()<<"; m_size="<<m_size);
+        m_matrix.resize( m_size, m_mapOriginal.freeSize() );
 
         // gsDebugVar(m_mapModified.coupledSize());
         // gsDebugVar(m_mapModified.boundarySize());
@@ -1455,24 +1495,32 @@ namespace gismo
     void gsAlmostC1<d,T>::_handleRegularCorner(patchCorner pcorner)
     {
         std::vector<patchSide> psides;
-
-        index_t colIdx, rowIdx, cornerIdx;
+        std::vector<index_t> indices(4);
+        tuple_t entries;
 
         pcorner.getContainingSides(d,psides);
+        indices[0] = _indexFromVert(0,pcorner,psides[0],0); // b00
+        indices[1] = _indexFromVert(1,pcorner,psides[0],0); // b01
+        indices[2] = _indexFromVert(1,pcorner,psides[1],0); // b10
+        indices[3] = _indexFromVert(1,pcorner,psides[1],1); // b11
 
-        gsBasis<T> * basis;
-
-        // Only do the coefficient for the 0,0 DoF
-        GISMO_ASSERT(psides.size()==2,"Must have 2 adjacent sides");
-        basis = &m_bases.basis(pcorner.patch);
-        cornerIdx = basis->functionAtCorner(pcorner);
-        rowIdx = m_mapModified.index(cornerIdx,pcorner.patch);
-        colIdx = m_mapOriginal.index(cornerIdx,pcorner.patch);
-
-        #pragma omp critical (handle_regular_corner)
+        T weight = 1.0;
+        index_t colIdx, rowIdx;
+        for (std::vector<index_t>::iterator it = indices.begin(); it!=indices.end(); ++it)
         {
-            m_matrix(rowIdx,colIdx) = 1.0;
-            m_basisCheck[rowIdx] = true;
+            rowIdx = m_mapModified.index(*it,pcorner.patch);
+            colIdx = m_mapOriginal.index(*it,pcorner.patch);
+            entries.push_back(std::make_tuple(rowIdx,colIdx,weight));
+        }
+
+        #pragma omp critical (handle_boundary_vertex_tt)
+        {
+            for (typename tuple_t::const_iterator it=entries.begin(); it!=entries.end(); it++)
+            {
+                std::tie(rowIdx,colIdx,weight) = *it;
+                m_matrix(rowIdx,colIdx) = weight;
+                m_basisCheck[rowIdx] = true;
+            }
             m_vertCheck[ _vertIndex(pcorner.patch, pcorner.corner()) ] = true;
         }
         // gsInfo<<"patch = "<<pcorner.patch<<", corner = "<<pcorner.corner()<<"\n";
@@ -2098,7 +2146,7 @@ namespace gismo
     template<short_t d,class T>
     void gsAlmostC1<d,T>::_computeSmoothMatrix()
     {
-
+        GISMO_ASSERT((size_t)m_mapModified.freeSize()==m_size,"Size does not match predicted size, m_mapModified.freeSize()="<<m_mapModified.freeSize()<<"; m_size="<<m_size);
         m_basisCheck.resize(m_size);
         // m_basisCheck.resize(m_bases.totalSize());
         std::fill(m_basisCheck.begin(), m_basisCheck.end(), false);
