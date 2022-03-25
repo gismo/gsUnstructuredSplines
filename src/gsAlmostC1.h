@@ -15,8 +15,7 @@
 
 #include <gsCore/gsBoxTopology.h>
 #include <gsCore/gsMultiPatch.h>
-
-#include <gsMSplines/gsMappedBasis.h>
+#include <gsIO/gsOptionList.h>
 
 namespace gismo
 {
@@ -28,17 +27,16 @@ namespace gismo
  * @tparam     d     parametric dimension
  */
 template<short_t d,class T>
-class gsAlmostC1  //: public gsMappedGeom<d,T>
+class gsAlmostC1
 {
 protected:
-    typedef typename std::vector<std::tuple<index_t,index_t,T>> tuple_t;
+
+    typedef typename std::vector<std::tuple<index_t,index_t,T>> sparseEntry_t;
 
     protected:
         const gsMultiPatch<T> & m_patches;
         gsMultiPatch<T> m_RefPatches;
         gsMultiBasis<T> m_bases, m_Bbases;
-        gsMultiBasis<T> m_globalBasis;
-        gsMappedBasis<d,T> m_MBasis;
         std::vector<gsBasis<T> *> m_basisContainer;
         mutable gsSparseMatrix<T> m_tMatrix;
         mutable std::vector<boxCorner> m_bcorners;
@@ -49,10 +47,13 @@ protected:
         mutable std::vector<bool> m_sideCheck;
         mutable std::vector<bool> m_vertCheck;
         mutable std::vector<bool> m_basisCheck;
+        mutable std::vector<bool> m_C0s;
 
         mutable gsDofMapper m_mapModified,m_mapOriginal;
 
         mutable gsSparseMatrix<T> m_matrix;
+
+        gsOptionList m_options;
 
         mutable size_t m_size;
 
@@ -65,14 +66,10 @@ protected:
 
         mutable bool m_verbose;
 
-        std::vector<patchCorner> m_C0s;
-
         #define PI 3.141592653589793
 
         // This will store the triangles as soon as they are computed
         std::map<patchCorner,gsMatrix<T,3,3>> m_triangles;
-
-        bool m_C0;
 
     public:
 
@@ -100,6 +97,9 @@ protected:
         GISMO_CLONE_FUNCTION(gsAlmostC1)
 
         virtual ~gsAlmostC1();
+
+        gsOptionList options() { return m_options; }
+        void defaultOptions();
 
         /**
          * @brief      Allow verbosity
@@ -235,6 +235,8 @@ protected:
 
 
     protected:
+
+        std::vector<bool> getSharpCorners(T tol = 1e-2) const;
 
         gsMatrix<T> _getNormals(const std::vector<patchCorner> & corners) const;
 
@@ -439,11 +441,11 @@ protected:
 
     protected:
 
-        void _pushToMatrix(tuple_t entries)
+        void _pushToMatrix(sparseEntry_t entries)
         {
             index_t rowIdx,colIdx;
             T weight;
-            for (typename tuple_t::const_iterator it=entries.begin(); it!=entries.end(); it++)
+            for (typename sparseEntry_t::const_iterator it=entries.begin(); it!=entries.end(); it++)
             {
                 std::tie(rowIdx,colIdx,weight) = *it;
                 m_matrix(rowIdx,colIdx) = weight;

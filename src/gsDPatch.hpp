@@ -181,7 +181,7 @@ namespace gismo
         std::fill(m_vertCheck.begin(), m_vertCheck.end(), false);
         for (size_t p=0; p!=m_patches.nPatches(); p++)
         {
-            for (index_t c=1; c<=4; c++)
+            for (index_t c=1; c<5; c++)
             {
                 index_t idx = _vertIndex(p,c);
                 if(m_vertCheck[ idx] )
@@ -846,7 +846,7 @@ namespace gismo
         std::vector<patchCorner> corners;
         // index_t corn = 0;
         for (size_t p=0; p!=m_patches.nPatches(); p++)
-            for (index_t c=1; c<=4; c++)
+            for (index_t c=1; c<5; c++)
             {
                 index_t idx = _vertIndex(p,c);
                 if (!passed.at(idx))
@@ -979,7 +979,7 @@ namespace gismo
         // vertices
         for (size_t p=0; p!=m_patches.nPatches(); p++)
         {
-            for (index_t c=1; c<=4; c++)
+            for (index_t c=1; c<5; c++)
             {
                 cidx = _vertIndex(p,c);
                 if (m_vertCheck.at(cidx))
@@ -1193,10 +1193,10 @@ namespace gismo
                 // If we want C0 at this vertex, we only handle the row k=1.
                 bool C0 = (std::count(m_C0s.begin(), m_C0s.end(), pcorner)) ? true : false;
                 indices.resize(3);
+                patchSide otherSide = iface.other(psides[iindex]);
+                patchCorner otherCorner = iface.mapCorner(pcorner);
                 for (index_t k = (C0 ? 1 : 0); k!=2; k++) // index of point over the interface
                 {
-                    patchSide otherSide = iface.other(psides[iindex]);
-                    patchCorner otherCorner = iface.mapCorner(pcorner);
                     indices[0] = _indexFromVert(k,pcorner,psides[iindex],1); // bk1 on patch of iface
                     indices[1] = _indexFromVert(k,pcorner,psides[iindex],0); // bk0 on patch of iface
                     indices[2] = _indexFromVert(k,otherCorner,otherSide,0); // bk0 on other patch
@@ -1611,7 +1611,7 @@ namespace gismo
 
         // iterate over the vertices
         for (size_t p=0; p!=m_patches.nPatches(); p++)
-            for (index_t c=1; c<=4; c++)
+            for (index_t c=1; c<5; c++)
                 _handleVertex(patchCorner(p,c));
 
         for(gsBoxTopology::const_iiterator iit = m_patches.iBegin(); iit!= m_patches.iEnd(); iit++)
@@ -2029,7 +2029,7 @@ namespace gismo
     //     patchCorner corner;
     //     // iterate over the other vertices
     //     for (size_t p=0; p!=m_patches.nPatches(); p++)
-    //         for (index_t c=1; c<=4; c++)
+    //         for (index_t c=1; c<5; c++)
     //         {
     //             if (m_vertCheck[ _vertIndex(p,c) ]) // vertex already covered?
     //                 continue;
