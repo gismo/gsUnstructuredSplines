@@ -27,7 +27,7 @@ class gsApproxC1Vertex
 
 private:
     typedef gsContainerBasis<d, T> Basis;
-    typedef typename std::vector<Basis> C1BasisContainer;
+    typedef typename std::vector<Basis> BasisContainer;
     typedef typename std::vector<gsPatchReparameterized<d,T>> C1AuxPatchContainer;
 
     /// Shared pointer for gsApproxC1Vertex
@@ -43,7 +43,7 @@ public:
 
 
     gsApproxC1Vertex(gsMultiPatch<T> & mp,
-                C1BasisContainer & bases,
+                BasisContainer & bases,
                 const std::vector<size_t> & patchesAroundVertex,
                 const std::vector<size_t> & vertexIndices,
                 const index_t & numVer,
@@ -202,8 +202,8 @@ public:
                             0));
                     index_t dir_1 = auxPatchSingle[0].getMapIndex(containingSides[dir].side()) < 3 ? 1 : 0;
                     index_t dir_2 = m_auxPatches[patch2].getMapIndex(result.side().index()) < 3 ? 1 : 0;
-                    //if (basis.component(dir_1).numElements() > basis2.component(dir_2).numElements())
-                    //    basis_pm.component(dir_1) = basis2.component(dir_2);
+//                    if (basis.component(dir_1).numElements() > basis2.component(dir_2).numElements())
+//                        basis_pm.component(dir_1) = basis2.component(dir_2);
 
                 }
             }
@@ -244,7 +244,7 @@ public:
 //                gsDebugVar(b_plus);
 //                gsDebugVar(b_minus);
 //                gsDebugVar(dir);
-//                gsDebugVar(isInterface[localdir]);
+//                gsDebugVar(isInterface[localdir]);application/paraview3/2334063
                 basis_plus[dir] = b_plus;
                 basis_minus[dir] = b_minus;
             }
@@ -377,7 +377,7 @@ protected:
 
     // Input
     gsMultiPatch<T> & m_mp;
-    C1BasisContainer & m_bases;
+    BasisContainer & m_bases;
 
     const std::vector<size_t> & m_patchesAroundVertex;
     const std::vector<size_t> & m_vertexIndices;

@@ -34,11 +34,11 @@ namespace gismo
                 m_auxPatches[1].getBasisRotated().piece(0).component(0).numElements()) {
                 basis = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(m_auxPatches[1].getBasisRotated().piece(0));
                 dir_pm = 0;
-                patch = 0;
+                patch = 1;
             } else {
                 basis = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(m_auxPatches[0].getBasisRotated().piece(0));
                 dir_pm = 1;
-                patch = 1;
+                patch = 0;
             }
         }
         else
@@ -180,7 +180,7 @@ namespace gismo
 
             basisEdgeResult.push_back(result);
         }
-}
+    }
 
 
     template<short_t d,class T>

@@ -46,13 +46,18 @@ class Method(Enum):
            
 """
 """ -------------------------------------------------------------------------------------------------- """
-#domain = "planar"
-domain = "surfaces"
+domain = "planar"
+#domain = "surfaces"
 
 #geo_list = ["g1000", "g1100", "g1510", "g1400"]
 #geo_list = ["g1021", "g1121", "g1500", "g1311"]  # Without .xml extension
 #geo_list = ["g1121", "g1702", "g1704", "g1703"]
-geo_list = ["g1001", "g1021", "g1030", "g1031"]  # Without .xml extension
+#geo_list = ["g1001", "g1021", "g1030", "g1031"]  # Without .xml extension
+geo_list = ["g1702", "g1703", "g1704", "g1023",
+            "g1024", "g1122", "g1600", "g1701",
+            "g1700", "g1123", "g1601", "g1801"]  # Without .xml extension
+geo_list = ["g1701", "g1700"]  # Without .xml extension
+
 
 path_geo = domain + "/geometries/"
 
@@ -60,8 +65,8 @@ NumRefinement = 4
 second = False
 
 deg_list = [
-    [3, 4],
-    [3, 4],
+    [3, 4, 5],
+    [3, 4, 5],
     [3, 4, 5],
 ]
 
@@ -75,7 +80,7 @@ method_list = [
 
 compute_list = [
     True,
-    True,
+    False,
     False
 ]
 

@@ -246,7 +246,7 @@ void computeStabilityParameter(gsMultiPatch<> mp, gsMultiBasis<> dbasis, gsMatri
         Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXd> ges(AA, BB);
 
         real_t m_h      = dbasis_temp.basis(0).getMinCellLength(); //*dbasis.basis(0).getMinCellLength();
-        mu_interfaces(i,0) = 4.0 * m_h * ges.eigenvalues().array().maxCoeff();
+        mu_interfaces(i,0) = 16.0 * m_h * ges.eigenvalues().array().maxCoeff();
 /*
         gsSparseSolver<>::SimplicialLDLT sol;
         sol.compute(B2.matrix());
@@ -446,6 +446,16 @@ int main(int argc, char *argv[])
         interpolation = optionList.getSwitch("interpolation");
     }
     //! [Read XML file]
+
+//    gsMatrix<> coefs;
+//    for (index_t i = 0; i < mp.nPatches(); i++)
+//    {
+//        coefs = 0.25 * mp.patch(i).coefs();
+//        mp.patch(i).setCoefs(coefs);
+//    }
+//    gsFileData<> fd;
+//    fd << mp;
+//    fd.save("ScaledGeometry");
 
     //! [Refinement]
     gsMultiBasis<real_t> dbasis(mp, true);//true: poly-splines (not NURBS)

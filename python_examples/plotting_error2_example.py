@@ -54,30 +54,40 @@ class Method(Enum):
            
 """
 """ -------------------------------------------------------------------------------------------------- """
-#domain = "planar"
-domain = "surfaces"
+domain = "planar"
+#domain = "surfaces"
 
 #geo_list = ["g1000", "g1100", "g1021","g1121"]  # Without .xml extension
 #geo_list = ["g1121", "g1702", "g1704","g1703"]  # Without .xml extension
-geo_list = ["g1001", "g1021", "g1030", "g1031"]  # Without .xml extension
+#geo_list = ["g1001", "g1021", "g1030", "g1031"]  # Without .xml extension
+geo_list = ["g1702", "g1703", "g1704", "g1023",
+            "g1024", "g1122", "g1600", "g1701",
+            "g1700", "g1123", "g1601", "g1801"]  # Without .xml extension
+
 path_geo = domain + "/geometries/"
 
 NumRefinement = 4
 second = False
 
-deg_list = [3, 4]  # For all methods the same
+deg_list = [3, 4, 5]  # For all methods the same
 
 # Approx C1: gluing data set to default: \tilde{p} = p-1, \tilde{r} = p-2,
 # Nitsche: penalty set to default: via Eigenvalue-problem
 method_list = [
     Method.ApproxC1,
     Method.DPatch,
-    #Method.Nitsche
+    Method.Nitsche
+]
+
+plot_list = [
+    True,
+    False,
+    True
 ]
 
 # 0 == mesh_size
 # 1 == Dofs
-x_col = 1
+x_col = 0
 
 path_example = "../build/bin/biharmonic3_example" if domain == "planar" else "../build/bin/biharmonic_surface2_example"
 """ -------------------------------------------------------------------------------------------------- """
@@ -93,26 +103,27 @@ if not os.path.exists(path_fig):
     os.makedirs(path_fig)
 
 file_coll = []
-for method in method_list:
-    for geo in geo_list:
-        for deg in deg_list:
-            m_str = ""
-            if method == Method.ApproxC1:
-                m_str = "approxC1"
-            elif method == Method.Nitsche:
-                m_str = "nitsche"
-            elif method == Method.DPatch:
-                m_str = "dPatch"
-            elif method == Method.AlmostC1:
-                m_str = "almostC1"
-            else:
-                print("METHOD NOT IMPLEMENTED!!!")
+for idx, method in enumerate(method_list):
+    if plot_list[idx]:
+        for geo in geo_list:
+            for deg in deg_list:
+                m_str = ""
+                if method == Method.ApproxC1:
+                    m_str = "approxC1"
+                elif method == Method.Nitsche:
+                    m_str = "nitsche"
+                elif method == Method.DPatch:
+                    m_str = "dPatch"
+                elif method == Method.AlmostC1:
+                    m_str = "almostC1"
+                else:
+                    print("METHOD NOT IMPLEMENTED!!!")
 
-            path_results_geo = "results/" + path_dir + geo + "/"
-            argument_list = m_str + "-g" + geo + "-p" + str(deg) + "-s" + str(deg - 1) + "-r" + str(NumRefinement) \
-                            + "-m" + str(method.value) + ("-second" if second else "") + ("--residual" if residual else "")
+                path_results_geo = "results/" + path_dir + geo + "/"
+                argument_list = m_str + "-g" + geo + "-p" + str(deg) + "-s" + str(deg - 1) + "-r" + str(NumRefinement) \
+                                + "-m" + str(method.value) + ("-second" if second else "") + ("--residual" if residual else "")
 
-            file_coll.append(path_results_geo + argument_list)
+                file_coll.append(path_results_geo + argument_list)
 
 list_dict = []
 for idx in range(len(file_coll)):
@@ -187,7 +198,7 @@ def create_tikz_figure(geo_mat, name_mat, deg_list, opt_plot):
     #fig.setRateShift(shift)
     fig.setPlotOptions(opt_plot)
     #fig.swapLinestyle(id)
-    fig.create_error_plot(x_list, M_list, False, rate=True)  # True since M is an array
+    fig.create_error_plot(x_list, M_list, False, rate=(True if x_col == 0 else False))  # True since M is an array
     fig.generate_tikz(path_tikz + name_mat)
 
     list_tikz.append(path_dir + name_mat)
@@ -203,19 +214,28 @@ opt_plot = [{'mark': 'diamond*', 'color': 'green', 'line width': '1pt'},
 
 tikz_coll = []
 legend_coll = []
+caption_coll = []
 
-for idx, deg in enumerate(deg_list):
-    for geo in range(len(geo_list)):
-        rate_list = [deg + 1, deg, deg - 1]
+col = 4
+row = 3
+pages = (len(geo_list)*len(deg_list))//(col*row) if (len(geo_list)*len(deg_list))%(col*row) == 0 \
+    else (len(geo_list)*len(deg_list))//(col*row) + 1
 
-        list_tikz2, legend_list2 = create_tikz_figure(row_mat_coll[geo][idx], name_mat_coll[geo][idx], rate_list, opt_plot)
+count = 0
+for page in range(pages):
+    for rr in range(col):
+        for idx, deg in enumerate(deg_list):
+            rate_list = [deg + 1, deg, deg - 1]
 
-        for tikz in list_tikz2:
-            tikz_coll.append(tikz)
-        if geo == 0:
-            for legend in legend_list2:
-                legend_coll.append(legend)
+            list_tikz2, legend_list2 = create_tikz_figure(row_mat_coll[count][idx], name_mat_coll[count][idx], rate_list, opt_plot)
 
+            for tikz in list_tikz2:
+                tikz_coll.append(tikz)
+            if count == 0:
+                for legend in legend_list2:
+                    legend_coll.append(legend)
+            caption_coll.append("$p = " + str(deg) + "$, $r = " + str(deg - 1) + "$")
+        count = count + 1  # Geometry count
 
 legend_list = []
 
@@ -236,12 +256,15 @@ legend_entry.append([r'\hspace{-0.8cm}$H^2$-error'])
 for idx in range(len(method_list)):
     legend_image.append(legend_coll[idx*3+2])
 
-legend_image.append(["empty legend"])
-legend_entry.append([r'\hspace{+0.5cm}Approx. $C^1$'])
-legend_image.append(["empty legend"])
-legend_entry.append([r'\hspace{+0.5cm}D-Patch'])
-# legend_image.append(["empty legend"])
-# legend_entry.append([r'\hspace{+0.5cm}Nitsche'])
+if plot_list[0]:
+    legend_image.append(["empty legend"])
+    legend_entry.append([r'\hspace{+0.5cm}Approx. $C^1$'])
+if plot_list[1]:
+    legend_image.append(["empty legend"])
+    legend_entry.append([r'\hspace{+0.5cm}D-Patch'])
+if plot_list[2]:
+    legend_image.append(["empty legend"])
+    legend_entry.append([r'\hspace{+0.5cm}Nitsche'])
 # ADD MORE METHODS
 
 fig = lib.MyTikz()
@@ -249,15 +272,8 @@ fig.create_legend(legend_image, legend_entry, col=3)
 fig.generate_tikz(path_tikz + "legend_error")
 legend_list.append(path_dir + "legend_error")
 
-
-caption_coll = []
-for deg in deg_list:
-    for geo in geo_list:
-        caption_coll.append("$p = " + str(deg) + "$, $r = " + str(deg - 1) + "$")
-
-
 doc = lib.MyDocument()
-doc.addTikzFigure(tikz_coll, caption_coll, row=3, col=4, legend=legend_list)
+doc.addTikzFigure(tikz_coll, caption_coll, row=row, col=col, legend=legend_list)
 doc.generate_pdf("error_example", compiler="pdflatex", compiler_args=["-shell-escape"], clean_tex=False)
 lib.clean_extensions(crop=legend_list)
 doc.generate_pdf("error_example", compiler="pdflatex", clean_tex=False)
