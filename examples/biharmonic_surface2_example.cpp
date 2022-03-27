@@ -653,7 +653,7 @@ int main(int argc, char *argv[])
     // where p is the highest degree in the bases
     basis.setDegree(degree); // preserve smoothness
 
-    if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
+    if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1 || method == MethodFlags::SURFASG1)
         mp.degreeElevate(degree-mp.patch(0).degree(0));
 
     // h-refine each basis
@@ -670,7 +670,7 @@ int main(int argc, char *argv[])
     if (basis.basis(0).numElements() < 4)
     {
         basis.uniformRefine(1, degree-smoothness);
-        if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
+        if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1 || method == MethodFlags::SURFASG1)
             mp.uniformRefine(1, degree-smoothness);
     }
     //! [Refinement]
@@ -827,6 +827,7 @@ int main(int argc, char *argv[])
         }
         else if (method == MethodFlags::SURFASG1) // Andrea
         {
+            gsDebugVar(basis);
             mp.uniformRefine(1,degree-smoothness);
             basis.uniformRefine(1,degree-smoothness);
 
@@ -837,8 +838,9 @@ int main(int argc, char *argv[])
             gsSparseMatrix<real_t> global2local;
             global2local = smoothC1.getSystem();
             global2local = global2local.transpose();
-            smoothC1.getMultiBasis(basis);
-            bb2.init(basis,global2local);
+            gsMultiBasis<> basis_temp;
+            smoothC1.getMultiBasis(basis_temp);
+            bb2.init(basis_temp,global2local);
         }
 
         // Setup the mapper
@@ -975,7 +977,7 @@ int main(int argc, char *argv[])
         //linferr[r] = ev.max( f-s ) / ev.max(f);
         if (residual)
         {
-            if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1) {
+            if (method != MethodFlags::NITSCHE) {
                 if (r != 0) {
                     auto u_coarse = A.getCoeff(ms_coarse);
                     l2err[r] = math::sqrt(
@@ -1032,7 +1034,7 @@ int main(int argc, char *argv[])
         // Jump error
         if (residual)
         {
-            if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
+            if (method != MethodFlags::NITSCHE)
             {
                 gsMatrix<real_t> solFull;
                 u_sol.extractFull(solFull);

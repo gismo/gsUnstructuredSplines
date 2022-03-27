@@ -444,7 +444,7 @@ int main(int argc, char *argv[])
     bool residual = false;
 
     std::string fn;
-    std::string geometry = "surface/surface_roof.xml";
+    std::string geometry = "g1000";
 
     gsCmdLine cmd("Example for solving the biharmonic problem (single patch only).");
     cmd.addInt("p", "degree","Set discrete polynomial degree", degree);
@@ -468,7 +468,7 @@ int main(int argc, char *argv[])
     gsMultiPatch<real_t> mp;
     std::string string_geo;
     if (fn.empty())
-        string_geo = "planar/geometries/" + geometry + ".xml";
+        string_geo = "surface/geometries/" + geometry + ".xml";
     else
         string_geo = fn;
 
