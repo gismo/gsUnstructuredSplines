@@ -28,7 +28,8 @@ class Method(Enum):
     DPatch = 1
     AlmostC1 = 2
     Nitsche = 3
-
+    #Spline = 4  # Only for surface
+    SurfASG1 = 5  # Only for surface
 
 """
     To run the biharmonic_test.py, we have the following options:
@@ -46,8 +47,8 @@ class Method(Enum):
            
 """
 """ -------------------------------------------------------------------------------------------------- """
-domain = "planar"
-#domain = "surfaces"
+#domain = "planar"
+domain = "surfaces"
 
 #geo_list = ["g1000", "g1100", "g1510", "g1400"]
 #geo_list = ["g1021", "g1121", "g1500", "g1311"]  # Without .xml extension
@@ -56,8 +57,7 @@ domain = "planar"
 geo_list = ["g1702", "g1703", "g1704", "g1023",
             "g1024", "g1122", "g1600", "g1701",
             "g1700", "g1123", "g1601", "g1801"]  # Without .xml extension
-geo_list = ["g1701", "g1700"]  # Without .xml extension
-
+geo_list = ["g2029", "g1021", "g2030", "g2013"]
 
 path_geo = domain + "/geometries/"
 
@@ -65,9 +65,10 @@ NumRefinement = 4
 second = False
 
 deg_list = [
+    [3, 4],
     [3, 4, 5],
     [3, 4, 5],
-    [3, 4, 5],
+    [3],
 ]
 
 # Approx C1: gluing data set to default: \tilde{p} = p-1, \tilde{r} = p-2,
@@ -75,13 +76,15 @@ deg_list = [
 method_list = [
     Method.ApproxC1,
     Method.DPatch,
-    Method.Nitsche
+    Method.Nitsche,
+    Method.SurfASG1
 ]
 
 compute_list = [
-    True,
     False,
-    False
+    False,
+    False,
+    True
 ]
 
 path_example = "../build/bin/biharmonic3_example" if domain == "planar" else "../build/bin/biharmonic_surface2_example"
@@ -99,6 +102,7 @@ for idx, compute in enumerate(compute_list):
 
             for deg in deg_list[idx]:
                 m_str = ""
+                reg = deg - 1
                 if method_list[idx] == Method.ApproxC1:
                     m_str = "approxC1"
                 elif method_list[idx] == Method.Nitsche:
@@ -107,14 +111,17 @@ for idx, compute in enumerate(compute_list):
                     m_str = "dPatch"
                 elif method_list[idx] == Method.AlmostC1:
                     m_str = "almostC1"
+                elif method_list[idx] == Method.SurfASG1:
+                    m_str = "surfASG1"
+                    reg = 1
                 else:
                     print("METHOD NOT IMPLEMENTED!!!")
 
-                argument_list = m_str + "-g" + geo + "-p" + str(deg) + "-s" + str(deg - 1) + "-r" + str(NumRefinement) \
+                argument_list = m_str + "-g" + geo + "-p" + str(deg) + "-s" + str(reg) + "-r" + str(NumRefinement) \
                                 + "-m" + str(method_list[idx].value) + ("--second" if second else "") + ("--residual" if residual else "")
 
                 # [!Run biharmonic2_example]
-                proc = subprocess.Popen([path_example, "-g", geo, "-p", str(deg), "-s", str(deg - 1), "-r", str(NumRefinement),
+                proc = subprocess.Popen([path_example, "-g", geo, "-p", str(deg), "-s", str(reg), "-r", str(NumRefinement),
                                          "-m", str(method_list[idx].value), ("--second" if second else ""), "", ("--residual" if residual else ""), "",
                                          "-o", path_results + argument_list])
                 proc.wait()

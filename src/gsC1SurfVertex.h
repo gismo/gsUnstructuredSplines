@@ -684,7 +684,7 @@ public:
 
                 gsC1SurfBasisVertex<real_t> g1BasisVertex_0(rotPatch.patch(i), rotPatch.patch(i).basis(), isBdy[i], Phi, gdCoefs);
 
-                g1BasisVertex_0.setG1BasisVertex(g1Basis, this->kindOfVertex());
+                g1BasisVertex_0.setG1BasisVertex(g1Basis);
 
                 g1BasisVector.push_back(g1Basis);
                 auxGeom[i].setG1Basis(g1Basis);
@@ -699,7 +699,7 @@ public:
 
                 gsC1SurfBasisVertex<real_t> g1BasisVertex_0(auxGeom[i].getPatch(), auxGeom[i].getPatch().basis(), isBdy[i], Phi, gdCoefs);
 
-                g1BasisVertex_0.setG1BasisVertex(g1Basis, this->kindOfVertex());
+                g1BasisVertex_0.setG1BasisVertex(g1Basis);
 
                 g1BasisVector.push_back(g1Basis);
                 auxGeom[i].setG1Basis(g1Basis);

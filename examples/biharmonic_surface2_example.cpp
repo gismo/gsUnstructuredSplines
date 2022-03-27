@@ -827,9 +827,10 @@ int main(int argc, char *argv[])
         }
         else if (method == MethodFlags::SURFASG1) // Andrea
         {
-            gsDebugVar(basis);
             mp.uniformRefine(1,degree-smoothness);
             basis.uniformRefine(1,degree-smoothness);
+
+            meshsize[r] = basis.basis(0).getMinCellLength();
 
             gsC1SurfSpline<2,real_t> smoothC1(mp,basis);
             smoothC1.init();

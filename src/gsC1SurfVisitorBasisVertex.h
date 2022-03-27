@@ -8,7 +8,7 @@
     License, v. 2.0. If a copy of the MPL was not distributed with this
     file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-    Author(s): A. Farahat & P. Weinmueller  
+    Author(s): A. Farahat
 */
 
 #pragma once
@@ -87,9 +87,9 @@ namespace gismo
                 gsMatrix<> b_0_plus_deriv, b_1_plus_deriv, b_2_plus_deriv;
                 gsMatrix<> b_0_minus, b_1_minus;
 
-                gsBSplineBasis<T> bsp_temp = dynamic_cast<gsBSplineBasis<> & >(basis_geo.component(i));
-                real_t p = bsp_temp.maxDegree();
-                real_t h_geo = bsp_temp.knots().at(p + 2);
+//                gsBSplineBasis<T> bsp_temp = dynamic_cast<gsBSplineBasis<> & >(basis_geo.component(i));
+//                real_t p = bsp_temp.maxDegree();
+//                real_t h_geo = bsp_temp.knots().at(p + 2);
 
                 basis_geo.component(i).evalSingle_into(0, md.points.row(i),b_0); // first
                 basis_geo.component(i).evalSingle_into(1, md.points.row(i),b_1); // second
@@ -105,16 +105,25 @@ namespace gismo
                 basis_minus[i].evalSingle_into(0, md.points.row(i),b_0_minus);
                 basis_minus[i].evalSingle_into(1, md.points.row(i),b_1_minus);
 
-
                 // Point zero
                 gsMatrix<> zero;
                 zero.setZero(2,1);
 
+                gsMatrix<T> b_1_0, b_1_minus_0;
+                basis_geo.component(i).derivSingle_into(1, zero.row(i),b_1_0);
+                basis_minus[i].derivSingle_into(1, zero.row(i),b_1_minus_0);
+//                c_0.push_back(b_0 + b_1);
+//                c_1.push_back((h_geo / p) * b_1);
+//
+//                c_0_minus.push_back(b_0_minus + b_1_minus);
+//                c_1_minus.push_back(h_geo/ (p-1) * b_1_minus);
+                real_t factor_b_1 = 1.0/b_1_0(0,0);
                 c_0.push_back(b_0 + b_1);
-                c_1.push_back((h_geo / p) * b_1);
+                c_1.push_back(factor_b_1 * b_1);
 
+                real_t factor_b_1_minus = 1.0/b_1_minus_0(0,0);
                 c_0_minus.push_back(b_0_minus + b_1_minus);
-                c_1_minus.push_back(h_geo/ (p-1) * b_1_minus);
+                c_1_minus.push_back(factor_b_1_minus * b_1_minus);
 
                 gsMatrix<> der_b_1_plus_0, der2_b_1_plus_0, der2_b_2_plus_0;
                 basis_plus[i].derivSingle_into(1, zero.row(i), der_b_1_plus_0);
@@ -174,6 +183,11 @@ namespace gismo
             gsMatrix<> zero;
             zero.setZero(2,1);
 
+            // Geo data:
+            gsMatrix<T> geo_jac, geo_der2;
+            geo_jac = geo.jacobian(zero);
+            geo_der2 = geo.deriv2(zero);
+
             gsMatrix<> zeros(1, md.points.cols());
             zeros.setZero();
 
@@ -204,43 +218,43 @@ namespace gismo
             gsMatrix<> dd_ik_plus, dd_ik_minus;
             gsMatrix<> dd_ik_minus_deriv, dd_ik_plus_deriv;
 
-            dd_ik_minus = ( -1 / alpha_0[0](0,0) ) * ( geo.jacobian(zero).col(1) +
-                                                       beta_0[0](0,0) * geo.jacobian(zero).col(0) );
+            dd_ik_minus = ( -1 / alpha_0[0](0,0) ) * ( geo_jac.col(1) +
+                                                       beta_0[0](0,0) * geo_jac.col(0) );
 
-            dd_ik_plus = ( 1 / alpha_0[1](0,0) ) * ( geo.jacobian(zero).col(0) +
-                                                     beta_0[1](0,0) * geo.jacobian(zero).col(1) );
+            dd_ik_plus = ( 1 / alpha_0[1](0,0) ) * ( geo_jac.col(0) +
+                                                     beta_0[1](0,0) * geo_jac.col(1) );
 
             gsMatrix<> geo_deriv2_12(geo.targetDim(), 1), geo_deriv2_11(geo.targetDim(), 1), geo_deriv2_22(geo.targetDim(), 1);
 
-            geo_deriv2_12.row(0) = geo.deriv2(zero).row(2);
-            geo_deriv2_12.row(1) = geo.deriv2(zero).row(5);
+            geo_deriv2_12.row(0) = geo_der2.row(2);
+            geo_deriv2_12.row(1) = geo_der2.row(5);
 
-            geo_deriv2_11.row(0) = geo.deriv2(zero).row(0);
-            geo_deriv2_11.row(1) = geo.deriv2(zero).row(3);
+            geo_deriv2_11.row(0) = geo_der2.row(0);
+            geo_deriv2_11.row(1) = geo_der2.row(3);
 
-            geo_deriv2_22.row(0) = geo.deriv2(zero).row(1);
-            geo_deriv2_22.row(1) = geo.deriv2(zero).row(4);
+            geo_deriv2_22.row(0) = geo_der2.row(1);
+            geo_deriv2_22.row(1) = geo_der2.row(4);
 
             if(geo.parDim() + 1 == geo.targetDim()) // In the surface case the dimension of the second derivative vector is 9x1
             {
-                geo_deriv2_12.row(2) = geo.deriv2(zero).row(8);
+                geo_deriv2_12.row(2) = geo_der2.row(8);
 
-                geo_deriv2_11.row(2) = geo.deriv2(zero).row(6);
+                geo_deriv2_11.row(2) = geo_der2.row(6);
 
-                geo_deriv2_22.row(2) = geo.deriv2(zero).row(7);
+                geo_deriv2_22.row(2) = geo_der2.row(7);
             }
 
             gsMatrix<> alpha_squared_u = alpha_0[0]*alpha_0[0];
             gsMatrix<> alpha_squared_v = alpha_0[1]*alpha_0[1];
 
             dd_ik_minus_deriv = -1/(alpha_squared_u(0,0)) * // N^2
-                                ( ( geo_deriv2_12 + (beta_deriv[0](0,0) * geo.jacobian(zero).col(0) + beta_0[0](0,0) * geo_deriv2_11) ) * alpha_0[0](0,0) -
-                                  ( geo.jacobian(zero).col(1) + beta_0[0](0,0) * geo.jacobian(zero).col(0) ) * alpha_deriv[0](0,0) );
+                                ( ( geo_deriv2_12 + (beta_deriv[0](0,0) * geo_jac.col(0) + beta_0[0](0,0) * geo_deriv2_11) ) * alpha_0[0](0,0) -
+                                  ( geo_jac.col(1) + beta_0[0](0,0) * geo_jac.col(0) ) * alpha_deriv[0](0,0) );
 
 
             dd_ik_plus_deriv = 1/(alpha_squared_v(0,0)) *
-                               ( ( geo_deriv2_12 + (beta_deriv[1](0,0) * geo.jacobian(zero).col(1) + beta_0[1](0,0) * geo_deriv2_22) ) * alpha_0[1](0,0) -
-                                 ( geo.jacobian(zero).col(0) + beta_0[1](0,0) * geo.jacobian(zero).col(1) ) * alpha_deriv[1](0,0) );
+                               ( ( geo_deriv2_12 + (beta_deriv[1](0,0) * geo_jac.col(1) + beta_0[1](0,0) * geo_deriv2_22) ) * alpha_0[1](0,0) -
+                                 ( geo_jac.col(0) + beta_0[1](0,0) * geo_jac.col(1) ) * alpha_deriv[1](0,0) );
 
             //if (isBoundary[0] == false)
             //    gsInfo << dd_ik_minus_deriv << "\n";
@@ -251,34 +265,34 @@ namespace gismo
             std::vector<gsMatrix<>> d_ik;
             d_ik.push_back(Phi.row(0).transpose());
 
-            d_ik.push_back(Phi.block(1, 0, geo.targetDim(), 6).transpose() * geo.jacobian(zero).col(0) ); // deriv into u
+            d_ik.push_back(Phi.block(1, 0, geo.targetDim(), 6).transpose() * geo_jac.col(0) ); // deriv into u
 
 
 //        gsInfo << "d_ik: " << d_ik.back()  << "\n";
 //        gsInfo << "======================================= \n";
-//        gsInfo << "geo.jacobian(zero).col(0): " << geo.jacobian(zero).col(0)  << "\n";
+//        gsInfo << "geo_jac.col(0): " << geo_jac.col(0)  << "\n";
 //        gsInfo << "======================================= \n";
 
 
-            d_ik.push_back(Phi.block(1, 0, geo.targetDim(), 6).transpose() * geo.jacobian(zero).col(1) ); // deriv into v
+            d_ik.push_back(Phi.block(1, 0, geo.targetDim(), 6).transpose() * geo_jac.col(1) ); // deriv into v
 
             // Hessian
             if(geo.parDim() + 1 == geo.targetDim()) // In the surface case the dimension of the second derivative vector is 9x1
             {
-                d_ik.push_back( (geo.jacobian(zero)(0,0) * Phi.row(4).transpose() + geo.jacobian(zero)(1,0) * Phi.row(7).transpose() + geo.jacobian(zero)(2,0) * Phi.row(10).transpose()) * geo.jacobian(zero)(0,1) +
-                                (geo.jacobian(zero)(0,0) * Phi.row(5).transpose() + geo.jacobian(zero)(1,0) * Phi.row(8).transpose() + geo.jacobian(zero)(2,0) * Phi.row(11).transpose()) * geo.jacobian(zero)(1,1) +
-                                (geo.jacobian(zero)(0,0) * Phi.row(6).transpose() + geo.jacobian(zero)(1,0) * Phi.row(9).transpose() + geo.jacobian(zero)(2,0) * Phi.row(12).transpose()) * geo.jacobian(zero)(2,1) +
-                                Phi.block(1, 0, 1, 6).transpose() * geo.deriv2(zero).row(2) +
-                                Phi.block(2, 0, 1, 6).transpose() * geo.deriv2(zero).row(5) +
-                                Phi.block(3, 0, 1, 6).transpose() * geo.deriv2(zero).row(8) );
+                d_ik.push_back( (geo_jac(0,0) * Phi.row(4).transpose() + geo_jac(1,0) * Phi.row(7).transpose() + geo_jac(2,0) * Phi.row(10).transpose()) * geo_jac(0,1) +
+                                (geo_jac(0,0) * Phi.row(5).transpose() + geo_jac(1,0) * Phi.row(8).transpose() + geo_jac(2,0) * Phi.row(11).transpose()) * geo_jac(1,1) +
+                                (geo_jac(0,0) * Phi.row(6).transpose() + geo_jac(1,0) * Phi.row(9).transpose() + geo_jac(2,0) * Phi.row(12).transpose()) * geo_jac(2,1) +
+                                Phi.block(1, 0, 1, 6).transpose() * geo_der2.row(2) +
+                                Phi.block(2, 0, 1, 6).transpose() * geo_der2.row(5) +
+                                Phi.block(3, 0, 1, 6).transpose() * geo_der2.row(8) );
 
             }
             else
             {
-                d_ik.push_back( (geo.jacobian(zero)(0,0) * Phi.col(3) + geo.jacobian(zero)(1,0) * Phi.col(4)) * geo.jacobian(zero)(0,1) +
-                                (geo.jacobian(zero)(0,0) * Phi.col(4) + geo.jacobian(zero)(1,0) * Phi.col(5)) * geo.jacobian(zero)(1,1) +
-                                Phi.block(0,1, 6,1) * geo.deriv2(zero).row(2) +
-                                Phi.block(0,2, 6,1) * geo.deriv2(zero).row(5)); // Hessian
+                d_ik.push_back( (geo_jac(0,0) * Phi.col(3) + geo_jac(1,0) * Phi.col(4)) * geo_jac(0,1) +
+                                (geo_jac(0,0) * Phi.col(4) + geo_jac(1,0) * Phi.col(5)) * geo_jac(1,1) +
+                                Phi.block(0,1, 6,1) * geo_der2.row(2) +
+                                Phi.block(0,2, 6,1) * geo_der2.row(5)); // Hessian
             }
 
 //        gsInfo << "d_ik: " << d_ik.back() << " : " << Phi << "\n";
@@ -288,40 +302,40 @@ namespace gismo
 //      d_(*,*)^(ik-1,ik)
             d_ilik_minus.push_back(Phi.row(0).transpose());
 
-            d_ilik_minus.push_back(Phi.block(1, 0, geo.targetDim(), 6).transpose() * geo.jacobian(zero).col(0));
+            d_ilik_minus.push_back(Phi.block(1, 0, geo.targetDim(), 6).transpose() * geo_jac.col(0));
 
             if(geo.parDim() + 1 == geo.targetDim()) // In the surface case the dimension of the second derivative vector is 9x1
             {
-                d_ilik_minus.push_back( (geo.jacobian(zero)(0,0) * Phi.row(4).transpose() + geo.jacobian(zero)(1,0) * Phi.row(7).transpose() + geo.jacobian(zero)(2,0) * Phi.row(10).transpose()) * geo.jacobian(zero)(0,0) +
-                                        (geo.jacobian(zero)(0,0) * Phi.row(5).transpose() + geo.jacobian(zero)(1,0) * Phi.row(8).transpose() + geo.jacobian(zero)(2,0) * Phi.row(11).transpose()) * geo.jacobian(zero)(1,0) +
-                                        (geo.jacobian(zero)(0,0) * Phi.row(6).transpose() + geo.jacobian(zero)(1,0) * Phi.row(9).transpose() + geo.jacobian(zero)(2,0) * Phi.row(12).transpose()) * geo.jacobian(zero)(2,0) +
-                                        Phi.block(1, 0, 1, 6).transpose() * geo.deriv2(zero).row(0) +
-                                        Phi.block(2, 0, 1, 6).transpose() * geo.deriv2(zero).row(3) +
-                                        Phi.block(3, 0, 1, 6).transpose() * geo.deriv2(zero).row(6) );
+                d_ilik_minus.push_back( (geo_jac(0,0) * Phi.row(4).transpose() + geo_jac(1,0) * Phi.row(7).transpose() + geo_jac(2,0) * Phi.row(10).transpose()) * geo_jac(0,0) +
+                                        (geo_jac(0,0) * Phi.row(5).transpose() + geo_jac(1,0) * Phi.row(8).transpose() + geo_jac(2,0) * Phi.row(11).transpose()) * geo_jac(1,0) +
+                                        (geo_jac(0,0) * Phi.row(6).transpose() + geo_jac(1,0) * Phi.row(9).transpose() + geo_jac(2,0) * Phi.row(12).transpose()) * geo_jac(2,0) +
+                                        Phi.block(1, 0, 1, 6).transpose() * geo_der2.row(0) +
+                                        Phi.block(2, 0, 1, 6).transpose() * geo_der2.row(3) +
+                                        Phi.block(3, 0, 1, 6).transpose() * geo_der2.row(6) );
             }
             else
             {
-                d_ilik_minus.push_back( (geo.jacobian(zero)(0,0) * Phi.col(3) + geo.jacobian(zero)(1,0) * Phi.col(4))*geo.jacobian(zero)(0,0) +
-                                        (geo.jacobian(zero)(0,0) * Phi.col(4) + geo.jacobian(zero)(1,0) * Phi.col(5))*geo.jacobian(zero)(1,0) +
-                                        Phi.block(0,1,6,1) * geo.deriv2(zero).row(0) +
-                                        Phi.block(0,2,6,1) * geo.deriv2(zero).row(3));
+                d_ilik_minus.push_back( (geo_jac(0,0) * Phi.col(3) + geo_jac(1,0) * Phi.col(4))*geo_jac(0,0) +
+                                        (geo_jac(0,0) * Phi.col(4) + geo_jac(1,0) * Phi.col(5))*geo_jac(1,0) +
+                                        Phi.block(0,1,6,1) * geo_der2.row(0) +
+                                        Phi.block(0,2,6,1) * geo_der2.row(3));
             }
 
             d_ilik_minus.push_back(Phi.block(1, 0, geo.targetDim(), 6).transpose() * dd_ik_minus);
 
             if(geo.parDim() + 1 == geo.targetDim()) // In the surface case the dimension of the second derivative vector is 9x1
             {
-                d_ilik_minus.push_back( (geo.jacobian(zero)(0,0) * Phi.row(4).transpose() + geo.jacobian(zero)(1,0) * Phi.row(7).transpose() + geo.jacobian(zero)(2,0) * Phi.row(10).transpose()) * dd_ik_minus(0,0) +
-                                        (geo.jacobian(zero)(0,0) * Phi.row(5).transpose() + geo.jacobian(zero)(1,0) * Phi.row(8).transpose() + geo.jacobian(zero)(2,0) * Phi.row(11).transpose()) * dd_ik_minus(1,0) +
-                                        (geo.jacobian(zero)(0,0) * Phi.row(6).transpose() + geo.jacobian(zero)(1,0) * Phi.row(9).transpose() + geo.jacobian(zero)(2,0) * Phi.row(12).transpose()) * dd_ik_minus(2,0) +
+                d_ilik_minus.push_back( (geo_jac(0,0) * Phi.row(4).transpose() + geo_jac(1,0) * Phi.row(7).transpose() + geo_jac(2,0) * Phi.row(10).transpose()) * dd_ik_minus(0,0) +
+                                        (geo_jac(0,0) * Phi.row(5).transpose() + geo_jac(1,0) * Phi.row(8).transpose() + geo_jac(2,0) * Phi.row(11).transpose()) * dd_ik_minus(1,0) +
+                                        (geo_jac(0,0) * Phi.row(6).transpose() + geo_jac(1,0) * Phi.row(9).transpose() + geo_jac(2,0) * Phi.row(12).transpose()) * dd_ik_minus(2,0) +
                                         Phi.block(1, 0, 1, 6).transpose() * dd_ik_minus_deriv.row(0) +
                                         Phi.block(2, 0, 1, 6).transpose() * dd_ik_minus_deriv.row(1) +
                                         Phi.block(3, 0, 1, 6).transpose() * dd_ik_minus_deriv.row(2) );
             }
             else
             {
-                d_ilik_minus.push_back( (geo.jacobian(zero)(0,0) * Phi.col(3) + geo.jacobian(zero)(1,0) * Phi.col(4)) * dd_ik_minus(0,0) +
-                                        (geo.jacobian(zero)(0,0) * Phi.col(4) + geo.jacobian(zero)(1,0) * Phi.col(5)) * dd_ik_minus(1,0) +
+                d_ilik_minus.push_back( (geo_jac(0,0) * Phi.col(3) + geo_jac(1,0) * Phi.col(4)) * dd_ik_minus(0,0) +
+                                        (geo_jac(0,0) * Phi.col(4) + geo_jac(1,0) * Phi.col(5)) * dd_ik_minus(1,0) +
                                         Phi.block(0,1,6,1) * dd_ik_minus_deriv.row(0) +
                                         Phi.block(0,2,6,1) * dd_ik_minus_deriv.row(1));
             }
@@ -330,40 +344,40 @@ namespace gismo
 //      d_(*,*)^(ik+1,ik)
             d_ilik_plus.push_back(Phi.row(0).transpose());
 
-            d_ilik_plus.push_back(Phi.block(1, 0, geo.targetDim(), 6).transpose() * geo.jacobian(zero).col(1));
+            d_ilik_plus.push_back(Phi.block(1, 0, geo.targetDim(), 6).transpose() * geo_jac.col(1));
 
             if(geo.parDim() + 1 == geo.targetDim()) // In the surface case the dimension of the second derivative vector is 9x1
             {
-                d_ilik_plus.push_back( (geo.jacobian(zero)(0,1) * Phi.row(4).transpose() + geo.jacobian(zero)(1,1) * Phi.row(7).transpose() + geo.jacobian(zero)(2,1) * Phi.row(10).transpose()) * geo.jacobian(zero)(0,1) +
-                                       (geo.jacobian(zero)(0,1) * Phi.row(5).transpose() + geo.jacobian(zero)(1,1) * Phi.row(8).transpose() + geo.jacobian(zero)(2,1) * Phi.row(11).transpose()) * geo.jacobian(zero)(1,1) +
-                                       (geo.jacobian(zero)(0,1) * Phi.row(6).transpose() + geo.jacobian(zero)(1,1) * Phi.row(9).transpose() + geo.jacobian(zero)(2,1) * Phi.row(12).transpose()) * geo.jacobian(zero)(2,1) +
-                                       Phi.block(1, 0, 1, 6).transpose() * geo.deriv2(zero).row(1) +
-                                       Phi.block(2, 0, 1, 6).transpose() * geo.deriv2(zero).row(4) +
-                                       Phi.block(3, 0, 1, 6).transpose() * geo.deriv2(zero).row(7) );
+                d_ilik_plus.push_back( (geo_jac(0,1) * Phi.row(4).transpose() + geo_jac(1,1) * Phi.row(7).transpose() + geo_jac(2,1) * Phi.row(10).transpose()) * geo_jac(0,1) +
+                                       (geo_jac(0,1) * Phi.row(5).transpose() + geo_jac(1,1) * Phi.row(8).transpose() + geo_jac(2,1) * Phi.row(11).transpose()) * geo_jac(1,1) +
+                                       (geo_jac(0,1) * Phi.row(6).transpose() + geo_jac(1,1) * Phi.row(9).transpose() + geo_jac(2,1) * Phi.row(12).transpose()) * geo_jac(2,1) +
+                                       Phi.block(1, 0, 1, 6).transpose() * geo_der2.row(1) +
+                                       Phi.block(2, 0, 1, 6).transpose() * geo_der2.row(4) +
+                                       Phi.block(3, 0, 1, 6).transpose() * geo_der2.row(7) );
             }
             else
             {
-                d_ilik_plus.push_back( (geo.jacobian(zero)(0,1) * Phi.col(3) + geo.jacobian(zero)(1,1) * Phi.col(4)) * geo.jacobian(zero)(0,1) +
-                                       (geo.jacobian(zero)(0,1) * Phi.col(4) + geo.jacobian(zero)(1,1) * Phi.col(5)) * geo.jacobian(zero)(1,1) +
-                                       Phi.block(0,1,6,1) * geo.deriv2(zero).row(1) +
-                                       Phi.block(0,2,6,1) * geo.deriv2(zero).row(4) );
+                d_ilik_plus.push_back( (geo_jac(0,1) * Phi.col(3) + geo_jac(1,1) * Phi.col(4)) * geo_jac(0,1) +
+                                       (geo_jac(0,1) * Phi.col(4) + geo_jac(1,1) * Phi.col(5)) * geo_jac(1,1) +
+                                       Phi.block(0,1,6,1) * geo_der2.row(1) +
+                                       Phi.block(0,2,6,1) * geo_der2.row(4) );
             }
 
             d_ilik_plus.push_back(Phi.block(1, 0, geo.targetDim(), 6).transpose() * dd_ik_plus);
 
             if(geo.parDim() + 1 == geo.targetDim()) // In the surface case the dimension of the second derivative vector is 9x1
             {
-                d_ilik_plus.push_back( (geo.jacobian(zero)(0,1) * Phi.row(4).transpose() + geo.jacobian(zero)(1,1) * Phi.row(7).transpose() + geo.jacobian(zero)(2,1) * Phi.row(10).transpose()) * dd_ik_plus(0,0) +
-                                       (geo.jacobian(zero)(0,1) * Phi.row(5).transpose() + geo.jacobian(zero)(1,1) * Phi.row(8).transpose() + geo.jacobian(zero)(2,1) * Phi.row(11).transpose()) * dd_ik_plus(1,0) +
-                                       (geo.jacobian(zero)(0,1) * Phi.row(6).transpose() + geo.jacobian(zero)(1,1) * Phi.row(9).transpose() + geo.jacobian(zero)(2,1) * Phi.row(12).transpose()) * dd_ik_plus(2,0) +
+                d_ilik_plus.push_back( (geo_jac(0,1) * Phi.row(4).transpose() + geo_jac(1,1) * Phi.row(7).transpose() + geo_jac(2,1) * Phi.row(10).transpose()) * dd_ik_plus(0,0) +
+                                       (geo_jac(0,1) * Phi.row(5).transpose() + geo_jac(1,1) * Phi.row(8).transpose() + geo_jac(2,1) * Phi.row(11).transpose()) * dd_ik_plus(1,0) +
+                                       (geo_jac(0,1) * Phi.row(6).transpose() + geo_jac(1,1) * Phi.row(9).transpose() + geo_jac(2,1) * Phi.row(12).transpose()) * dd_ik_plus(2,0) +
                                        Phi.block(1, 0, 1, 6).transpose() * dd_ik_plus_deriv.row(0) +
                                        Phi.block(2, 0, 1, 6).transpose() * dd_ik_plus_deriv.row(1) +
                                        Phi.block(3, 0, 1, 6).transpose() * dd_ik_plus_deriv.row(2) );
             }
             else
             {
-                d_ilik_plus.push_back( (geo.jacobian(zero)(0,1) * Phi.col(3) + geo.jacobian(zero)(1,1) * Phi.col(4)) * dd_ik_plus(0,0) +
-                                       (geo.jacobian(zero)(0,1) * Phi.col(4) + geo.jacobian(zero)(1,1) * Phi.col(5)) * dd_ik_plus(1,0) +
+                d_ilik_plus.push_back( (geo_jac(0,1) * Phi.col(3) + geo_jac(1,1) * Phi.col(4)) * dd_ik_plus(0,0) +
+                                       (geo_jac(0,1) * Phi.col(4) + geo_jac(1,1) * Phi.col(5)) * dd_ik_plus(1,0) +
                                        Phi.block(0,1,6,1) * dd_ik_plus_deriv.row(0) +
                                        Phi.block(0,2,6,1) * dd_ik_plus_deriv.row(1) );
             }
