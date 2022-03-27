@@ -41,7 +41,7 @@ namespace gismo
     void gsDPatch<d,T>::defaultOptions()
     {
         m_options.addSwitch("Verbose","Verbose output",false);
-        m_options.addInt("Pi","Pi matrix to be applied, 0: Non-negative, 1: Idempoten",0);
+        m_options.addInt("Pi","Pi matrix to be applied, 0: Non-negative, 1: Idempotent",0);
     }
 
     /*=====================================================================================
