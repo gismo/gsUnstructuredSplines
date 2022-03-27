@@ -16,6 +16,9 @@
 #include <gsUnstructuredSplines/src/gsAlmostC1.h>
 #include <gsUnstructuredSplines/src/gsAlmostC1.hpp>
 
+#include <gsUnstructuredSplines/src/gsDPatchBase.h>
+#include <gsUnstructuredSplines/src/gsDPatchBase.hpp>
+
 namespace gismo
 {
 

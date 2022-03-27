@@ -13,15 +13,12 @@
 
 #include <gsCore/gsTemplateTools.h>
 
-#include <gsUnstructuredSplines/src/gsDPatch.h>
-#include <gsUnstructuredSplines/src/gsDPatch.hpp>
-
 #include <gsUnstructuredSplines/src/gsDPatchBase.h>
 #include <gsUnstructuredSplines/src/gsDPatchBase.hpp>
 
 namespace gismo
 {
 
-    CLASS_TEMPLATE_INST gsDPatch<2,real_t> ;
+    CLASS_TEMPLATE_INST gsDPatchBase<2,real_t> ;
 
 } // end namespace gismo
