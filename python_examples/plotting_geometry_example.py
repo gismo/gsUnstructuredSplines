@@ -15,7 +15,7 @@
 import os
 import sys
 
-path_module = "data-private/"
+path_module = "data/"
 print("Module path:", path_module, "(change if needed).")
 os.chdir(os.path.join(os.path.dirname(__file__), "../../../" + path_module))
 
@@ -47,15 +47,31 @@ import library.library as lib
            
 """
 """ -------------------------------------------------------------------------------------------------- """
-#domain = "planar"
+domain = "planar"
 domain = "surfaces"
 
 # geo_list = ["g1000", "g1100", "g1510", "g1400"]  # Without .xml extension
 # geo_list = ["g1021", "g1121", "g1500", "g1311"]  # Without .xml extension
 # geo_list = ["g1000", "g1100", "g1510", "g1400","g1021", "g1121", "g1501", "g1311"]
 # geo_list = ["g1121", "g1702", "g1704", "g1703"]
-#geo_list = ["g1001", "g1021", "g1030", "g1031"]  # Without .xml extension
+# geo_list = ["g1001", "g1021", "g1030", "g1031"]  # Without .xml extension
+# geo_list = ["g2029", "g1021", "g2030", "g2013"]
+
+# List for planar
+geo_list = ["g1000", "g1100", "g1510", "g1400",
+            "g1021", "g1121", "g1500", "g1311",
+            "g1702", "g1705", "g1704", "g1023",
+            "g1024", "g1122", "g1600", "g1701",
+            "g1700", "g1123", "g1601", "g1801"]  # Without .xml extension
+
+# List for surfaces
+geo_list = ["g2029", "g2024", "g2030", "g2013",
+            "g2007","g2009","g1031","g1021",
+            "g2018", "g2000","g2028","g2008"]
+
 geo_list = ["g2029", "g1021", "g2030", "g2013"]
+
+
 
 from glob import glob
 
@@ -69,11 +85,11 @@ path_geo = "../filedata/" + domain + "/geometries/"
 # geo_list = geo_list_temp
 # print(geo_list)
 
-caption_list = 2*geo_list
-print(caption_list)
+caption_list = geo_list
 
-# numData = 50
 numData = 50
+
+plot_solution = False
 """ -------------------------------------------------------------------------------------------------- """
 # Here the tikz files and the corresponding pdf are stored
 # Change if necessary
@@ -256,25 +272,65 @@ for idgeo, geo in enumerate(geo_list):
         ax.xaxis.set_major_locator(ticker.MultipleLocator(0.5))
 
         geo_name = geo.replace("/", ":")
-        tikz_list.append(path_dir + geo_name + "_mesh" + '.pdf')
-        plt.savefig(path_fig + geo_name + "_mesh" + '.pdf')
-        crop_list.append(path_dir + geo_name + "_mesh")
+        tikz_list.append(path_dir + geo_name + "_mesh" + '.png')
+        plt.savefig(path_fig + geo_name + "_mesh" + '.png')
+        crop_list.append(path_dir + geo_name + "_mesh.png")
 
-        ax.view_init(azim=-90, elev=90)
-        ax.set_zticks([])
-
-        geo_name = geo.replace("/", ":")
-        tikz_list.append(path_dir + geo_name + "_mesh2" + '.pdf')
-        plt.savefig(path_fig + geo_name + "_mesh2" + '.pdf')
-        crop_list.append(path_dir + geo_name + "_mesh2")
+        # ax.view_init(azim=-90, elev=90)
+        # ax.set_zticks([])
+        #
+        # geo_name = geo.replace("/", ":")
+        # tikz_list.append(path_dir + geo_name + "_mesh2" + '.pdf')
+        # plt.savefig(path_fig + geo_name + "_mesh2" + '.pdf')
+        # crop_list.append(path_dir + geo_name + "_mesh2")
+        # caption_list = 2*geo_list
 
         #plt.show()
         plt.close(fig)
 
+
+
+    if plot_solution:
+        nx, ny = (numData, numData)  # If you need a "smoother" picture, increase the number of points
+
+        x = np.linspace(0, 1, nx)
+        y = np.linspace(0, 1, ny)
+        xv, yv = np.meshgrid(x, y)
+
+        fig = plt.figure()
+        ax = plt.axes(projection='3d')
+
+        x = xv
+        y = yv
+
+        for idx in range(mp.nPatches()):
+            Z = np.zeros((nx, ny))
+            X = np.zeros((nx, ny))
+            Y = np.zeros((nx, ny))
+            for i in range(nx):
+                for j in range(ny):
+                    uv = [x[i, j], y[i, j]]
+                    xy = mp.patch(idx).eval(uv)
+                    X[i, j] = xy[0]
+                    Y[i, j] = xy[1]
+                    ms = gs.core.gsFunctionExpr("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)", 2)
+                    Z[i, j] = ms.eval(xy)
+
+            surf = ax.plot_surface(X, Y, Z, edgecolor='none')
+            surf._facecolors2d = surf._facecolor3d
+            surf._edgecolors2d = surf._edgecolor3d
+
+        tikz_list.append(path_dir + 'solution_' + geo + '.png')
+        plt.savefig(path_fig + 'solution_' + geo + '.png')
+        crop_list.append(path_dir + 'solution_' + geo + '.png')
+        #plt.show()
+        plt.close(fig)
+
+        caption_list = 2*geo_list
+
 if not len(tikz_list) == len(caption_list):
     print("Something is wrong in tikz_list and caption_list!")
     exit()
-
 
 
 # Creating the tex and pdf file

@@ -17,7 +17,7 @@
 
 #include <gsUnstructuredSplines/src/gsContainerBasis.h>
 #include <gsUnstructuredSplines/src/gsPatchReparameterized.h>
-#include <gsUnstructuredSplines/src/gsApproxGluingData.h>
+#include <gsUnstructuredSplines/src/gsApproxC1GluingData.h>
 
 
 namespace gismo {
@@ -209,7 +209,7 @@ public:
             }
 
             // Compute Gluing data
-            gsApproxGluingData<d, T> approxGluingData(auxPatchSingle, m_optionList, containingSides, isInterface, basis_pm);
+            gsApproxC1GluingData<d, T> approxGluingData(auxPatchSingle, m_optionList, containingSides, isInterface, basis_pm);
 
             //gsGeometry<T> & geo = auxPatchSingle[0].getPatchRotated();
             gsGeometry<T> & geo = rotPatch.patch(i);

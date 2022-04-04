@@ -32,10 +32,16 @@ def clean_extensions(crop=None):
                     raise
     if not crop == None:
         for file in crop:
-            try:
-                os.system("pdfcrop tikz_figures/" + file + ".pdf tikz_figures/" + file + ".pdf")
-            except:
-                print("Please install pdfcrop. Cannot crop the figures.")
+            if file[-3:] == "png":
+                try:
+                    os.system("convert tikz_figures/" + file + " -trim tikz_figures/" + file)
+                except:
+                    print("Crop png file doesn't work.")
+            else:
+                try:
+                    os.system("pdfcrop tikz_figures/" + file + ".pdf tikz_figures/" + file + ".pdf")
+                except:
+                    print("Please install pdfcrop. Cannot crop the figures.")
 
 
 class MyDocument(Document):
@@ -63,9 +69,9 @@ class MyDocument(Document):
         self.preamble.append(NoEscape(r'\definecolor{red}{HTML}{078282}'))
         self.preamble.append(NoEscape(r'\definecolor{green}{HTML}{339E66}'))
 
-    def addTikzFigure(self, tikz_list, caption_list, col=1, row=7, legend=None):
-        # Input: tikz_list      [list] A list of tikz_files
-        #        caption_list   [list] A list of captions for each tikz_file
+    def addTikzFigure(self, tikz_list, subcaption_list, caption_list, col=1, row=7, legend=None):
+        # Input: tikz_list         [list] A list of tikz_files
+        #        subcaption_list   [list] A list of captions for each tikz_file
 
         pages = len(tikz_list)//(col*row) if len(tikz_list)%(col*row) == 0 else len(tikz_list)//(col*row) + 1
 
@@ -81,13 +87,13 @@ class MyDocument(Document):
                                 position='b',
                                 width=NoEscape(width))) as subfig:
                             self.append(NoEscape(r"\centering"))
-                            if tikz[-3:] == "pdf":
+                            if tikz[-3:] == "pdf" or tikz[-3:] == "png":
                                 self.append(NoEscape(r'\resizebox{\textwidth}{!}{'
                                                      r'\includegraphics[width=\textwidth]{tikz_figures/' + tikz + '}'))
                                 self.append(NoEscape(r'}'))
                             else:
                                 self.append(NoEscape(r'\inputtikz{' + tikz + '}'))
-                            subfig.add_caption(NoEscape(r'' + caption_list[idx+col*row*page]))
+                            subfig.add_caption(NoEscape(r'' + subcaption_list[idx+col*row*page]))
                     if idx % col == col - 1:
                         self.append(NoEscape(r"\\"))
 
@@ -96,12 +102,12 @@ class MyDocument(Document):
                     for leg in legend:
                         with self.create(SubFigure(
                                 position='b',
-                                width=NoEscape(width))) as subfig:
+                                width=NoEscape(r'1\textwidth'))) as subfig:
                             self.append(NoEscape(r"\centering"))
                             self.append(NoEscape(r'\inputtikz{' + str(leg) + '}'))
                     self.append(NoEscape(r"\end{center}"))
 
-                fig.add_caption("Geometries " + str(page))
+                fig.add_caption(caption_list[page])
 
 
 class MyTikz(Document):

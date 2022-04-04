@@ -16,7 +16,7 @@
 
 import os, sys
 
-path_module = "data-private/"
+path_module = "data/"
 print("Module path:", path_module, "(change if needed).")
 os.chdir(os.path.join(os.path.dirname(__file__), "../../../"+path_module))
 
@@ -55,11 +55,11 @@ class Method(Enum):
            - plot               [bool]       Print the result in paraview output
            - mesh               [bool]       Flag for printing the mesh lines in the output
            
-    Output:- The xml file is stored in "data-privat/biharmonic_bvp_example.xml"
+    Output:- The xml file is stored in "data/biharmonic_bvp_example.xml"
     
     To run the xml file, use for this location:
     ~/gismo/extensions/gsUnstructuredSplines/python_examples $ 
-    ../../../build/bin/biharmonic3_example -x "../../../data-private/biharmonic_bvp_example.xml"
+    ../../../build/bin/biharmonic3_example -x "../../../data/biharmonic_bvp_example.xml"
     
            
 """

@@ -19,23 +19,23 @@ namespace gismo
 {
 
 template<short_t d, class T>
-class gsApproxGluingData
+class gsApproxC1GluingData
 {
 private:
     typedef typename std::vector<gsPatchReparameterized<d,T>> C1AuxPatchContainer;
 
     /// Shared pointer for gsApproxGluingData
-    typedef memory::shared_ptr<gsApproxGluingData> Ptr;
+    typedef memory::shared_ptr<gsApproxC1GluingData> Ptr;
 
     /// Unique pointer for gsApproxGluingData
-    typedef memory::unique_ptr<gsApproxGluingData> uPtr;
+    typedef memory::unique_ptr<gsApproxC1GluingData> uPtr;
 
 public:
-    gsApproxGluingData()
+    gsApproxC1GluingData()
     { }
 
 
-    gsApproxGluingData(C1AuxPatchContainer const & auxPatchContainer,
+    gsApproxC1GluingData(C1AuxPatchContainer const & auxPatchContainer,
                        gsOptionList const & optionList,
                        std::vector<patchSide> sidesContainer,
                        std::vector<bool> isInterface = std::vector<bool>{},
@@ -98,7 +98,7 @@ protected:
 
 
 template<short_t d, class T>
-void gsApproxGluingData<d, T>::setGlobalGluingData(index_t patchID, index_t dir)
+void gsApproxC1GluingData<d, T>::setGlobalGluingData(index_t patchID, index_t dir)
 {
     // Interpolate boundary yes or no //
     bool interpolate_boundary = false;
@@ -119,7 +119,7 @@ void gsApproxGluingData<d, T>::setGlobalGluingData(index_t patchID, index_t dir)
 
 
     //! [Problem setup]
-    gsSparseSolver<real_t>::LU solver;
+    gsSparseSolver<real_t>::SimplicialLDLT solver;
     gsExprAssembler<T> A(1,1);
 
     // Elements used for numerical integration

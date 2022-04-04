@@ -213,8 +213,7 @@ public:
 
         gsMatrix<> alpha_R_L = alpha_R.cwiseProduct(alpha_L);
 
-        gsMatrix<> lamB = ones / 10000000;
-
+        gsMatrix<> lamB = ones / 10000000000;
 
         basisDataBeta.setZero(numActiveBeta * numActiveBeta, md.points.cols());
         rhsValsBeta.setZero(numActiveBeta, md.points.cols());

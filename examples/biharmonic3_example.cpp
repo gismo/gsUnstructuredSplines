@@ -198,17 +198,23 @@ void computeStabilityParameter(gsMultiPatch<> mp, gsMultiBasis<> dbasis, gsMatri
         gsMultiBasis<> dbasis_temp;
         dbasis_temp.addBasis(dbasis.basis(it->first().patch).clone().release());
         dbasis_temp.addBasis(dbasis.basis(it->second().patch).clone().release());
-/*
-        patchSide pS1 = mp_temp.interfaces()[0].first();
-        patchSide pS2 = mp_temp.interfaces()[0].second();
+
         gsBoundaryConditions<> bc;
 
-        index_t side = pS1.index() < 3 ? (pS1.index() == 1 ? 2 : 1) : (pS1.index() == 3 ? 4 : 3);
-        bc.addCondition(patchSide(pS1.patchIndex(), side), condition_type::dirichlet, 0);
+//        patchSide pS1 = mp_temp.interfaces()[0].first();
+//        patchSide pS2 = mp_temp.interfaces()[0].second();
+//
+//
+//        index_t side = pS1.index() < 3 ? (pS1.index() == 1 ? 2 : 1) : (pS1.index() == 3 ? 4 : 3);
+//        bc.addCondition(patchSide(pS1.patchIndex(), side), condition_type::dirichlet, 0);
+//
+//        side = pS2.index() < 3 ? (pS2.index() == 1 ? 2 : 1) : (pS2.index() == 3 ? 4 : 3);
+//        bc.addCondition(patchSide(pS2.patchIndex(), side), condition_type::dirichlet, 0);
 
-        side = pS2.index() < 3 ? (pS2.index() == 1 ? 2 : 1) : (pS2.index() == 3 ? 4 : 3);
-        bc.addCondition(patchSide(pS2.patchIndex(), side), condition_type::dirichlet, 0);
-*/
+        // Make the Eigenvalue problem to a homogeneous one
+        for (gsMultiPatch<>::const_biterator bit = mp_temp.bBegin(); bit != mp_temp.bEnd(); ++bit)
+            bc.addCondition(*bit, condition_type::dirichlet, 0);
+
         gsExprAssembler<real_t> A2(1, 1), B2(1, 1);
 
         // Elements used for numerical integration
@@ -223,10 +229,10 @@ void computeStabilityParameter(gsMultiPatch<> mp, gsMultiBasis<> dbasis, gsMatri
         auto uA = A2.getSpace(dbasis_temp);
         auto uB = B2.getSpace(dbasis_temp);
 
-        //uA.setup(bc, dirichlet::homogeneous, 0);
-        //uB.setup(bc, dirichlet::homogeneous,0);
-        uA.setup(0);
-        uB.setup(0);
+        uA.setup(bc, dirichlet::homogeneous, 0);
+        uB.setup(bc, dirichlet::homogeneous,0);
+        //uA.setup(0);
+        //uB.setup(0);
 
         A2.initSystem();
         B2.initSystem();
@@ -240,7 +246,7 @@ void computeStabilityParameter(gsMultiPatch<> mp, gsMultiBasis<> dbasis, gsMatri
 
         B2.assemble(ilapl(uB, GB) * ilapl(uB, GB).tr() * meas(GB));
 
-        // TODO STILL INSTABLE
+        // TODO INSTABLE && SLOW
         Eigen::MatrixXd AA = A2.matrix().toDense().cast<double>();
         Eigen::MatrixXd BB = B2.matrix().toDense().cast<double>();
         Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXd> ges(AA, BB);
@@ -282,6 +288,7 @@ int main(int argc, char *argv[])
 {
     //! [Parse command line]
     bool plot = false;
+    bool plotApproxC1 = false;
     bool mesh = false;
 
     index_t method = 0;
@@ -328,6 +335,7 @@ int main(int argc, char *argv[])
     cmd.addInt( "R", "gluingDataSmoothness", "Set the smoothness for the gluing data",  gluingDataSmoothness );
     cmd.addSwitch("interpolation", "Compute the basis constructions with interpolation", interpolation);
     cmd.addSwitch("info", "Getting the information inside of Approximate C1 basis functions", info);
+    cmd.addSwitch("plotApproxC1", "Plot the approximate C1 basis functions", plotApproxC1);
 
     // Flags related to Nitsche's method
     cmd.addReal( "y", "penalty", "Fixed Penalty value for Nitsche's method",  penalty_init);
@@ -569,7 +577,7 @@ int main(int argc, char *argv[])
             // The approx. C1 space
             gsApproxC1Spline<2,real_t> approxC1(mp,dbasis);
             approxC1.options().setSwitch("info",info);
-            approxC1.options().setSwitch("plot",plot);
+            approxC1.options().setSwitch("plot",plotApproxC1);
             approxC1.options().setSwitch("interpolation",interpolation);
             approxC1.options().setSwitch("second",second);
             approxC1.options().setInt("gluingDataDegree",gluingDataDegree);

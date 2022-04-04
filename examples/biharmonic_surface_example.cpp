@@ -468,7 +468,7 @@ int main(int argc, char *argv[])
     gsMultiPatch<real_t> mp;
     std::string string_geo;
     if (fn.empty())
-        string_geo = "surface/geometries/" + geometry + ".xml";
+        string_geo = "surfaces/geometries/" + geometry + ".xml";
     else
         string_geo = fn;
 
@@ -484,10 +484,16 @@ int main(int argc, char *argv[])
     }
     //! [Read geometry]
 
-    gsFunctionExpr<>f("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
-    gsInfo << "Source function: " << f << "\n";
+    //gsFunctionExpr<>f("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
+    //gsFunctionExpr<> ms("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",3);
 
-    gsFunctionExpr<> ms("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",3);
+
+    gsFunctionExpr<> f  ("(64 * (x - y) * (x + y) * (13 + 64 * x^4 + 12 * y^2 + 64 * y^4 + x^2 * (12 - 768 * y^2)))/(1 + 4 * x^2 + 4 * y^2)^5",3);
+//    gsFunctionExpr<> source  ("z",3);
+
+    gsFunctionExpr<> ms("z",3);
+
+    gsInfo << "Source function: " << f << "\n";
     gsInfo << "Exact function: " << ms << "\n";
 
     //! [Refinement]
@@ -509,15 +515,20 @@ int main(int argc, char *argv[])
     }
     //! [Refinement]
 
-    gsDebugVar(mp.basis(0));
+    gsDebugVar(basis.basis(0));
 
     //! [Boundary condition]
     // Laplace
-    gsFunctionExpr<> laplace ("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
+    //gsFunctionExpr<> laplace ("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
     // Neumann
-    gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
-                     "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)",
-                     "0", 3);
+//    gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
+//                     "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)",
+//                     "0", 3);
+    gsFunctionExpr<> laplace ("-((8 * (x^2 - y^2))/(1 + 4 * x^2 + 4 * y^2)^2)",3);
+
+    gsFunctionExpr<>sol1der ("(2 * x)/(1 + 4 * x^2 + 4 * y^2)",
+                             "-((2 * y)/(1 + 4 * x^2 + 4 * y^2))",
+                             "-((4 * (x^2 - y^2))/(1 + 4 * x^2 + 4 * y^2))",3);
 
     gsBoundaryConditions<> bc;
     for (gsMultiPatch<>::const_biterator bit = mp.bBegin(); bit != mp.bEnd(); ++bit)

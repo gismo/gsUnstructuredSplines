@@ -17,7 +17,7 @@
 
 #include <gsUnstructuredSplines/src/gsPatchReparameterized.h>
 
-#include <gsUnstructuredSplines/src/gsApproxGluingData.h>
+#include <gsUnstructuredSplines/src/gsApproxC1GluingData.h>
 
 namespace gismo
 {
@@ -25,7 +25,7 @@ namespace gismo
     void gsApproxC1Edge<d,T>::compute(std::vector<patchSide> & sidesContainer) {
 
         // Compute GLuing data
-        gsApproxGluingData<d, T> approxGluingData(m_auxPatches, m_optionList, sidesContainer);
+        gsApproxC1GluingData<d, T> approxGluingData(m_auxPatches, m_optionList, sidesContainer);
 
         gsTensorBSplineBasis<d, T> basis;
         index_t dir_pm, patch;

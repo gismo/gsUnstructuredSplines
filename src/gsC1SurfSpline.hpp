@@ -47,7 +47,7 @@ namespace gismo
         for (size_t np = 0; np < m_patches.nPatches(); np++)
         {
             gsTensorBSplineBasis<d, T> basis_patch = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(np));
-            gsInfo << "Basis Patch: " << basis_patch.component(0).knots() << "\n";
+            //gsInfo << "Basis Patch: " << basis_patch.component(0).knots().asMatrix() << "\n";
             m_bases[np].setBasis(0, basis_patch); // Inner
         }
 
@@ -65,11 +65,14 @@ namespace gismo
         {
             index_t dir = m_patches.interfaces()[numInt].first().m_index < 3 ? 1 : 0;
             gsBSplineBasis<T> basis_edge = dynamic_cast<gsBSplineBasis<T> &>(m_multiBasis.basis(m_patches.interfaces()[numInt].first().patch).component(dir)); // If the interface matches!!!
-            index_t m_p = basis_edge.maxDegree();
-            index_t m_r = 1; // Here fixed to 1 TODO MORE GENERAL
-            index_t m_n = basis_edge.numElements();
 
-            index_t numDofs = 2 * (m_p - m_r - 1) * (m_n - 1) + 2 * m_p - 9;
+            gsBSplineBasis<> basis_plus(basis_edge);
+            basis_plus.elevateContinuity(1);
+
+            gsBSplineBasis<> basis_minus(basis_edge);
+            basis_minus.degreeReduce(1);
+
+            index_t numDofs = basis_plus.size() + basis_minus.size() - 10;
             row_dofs += numDofs;
         }
 
@@ -83,11 +86,14 @@ namespace gismo
 
             index_t dir = side_1 < 3 ? 1 : 0;
             gsBSplineBasis<T> basis_edge = dynamic_cast<gsBSplineBasis<T> &>(m_multiBasis.basis(patch_1).component(dir)); // If the interface matches!!!
-            index_t m_p = basis_edge.maxDegree();
-            index_t m_r = 1; // Here fixed to 1 TODO MORE GENERAL
-            index_t m_n = basis_edge.numElements();
 
-            index_t numDofs = 2 * (m_p - m_r - 1) * (m_n - 1) + 2 * m_p - 9;
+            gsBSplineBasis<> basis_plus(basis_edge);
+            basis_plus.elevateContinuity(1);
+
+            gsBSplineBasis<> basis_minus(basis_edge);
+            basis_minus.degreeReduce(1);
+
+            index_t numDofs = basis_plus.size() + basis_minus.size() - 10;
             row_dofs += numDofs;
         }
 
@@ -109,10 +115,10 @@ namespace gismo
         const index_t nz = 7*row_dofs; // TODO
         m_matrix.reserve(nz);
 
-        gsInfo << m_multiBasis << "\n";
-        for (size_t np = 0; np < m_patches.nPatches(); np++)
-            gsInfo << "Basis " << np << " Size: " << m_multiBasis.basis(np).size() << "\n";
-        gsInfo << "Mat dim: (" << row_dofs  << " : " << dim_col << ")\n";
+//        gsInfo << m_multiBasis << "\n";
+//        for (size_t np = 0; np < m_patches.nPatches(); np++)
+//            gsInfo << "Basis " << np << " Size: " << m_multiBasis.basis(np).size() << "\n";
+//        gsInfo << "Mat dim: (" << row_dofs  << " : " << dim_col << ")\n";
     }
 
 
@@ -144,7 +150,7 @@ namespace gismo
             smoothC1Edge.computeG1InterfaceBasis();
             std::vector<gsMultiPatch<T>> basisEdge = smoothC1Edge.getBasis();
 
-            gsWriteParaview(basisEdge[0].patch(0),"test_1",2000);
+            //gsWriteParaview(basisEdge[0].patch(0),"test_1",2000);
 
             const boundaryInterface & item = m_patches.interfaces()[numInt];
 

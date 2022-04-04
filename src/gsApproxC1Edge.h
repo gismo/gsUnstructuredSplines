@@ -16,7 +16,7 @@
 #include <gsUnstructuredSplines/src/gsContainerBasis.h>
 #include <gsUnstructuredSplines/src/gsPatchReparameterized.h>
 
-#include <gsUnstructuredSplines/src/gsApproxGluingData.h>
+#include <gsUnstructuredSplines/src/gsApproxC1GluingData.h>
 
 #include <gsUnstructuredSplines/src/gsApproxC1Utils.h>
 

@@ -75,6 +75,14 @@ public:
         return solBeta.row(2) * ( ones - points ) + solBeta.row(3) * points;
     }
 
+    gsMatrix<> evalBeta(gsMatrix<> points)
+    {
+        gsMatrix<> ones(1, points.cols());
+        ones.setOnes();
+        return sol.row(4) * ( ones - points ).cwiseProduct( ones - points)
+            + sol.row(5) * ( ones - points ).cwiseProduct(points) + sol.row(6) * points;
+    }
+
     gsMatrix<> getSol(){ return sol; }
 
     gsMatrix<> getSolBeta(){ return solBeta; }
@@ -244,7 +252,7 @@ protected:
 
     void solve()
     {
-        gsSparseSolver<>::CGDiagonal solver;
+        gsSparseSolver<>::SimplicialLDLT solver;
 
         solver.compute(mSys.matrix());
         sol = solver.solve(mSys.rhs()); // My solution
@@ -252,7 +260,7 @@ protected:
 
     void solveBeta()
     {
-        gsSparseSolver<>::CGDiagonal solver;
+        gsSparseSolver<>::SimplicialLDLT solver;
 
         solver.compute(mSysBeta.matrix());
         solBeta = solver.solve(mSysBeta.rhs()); // My solution

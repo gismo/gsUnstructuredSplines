@@ -34,30 +34,18 @@ namespace gismo
         {
 
             // Computing the G1 - basis function at the edge
-            // Spaces for computing the g1 basis
-            index_t m_r = 1; // TODO CHANGE IF DIFFERENT REGULARITY IS NECESSARY
-
             gsBSplineBasis<> basis_edge = dynamic_cast<gsBSplineBasis<> &>(m_basis.basis(0).component(m_uv)); // 0 -> v, 1 -> u
-            index_t m_p = basis_edge.maxDegree(); // Minimum degree at the interface // TODO if interface basis are not the same
 
-            // first,last,interior,mult_ends,mult_interior
-            gsKnotVector<T> kv_plus(0,1,0,m_p+1,m_p-1-m_r); // p,r+1 //-1 bc r+1
-            gsBSplineBasis<> basis_plus(kv_plus);
-
-
-            for (size_t i = m_p+1; i < basis_edge.knots().size() - (m_p+1); i = i+(m_p-m_r))
-                basis_plus.insertKnot(basis_edge.knot(i),m_p-1-m_r);
-
+            gsBSplineBasis<> basis_plus(basis_edge);
+            basis_plus.elevateContinuity(1);
             m_basis_plus = basis_plus;
+            //gsDebugVar(basis_plus.knots().asMatrix());
 
 
-            gsKnotVector<T> kv_minus(0,1,0,m_p+1-1,m_p-1-m_r); // p-1,r //-1 bc p-1
-            gsBSplineBasis<> basis_minus(kv_minus);
-
-            for (size_t i = m_p+1; i < basis_edge.knots().size() - (m_p+1); i = i+(m_p-m_r))
-                basis_minus.insertKnot(basis_edge.knot(i),m_p-1-m_r);
-
+            gsBSplineBasis<> basis_minus(basis_edge);
+            basis_minus.degreeReduce(1);
             m_basis_minus = basis_minus;
+            //gsDebugVar(basis_minus.knots().asMatrix());
 
             // Basis for the G1 basis
             m_basis_g1 = m_basis.basis(0);
@@ -124,7 +112,7 @@ namespace gismo
 
             assemble(bfID,"plus"); // i == number of bf
 
-            gsSparseSolver<real_t>::CGDiagonal solver;
+            gsSparseSolver<real_t>::SimplicialLDLT solver;
 //        gsSparseSolver<real_t>::LU solver;
             gsMatrix<> sol;
             solver.compute(m_system.matrix());
@@ -143,7 +131,7 @@ namespace gismo
 
             assemble(bfID,"minus"); // i == number of bf
 
-            gsSparseSolver<real_t>::CGDiagonal solver;
+            gsSparseSolver<real_t>::SimplicialLDLT solver;
 //        gsSparseSolver<real_t>::LU solver;
             gsMatrix<> sol;
             solver.compute(m_system.matrix());

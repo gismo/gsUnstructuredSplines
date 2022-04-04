@@ -16,7 +16,7 @@ import subprocess
 
 import numpy as np
 
-path_module = "data-private/"
+path_module = "data/"
 print("Module path:", path_module, "(change if needed).")
 os.chdir(os.path.join(os.path.dirname(__file__), "../../../" + path_module))
 
@@ -54,11 +54,11 @@ class Method(Enum):
            
 """
 """ -------------------------------------------------------------------------------------------------- """
-#domain = "planar"
-domain = "surfaces"
+domain = "planar"
+#domain = "surfaces"
 
-#geo_list = ["g1000", "g1100", "g1400", "g1510"]  # Without .xml extension
-geo_list = ["g1001", "g1021", "g1030", "g1031"]  # Without .xml extension
+geo_list = ["g1000", "g1100", "g1510", "g1400"]  # Without .xml extension
+#geo_list = ["g1001", "g1021", "g1030", "g1031"]  # Without .xml extension
 path_geo = domain + "/geometries/"
 
 numRefinement = 5
@@ -67,7 +67,7 @@ degree = 3
 second = False
 
 h = -1
-N = 100
+N = 1
 
 penalty = np.linspace(-10, 20, num=N)
 penalty = np.around(np.power(2, penalty), decimals=5)

@@ -89,7 +89,6 @@ namespace gismo
             else if (r_basis < r_geo)
                 kv_basis.remove(knot_it, r_geo-r_basis);
         }
-
         //gsDebugVar(kv_basis.asMatrix());
         result = gsBSplineBasis<real_t>(kv_basis);
     }

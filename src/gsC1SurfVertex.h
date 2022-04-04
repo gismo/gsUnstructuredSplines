@@ -706,72 +706,82 @@ public:
             }
         }
 
-        if (this->kindOfVertex() == 1) // Interface-Boundary vertex
-        {
-            gsMatrix<> bigMatrix(0,0);
-            gsMatrix<> smallMatrix(0,0);
-            for (size_t i = 0; i < auxGeom.size(); i++)
-            {
-                std::pair<gsMatrix<>, gsMatrix<>> tmp;
-                tmp = createSinglePatchSystem(i);
-                size_t row_bigMatrix = bigMatrix.rows();
-                size_t row_smallMatrix = smallMatrix.rows();
+        // OLD
+//        if (this->kindOfVertex() == 1) // Interface-Boundary vertex
+//        {
+//            gsMatrix<> bigMatrix(0,0);
+//            gsMatrix<> smallMatrix(0,0);
+//            for (size_t i = 0; i < auxGeom.size(); i++)
+//            {
+//                std::pair<gsMatrix<>, gsMatrix<>> tmp;
+//                tmp = createSinglePatchSystem(i);
+//                size_t row_bigMatrix = bigMatrix.rows();
+//                size_t row_smallMatrix = smallMatrix.rows();
+//
+//                bigMatrix.conservativeResize(bigMatrix.rows() + tmp.first.rows(), 6);
+//                smallMatrix.conservativeResize(smallMatrix.rows() + tmp.second.rows(), 6);
+//
+//                bigMatrix.block(row_bigMatrix, 0, tmp.first.rows(), 6) = tmp.first;
+//                smallMatrix.block(row_smallMatrix, 0, tmp.second.rows(), 6) = tmp.second;
+//            }
+//
+//            Eigen::FullPivLU<gsMatrix<>> BigLU(bigMatrix);
+//            Eigen::FullPivLU<gsMatrix<>> SmallLU(smallMatrix);
+//            SmallLU.setThreshold(1e-10);
+//            BigLU.setThreshold(1e-10);
+//
+////            if (!g1OptionList.getSwitch("neumann"))
+////                dim_kernel = SmallLU.dimensionOfKernel();
+////            else
+////                dim_kernel = BigLU.dimensionOfKernel();
+//
+//            vertexBoundaryBasis = selectVertexBoundaryBasisFunction(BigLU.kernel(), BigLU.dimensionOfKernel(), SmallLU.kernel(), SmallLU.dimensionOfKernel());
+//
+//        }
+//        else if(this->kindOfVertex() == -1) // Boundary vertex
+//        {
+//            Eigen::FullPivLU<gsMatrix<>> BigLU(computeBigSystemMatrix(0));
+//            Eigen::FullPivLU<gsMatrix<>> SmallLU(computeSmallSystemMatrix(0));
+//            SmallLU.setThreshold(1e-10);
+//            BigLU.setThreshold(1e-10);
+//
+////            if (!g1OptionList.getSwitch("neumann"))
+////                dim_kernel = SmallLU.dimensionOfKernel();
+////            else
+////                dim_kernel = BigLU.dimensionOfKernel();
+//
+//            vertexBoundaryBasis = selectVertexBoundaryBasisFunction(BigLU.kernel(), BigLU.dimensionOfKernel(), SmallLU.kernel(), SmallLU.dimensionOfKernel());
+//
+//        }
+//
+//        if (this->kindOfVertex() != 0)
+//            for (size_t i = 0; i < auxGeom.size(); i++)
+//            {
+//                gsMultiPatch<> temp_mp_g1 = g1BasisVector[i];
+//                for (size_t bf = 0; bf < temp_mp_g1.nPatches(); bf++)
+//                {
+////                    gsInfo << "coeffbf: " << temp_mp_g1.patch(bf).coefs().transpose() << "\n";
+//                    gsMatrix<> coef_bf;
+//                    coef_bf.setZero(temp_mp_g1.patch(bf).coefs().dim().first,1);
+//                    for (size_t lambda = 0; lambda < temp_mp_g1.nPatches(); lambda++)
+//                        coef_bf += temp_mp_g1.patch(lambda).coefs() * vertexBoundaryBasis.first(lambda,bf);
+//
+//                    g1BasisVector[i].patch(bf).setCoefs(coef_bf);
+//                }
+//                auxGeom[i].parametrizeBasisBack(g1BasisVector[i]);
+//            }
+//        else
+//            for (size_t i = 0; i < auxGeom.size(); i++)
+//                auxGeom[i].parametrizeBasisBack(g1BasisVector[i]);
+        // END
 
-                bigMatrix.conservativeResize(bigMatrix.rows() + tmp.first.rows(), 6);
-                smallMatrix.conservativeResize(smallMatrix.rows() + tmp.second.rows(), 6);
-
-                bigMatrix.block(row_bigMatrix, 0, tmp.first.rows(), 6) = tmp.first;
-                smallMatrix.block(row_smallMatrix, 0, tmp.second.rows(), 6) = tmp.second;
-            }
-
-            Eigen::FullPivLU<gsMatrix<>> BigLU(bigMatrix);
-            Eigen::FullPivLU<gsMatrix<>> SmallLU(smallMatrix);
-            SmallLU.setThreshold(1e-10);
-            BigLU.setThreshold(1e-10);
-
-//            if (!g1OptionList.getSwitch("neumann"))
-//                dim_kernel = SmallLU.dimensionOfKernel();
-//            else
-//                dim_kernel = BigLU.dimensionOfKernel();
-
-            vertexBoundaryBasis = selectVertexBoundaryBasisFunction(BigLU.kernel(), BigLU.dimensionOfKernel(), SmallLU.kernel(), SmallLU.dimensionOfKernel());
-
-        }
-        else if(this->kindOfVertex() == -1) // Boundary vertex
-        {
-            Eigen::FullPivLU<gsMatrix<>> BigLU(computeBigSystemMatrix(0));
-            Eigen::FullPivLU<gsMatrix<>> SmallLU(computeSmallSystemMatrix(0));
-            SmallLU.setThreshold(1e-10);
-            BigLU.setThreshold(1e-10);
-
-//            if (!g1OptionList.getSwitch("neumann"))
-//                dim_kernel = SmallLU.dimensionOfKernel();
-//            else
-//                dim_kernel = BigLU.dimensionOfKernel();
-
-            vertexBoundaryBasis = selectVertexBoundaryBasisFunction(BigLU.kernel(), BigLU.dimensionOfKernel(), SmallLU.kernel(), SmallLU.dimensionOfKernel());
-
-        }
-
+        // NEW
         if (this->kindOfVertex() != 0)
-            for (size_t i = 0; i < auxGeom.size(); i++)
-            {
-                gsMultiPatch<> temp_mp_g1 = g1BasisVector[i];
-                for (size_t bf = 0; bf < temp_mp_g1.nPatches(); bf++)
-                {
-//                    gsInfo << "coeffbf: " << temp_mp_g1.patch(bf).coefs().transpose() << "\n";
-                    gsMatrix<> coef_bf;
-                    coef_bf.setZero(temp_mp_g1.patch(bf).coefs().dim().first,1);
-                    for (size_t lambda = 0; lambda < temp_mp_g1.nPatches(); lambda++)
-                        coef_bf += temp_mp_g1.patch(lambda).coefs() * vertexBoundaryBasis.first(lambda,bf);
+            computeKernel(g1BasisVector);
 
-                    g1BasisVector[i].patch(bf).setCoefs(coef_bf);
-                }
-                auxGeom[i].parametrizeBasisBack(g1BasisVector[i]);
-            }
-        else
-            for (size_t i = 0; i < auxGeom.size(); i++)
-                auxGeom[i].parametrizeBasisBack(g1BasisVector[i]);
+        for (size_t i = 0; i < auxGeom.size(); i++)
+            auxGeom[i].parametrizeBasisBack(g1BasisVector[i]);
+        // END
 
         for (size_t i = 0; i < auxGeom.size(); i++)
         {
@@ -781,7 +791,7 @@ public:
                 coefs_temp.setZero(auxGeom[i].getG1Basis().patch(ii).coefs().rows(),1);
                 for (index_t j = 0; j < auxGeom[i].getG1Basis().patch(ii).coefs().rows(); j++)
                 {
-                    if (auxGeom[i].getG1Basis().patch(ii).coefs().at(j)*auxGeom[i].getG1Basis().patch(ii).coefs().at(j) > 1e-10)
+                    if (auxGeom[i].getG1Basis().patch(ii).coefs().at(j)*auxGeom[i].getG1Basis().patch(ii).coefs().at(j) > 1e-25)
                         coefs_temp(j,0) = auxGeom[i].getG1Basis().patch(ii).coefs()(j,0);
                 }
                 auxGeom[i].getG1Basis().patch(ii).setCoefs(coefs_temp);
@@ -791,29 +801,234 @@ public:
 
 
         // just for plotting
-/*        std::string fileName;
-        std::string basename = "VerticesBasisFunctions" + util::to_string(auxGeom.size());
-        gsParaviewCollection collection(basename);
-
-        for (size_t np = 0; np < auxGeom.size(); ++np)
-        {
-            if (basisVertexResult.size() != 0)
-                for (size_t i = 0; i < basisVertexResult[np].nPatches(); ++i)
-                {
-                    fileName = basename + "_" + util::to_string(np) + "_" + util::to_string(i);
-                    gsField<> temp_field(m_mp.patch(auxGeom[np].getGlobalPatchIndex()), basisVertexResult[np].patch(i));
-                    gsWriteParaview(temp_field, fileName, 5000);
-                    collection.addTimestep(fileName, i, "0.vts");
-
-                }
-        }
-        collection.save();*/
+//        std::string fileName;
+//        std::string basename = "VerticesBasisFunctions" + util::to_string(auxGeom.size());
+//        gsParaviewCollection collection(basename);
+//
+//        for (size_t np = 0; np < auxGeom.size(); ++np)
+//        {
+//            if (basisVertexResult.size() != 0)
+//                for (size_t i = 0; i < basisVertexResult[np].nPatches(); ++i)
+//                {
+//                    fileName = basename + "_" + util::to_string(np) + "_" + util::to_string(i);
+//                    gsField<> temp_field(m_mp.patch(auxGeom[np].getGlobalPatchIndex()), basisVertexResult[np].patch(i));
+//                    gsWriteParaview(temp_field, fileName, 5000);
+//                    collection.addTimestep(fileName, i, "0.vts");
+//
+//                }
+//        }
+//        collection.save();
     }
 
     gsG1AuxiliaryPatch & getSinglePatch(const unsigned i){ return auxGeom[i]; }
 
     std::vector<gsMultiPatch<T>> getBasis()
     { return basisVertexResult; }
+
+
+
+
+    void computeKernel(std::vector<gsMultiPatch<>> & g1BasisVector)
+    {
+
+        gsMultiPatch<T> mp_vertex;
+        for(size_t i = 0; i < auxGeom.size(); i++)
+            mp_vertex.addPatch(auxGeom[i].getPatch());
+
+        mp_vertex.computeTopology();
+
+        index_t dim_mat = 0;
+        std::vector<index_t> dim_u, dim_v, side, patchID;
+        std::vector<index_t> dim_u_iFace, patchID_iFace;
+        gsMatrix<> matrix_det(m_mp.targetDim(), m_mp.targetDim()), points(m_mp.parDim(),1);
+        points.setZero();
+        for(size_t np = 0; np < mp_vertex.nPatches(); np++)
+        {
+            if (mp_vertex.isBoundary(np,3)) // u
+            {
+                side.push_back(3);
+                patchID.push_back(np);
+                dim_u.push_back(auxGeom[np].getG1Basis().basis(0).component(0).size());
+                dim_v.push_back(auxGeom[np].getG1Basis().basis(0).component(1).size());
+                dim_mat += auxGeom[np].getG1Basis().basis(0).component(0).size();
+                dim_mat += auxGeom[np].getG1Basis().basis(0).component(0).size();
+
+                if(m_mp.parDim() == m_mp.targetDim()) // Planar
+                    matrix_det.col(0) = auxGeom[np].getPatch().jacobian(points).col(0); // u
+                else if(m_mp.parDim() + 1 == m_mp.targetDim()) // Surface
+                {
+                    gsMatrix<> N, ev;
+                    auxGeom[np].getPatch().jacobian_into(points, ev);
+                    N.setZero(3,1);
+                    N(0,0) = ev(1,0)*ev(2,1)-ev(2,0)*ev(1,1);
+                    N(1,0) = ev(2,0)*ev(0,1)-ev(0,0)*ev(2,1);
+                    N(2,0) = ev(0,0)*ev(1,1)-ev(1,0)*ev(0,1);
+                    matrix_det.col(0) = ev.col(0);
+                    matrix_det.col(2) = N;
+                }
+            }
+            if (mp_vertex.isBoundary(np,1)) // v
+            {
+                side.push_back(1);
+                patchID.push_back(np);
+                dim_u.push_back(auxGeom[np].getG1Basis().basis(0).component(0).size());
+                dim_v.push_back(auxGeom[np].getG1Basis().basis(0).component(1).size());
+                dim_mat += auxGeom[np].getG1Basis().basis(0).component(1).size();
+                dim_mat += auxGeom[np].getG1Basis().basis(0).component(1).size();
+
+                if(m_mp.parDim() == m_mp.targetDim()) // Planar
+                    matrix_det.col(1) = auxGeom[np].getPatch().jacobian(points).col(1); // u
+                else if(m_mp.parDim() + 1 == m_mp.targetDim()) // Surface
+                {
+                    gsMatrix<> N, ev;
+                    auxGeom[np].getPatch().jacobian_into(points, ev);
+                    N.setZero(3,1);
+                    N(0,0) = ev(1,0)*ev(2,1)-ev(2,0)*ev(1,1);
+                    N(1,0) = ev(2,0)*ev(0,1)-ev(0,0)*ev(2,1);
+                    N(2,0) = ev(0,0)*ev(1,1)-ev(1,0)*ev(0,1);
+                    matrix_det.col(1) = ev.col(1);
+                }
+            }
+            if(mp_vertex.isInterface(patchSide(np,1)) && mp_vertex.isInterface(patchSide(np,3)))
+            {
+                dim_mat += 4;
+
+                patchID_iFace.push_back(np);
+                dim_u_iFace.push_back(auxGeom[np].getG1Basis().basis(0).component(0).size());
+            }
+
+        }
+        if (patchID.size() != 2)
+            gsInfo << "Something went wrong \n";
+
+        index_t dofsCorner = 1;
+        if (matrix_det.determinant()*matrix_det.determinant() > 1e-15) // There is (numerically) a kink
+        {
+            dofsCorner = 0;  // With Neumann
+        }
+
+        gsInfo << "Det: " << matrix_det.determinant() << "\n";
+
+        gsMatrix<T> coefs_corner(dim_mat, 6);
+        coefs_corner.setZero();
+
+        index_t shift_row = 0;
+        for (size_t bdy_index = 0; bdy_index < patchID.size(); ++bdy_index)
+        {
+            if (side[bdy_index] < 3) // v
+            {
+                index_t shift_row_neumann = dim_v[bdy_index];
+                for (index_t i = 0; i < dim_v[bdy_index]; ++i)
+                {
+                    for (index_t j = 0; j < 6; ++j)
+                    {
+                        T coef_temp = auxGeom[patchID[bdy_index]].getG1Basis().patch(j).coef(i*dim_u[bdy_index], 0); // v = 0
+                        if (coef_temp * coef_temp > 1e-25)
+                            coefs_corner(shift_row+i, j) = coef_temp;
+
+                        coef_temp = auxGeom[patchID[bdy_index]].getG1Basis().patch(j).coef(i*dim_u[bdy_index] +1, 0); // v = 0
+                        if (coef_temp * coef_temp > 1e-25)
+                            coefs_corner(shift_row_neumann + shift_row+i, j) = coef_temp;
+
+                    }
+                }
+                shift_row += dim_v[bdy_index];
+                shift_row += dim_v[bdy_index];
+            }
+            else // u
+            {
+                index_t shift_row_neumann = dim_u[bdy_index];
+                for (index_t i = 0; i < dim_u[bdy_index]; ++i)
+                {
+                    for (index_t j = 0; j < 6; ++j)
+                    {
+                        T coef_temp = auxGeom[patchID[bdy_index]].getG1Basis().patch(j).coef(i, 0); // v = 0
+                        if (coef_temp * coef_temp > 1e-25)
+                            coefs_corner(shift_row+i, j) = coef_temp;
+
+                        coef_temp = auxGeom[patchID[bdy_index]].getG1Basis().patch(j).coef(i+dim_u[bdy_index], 0); // v = 0
+                        if (coef_temp * coef_temp > 1e-25)
+                            coefs_corner(shift_row_neumann + shift_row+i, j) = coef_temp;
+
+                    }
+                }
+                shift_row += dim_u[bdy_index];
+                shift_row += dim_u[bdy_index];
+            }
+        }
+        for (size_t iFace_index = 0; iFace_index < patchID_iFace.size(); ++iFace_index)
+        {
+            for (index_t i = 0; i < 2; ++i) // Only the first two
+            {
+                for (index_t j = 0; j < 6; ++j) {
+                    T coef_temp = auxGeom[patchID[iFace_index]].getG1Basis().patch(j).coef(i, 0); // v = 0
+                    if (coef_temp * coef_temp > 1e-25)
+                        coefs_corner(shift_row + i, j) = coef_temp;
+                    coef_temp = auxGeom[patchID[iFace_index]].getG1Basis().patch(j).coef(i + dim_u[iFace_index],
+                                                                                      0); // v = 0
+                    if (coef_temp * coef_temp > 1e-25)
+                        coefs_corner(shift_row + 2 + i, j) = coef_temp; //  +2 bcs of the previous adding
+                }
+            }
+            shift_row += 4;
+        }
+
+        gsMatrix<T> kernel;
+        if (dofsCorner > 0)
+        {
+            real_t threshold = 1e-10;
+            Eigen::FullPivLU<gsMatrix<>> KernelCorner(coefs_corner);
+            KernelCorner.setThreshold(threshold);
+            //gsInfo << "Coefs: " << coefs_corner << "\n";
+            while (KernelCorner.dimensionOfKernel() < dofsCorner) {
+                threshold += 1e-8;
+                KernelCorner.setThreshold(threshold);
+            }
+            gsInfo << "Dimension of Kernel: " << KernelCorner.dimensionOfKernel() << " With " << threshold << "\n";
+
+            gsMatrix<> vertBas;
+            vertBas.setIdentity(6, 6);
+
+            kernel = KernelCorner.kernel();
+
+            size_t count = 0;
+            while (kernel.cols() < 6) {
+                kernel.conservativeResize(kernel.rows(), kernel.cols() + 1);
+                kernel.col(kernel.cols() - 1) = vertBas.col(count);
+
+                Eigen::FullPivLU<gsMatrix<>> ker_temp(kernel);
+                ker_temp.setThreshold(1e-6);
+                if (ker_temp.dimensionOfKernel() != 0) {
+                    kernel = kernel.block(0, 0, kernel.rows(), kernel.cols() - 1);
+                }
+                count++;
+            }
+        }
+        else
+            kernel.setIdentity(6, 6);
+
+        gsInfo << "NumDofs: " << dofsCorner << " with Kernel: \n" << kernel << "\n";
+
+        for(size_t np = 0; np < auxGeom.size(); np++)
+        {
+            gsMultiPatch<> temp_result_0 = auxGeom[np].getG1Basis();
+
+            for (size_t j = 0; j < 6; ++j)
+            {
+                index_t dim_uv = temp_result_0.basis(j).size();
+                gsMatrix<> coef_bf;
+                coef_bf.setZero(dim_uv, 1);
+                for (index_t i = 0; i < 6; ++i)
+                    if (kernel(i, j) * kernel(i, j) > 1e-25)
+                        coef_bf += temp_result_0.patch(i).coefs() * kernel(i, j);
+
+
+                g1BasisVector[np].patch(j).setCoefs(coef_bf);
+            }
+        }
+
+    }
+
 
 protected:
 

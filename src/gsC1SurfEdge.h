@@ -64,6 +64,19 @@ public:
         g1BasisEdge_0.setG1BasisEdge(g1Basis_0);
         g1BasisEdge_1.setG1BasisEdge(g1Basis_1);
 
+        gsMatrix<> points(1,5);
+        points << 0.0, 0.25, 0.5, 0.75, 1.0;
+        gsMatrix<> alphaL = g1BasisEdge.evalAlpha_L(points);
+        gsMatrix<> alphaR = g1BasisEdge.evalAlpha_R(points);
+        gsMatrix<> betaL = g1BasisEdge.evalBeta_L(points);
+        gsMatrix<> betaR = g1BasisEdge.evalBeta_R(points);
+        gsMatrix<> beta = g1BasisEdge.evalBeta(points);
+
+        gsDebugVar(alphaL.cwiseProduct(betaR)-alphaR.cwiseProduct(betaL)-beta);
+        gsDebugVar(alphaL.cwiseProduct(betaR)+alphaR.cwiseProduct(betaL)-beta);
+        gsDebugVar(alphaL.cwiseProduct(betaR)-alphaR.cwiseProduct(betaL)+beta);
+        gsDebugVar(-alphaL.cwiseProduct(betaR)+alphaR.cwiseProduct(betaL)-beta);
+
 //      Patch 0 -> Right
         auxGeom[0].parametrizeBasisBack(g1Basis_0);
 //      Patch 1 -> Left

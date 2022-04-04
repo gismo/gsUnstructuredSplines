@@ -15,7 +15,7 @@ import sys
 import subprocess
 
 
-path_module = "data-private/"
+path_module = "data/"
 print("Module path:", path_module, "(change if needed).")
 os.chdir(os.path.join(os.path.dirname(__file__), "../../../"+path_module))
 
