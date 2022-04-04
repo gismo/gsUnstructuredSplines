@@ -15,6 +15,7 @@
 
 #include <gsCore/gsBoxTopology.h>
 #include <gsCore/gsMultiPatch.h>
+#include <gsIO/gsOptionList.h>
 
 // #include <gsUnstructuredSplines/src/gsDPatchBase.hpp>
 

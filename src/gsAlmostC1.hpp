@@ -1247,8 +1247,6 @@ namespace gismo
 
         pcorner.getContainingSides(d,psides);
 
-        gsBasis<T> * basis;
-
         std::vector<index_t> rowIndices, colIndices, patchIndices;
 
         // pcorner is the current corner
@@ -1264,7 +1262,6 @@ namespace gismo
         entries.push_back(std::make_tuple(rowIdx,colIdx,weight));
 
         ////////////////////////////////////////////////////////////////////////////////
-        basis = &m_bases.basis(pcorner.patch);
         index_t idx;
         for (index_t k = 0; k!=2; k++)
         {
@@ -1300,7 +1297,7 @@ namespace gismo
 
         // Lastly, give the 0,0 a weight 1 to itself
         // Influence of 1,1 to itself
-        index_t b00_p1 = _indexFromVert(0,pcorner,psides[0],0); // point 1,1 (does not matter which reference side is taken)
+        index_t b00_p1 = _indexFromVert(0,pcorner,psides[0],0); // point 0,0 (does not matter which reference side is taken)
         rowIdx = m_mapModified.index(b00_p1,pcorner.patch);
         colIdx = m_mapOriginal.index(b00_p1,pcorner.patch);
 
