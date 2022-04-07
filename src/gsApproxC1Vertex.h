@@ -83,27 +83,30 @@ public:
             gsMatrix<> G = Jk.transpose() * Jk; // Symmetric
             gsMatrix<> G_inv = G.cramerInverse(); // Symmetric
 
-
             gsMatrix<> geoMapDeriv1 = m_auxPatches[0].getPatchRotated()
                     .deriv(zero); // First derivative of the geometric mapping with respect to the parameter coordinates
             gsMatrix<> geoMapDeriv2 = m_auxPatches[0].getPatchRotated()
                     .deriv2(zero); // Second derivative of the geometric mapping with respect to the parameter coordinates
 
             //Computing the normal vector to the tangent plane along the boundary curve
-            Eigen::Vector3d t1 = Jk.col(0);
-            Eigen::Vector3d t2 = Jk.col(1);
+            gsVector<> n(3);
+            n.setZero();
+            n(0) = Jk(1,0)*Jk(2,1)-Jk(2,0)*Jk(1,1);
+            n(1) = Jk(2,0)*Jk(0,1)-Jk(0,0)*Jk(2,1);
+            n(2) = Jk(0,0)*Jk(1,1)-Jk(1,0)*Jk(0,1);
 
-            Eigen::Vector3d n = t1.cross(t2);
+            gsVector<> z(3);
+            z.setZero();
+            z(2) = 1.0;
 
-            gsVector<> normal = n.normalized();
-            n = n.normalized();
-            Eigen::Vector3d z(0, 0, 1);
+            gsVector<> rotVec(3);
+            rotVec.setZero(3);
+            rotVec(0) = n(1,0)*z(2,0)-n(2,0)*z(1,0);
+            rotVec(1) = n(2,0)*z(0,0)-n(0,0)*z(2,0);
+            rotVec(2) = n(0,0)*z(1,0)-n(1,0)*z(0,0);
 
-            Eigen::Vector3d rotVec = n.cross(z);
-            rotVec = rotVec.normalized();
-
-            real_t cos_t = n.dot(z) / (n.norm() * z.norm());
-            real_t sin_t = (n.cross(z)).norm() / (n.norm() * z.norm());
+            real_t cos_t = (n.dot(z))/ (n.norm() * z.norm());
+            real_t sin_t = rotVec.norm() / (n.norm() * z.norm());
 
 //                Rotation matrix
             gsMatrix<> R(3, 3);

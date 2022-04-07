@@ -240,6 +240,8 @@ namespace gismo{
                 _u.data().flags |= NEED_DERIV2; // define flags
 
                 _v.parse(evList); // We need to evaluate _v (_v.eval(.) is called)
+                //evList.add(_v);
+                //_v.data().flags |= NEED_DERIV;
 
                 // Note: evList.parse(.) is called only in exprAssembler for the global expression
             }
@@ -271,6 +273,7 @@ namespace gismo{
                 // evaluate the geometry map of U
                 tmp =_u.data().values[2].reshapeCol(k, cols(), _u.data().dim.second );
                 vEv = _v.eval(k);
+
                 res = vEv * tmp.transpose();
                 return res;
             }
@@ -353,11 +356,364 @@ namespace gismo{
             }
         };
 
+
+/**
+ * @brief      Expression for the first variation of the surface normal
+ *
+ * @tparam     E     Object type
+ */
+        template<class E>
+        class var1_expr : public _expr<var1_expr<E> >
+        {
+        public:
+            typedef typename E::Scalar Scalar;
+
+        private:
+            typename E::Nested_t _u;
+            typename gsGeometryMap<Scalar>::Nested_t _G;
+
+            mutable gsMatrix<Scalar> res;
+//            mutable gsMatrix<Scalar> bGrads, cJac;
+//            mutable gsVector<Scalar,3> m_v, normal;
+        public:
+            enum{ Space = E::Space, ScalarValued= 0, ColBlocks= 0};
+
+            var1_expr(const E & u, const gsGeometryMap<Scalar> & G) : _u(u), _G(G) { }
+
+            EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+            const gsMatrix<Scalar> & eval(const index_t k) const {return eval_impl(_u,k); }
+
+            index_t rows() const { return 1; }
+            index_t cols() const { return 1; }
+
+            void parse(gsExprHelper<Scalar> & evList) const
+            {
+                parse_impl<E>(evList);
+            }
+
+            const gsFeSpace<Scalar> & rowVar() const { return _u.rowVar(); }
+            const gsFeSpace<Scalar> & colVar() const { return _u.colVar(); }
+
+            index_t cardinality_impl() const { return _u.cardinality_impl(); }
+
+            void print(std::ostream &os) const { os << "var1("; _u.print(os); os <<")"; }
+
+        private:
+            template<class U> inline
+            typename util::enable_if< !util::is_same<U,gsFeSolution<Scalar> >::value,void>::type
+            parse_impl(gsExprHelper<Scalar> & evList) const
+            {
+                evList.add(_u);
+                _u.data().flags |= NEED_ACTIVE | NEED_DERIV | NEED_DERIV2; // need actives for cardinality
+                evList.add(_G);
+                _G.data().flags |= NEED_DERIV | NEED_DERIV2 ;
+            }
+
+            template<class U> inline
+            typename util::enable_if< util::is_same<U,gsFeSolution<Scalar> >::value,void>::type
+            parse_impl(gsExprHelper<Scalar> & evList) const
+            {
+                evList.add(_G);
+                _G.data().flags |= NEED_DERIV | NEED_DERIV2 | NEED_JACOBIAN;
+
+                hess(_u).parse(evList); //
+
+                _u.parse(evList);
+            }
+
+            template<class U> inline
+            typename util::enable_if< util::is_same<U,gsFeSpace<Scalar> >::value, const gsMatrix<Scalar> & >::type
+            eval_impl(const U & u, const index_t k)  const
+            {
+                const index_t numAct = u.data().values[0].rows();
+                const index_t numPts = 1;
+                //const index_t A = _u.cardinality()/_u.dim(); // _u.data().actives.rows()
+                res.resize(rows()*u.cardinality(), cols()); // rows()*
+
+                gsMatrix<real_t> geoMapDeriv1 = _G.data().values[1].col(k); // First derivative of the geometric mapping with respect to the parameter coordinates
+                gsMatrix<real_t> geoMapDeriv2 = _G.data().values[2].col(k); // Second derivative of the geometric mapping with respect to the parameter coordinates
+
+//
+//
+//                const index_t nDers = _u.source().domainDim() * ( _u.source().domainDim() + 1 ) / 2;
+//                gsDebugVar(_u.data().values[2].reshapeCol(k, nDers, numAct ));
+
+                // First fundamental form
+                gsMatrix<real_t> G11 = ( geoMapDeriv1.row(0).cwiseProduct(geoMapDeriv1.row(0)) +
+                                    geoMapDeriv1.row(2).cwiseProduct(geoMapDeriv1.row(2)) +
+                                    geoMapDeriv1.row(4).cwiseProduct(geoMapDeriv1.row(4)));
+
+                //          G12 = G21
+                gsMatrix<real_t> G12 = ( geoMapDeriv1.row(0).cwiseProduct(geoMapDeriv1.row(1)) +
+                                    geoMapDeriv1.row(2).cwiseProduct(geoMapDeriv1.row(3)) +
+                                    geoMapDeriv1.row(4).cwiseProduct(geoMapDeriv1.row(5)));
+
+                gsMatrix<real_t> G22 = ( geoMapDeriv1.row(1).cwiseProduct(geoMapDeriv1.row(1)) +
+                                    geoMapDeriv1.row(3).cwiseProduct(geoMapDeriv1.row(3)) +
+                                    geoMapDeriv1.row(5).cwiseProduct(geoMapDeriv1.row(5)));
+
+                // Derivative of the first fundamental form
+                gsMatrix<real_t> DuG11 = 2 * ( geoMapDeriv2.row(0).cwiseProduct(geoMapDeriv1.row(0)) +
+                                          geoMapDeriv2.row(3).cwiseProduct(geoMapDeriv1.row(2)) +
+                                          geoMapDeriv2.row(6).cwiseProduct(geoMapDeriv1.row(4)) );
+
+
+                gsMatrix<real_t> DvG11 = 2 * ( geoMapDeriv2.row(2).cwiseProduct(geoMapDeriv1.row(0)) +
+                                          geoMapDeriv2.row(5).cwiseProduct(geoMapDeriv1.row(2)) +
+                                          geoMapDeriv2.row(8).cwiseProduct(geoMapDeriv1.row(4)) );
+
+                //          DuG12 = DuG21
+                gsMatrix<real_t> DuG12 = (     geoMapDeriv2.row(0).cwiseProduct(geoMapDeriv1.row(1)) +
+                                          geoMapDeriv2.row(2).cwiseProduct(geoMapDeriv1.row(0)) +
+                                          geoMapDeriv2.row(3).cwiseProduct(geoMapDeriv1.row(3)) +
+                                          geoMapDeriv2.row(5).cwiseProduct(geoMapDeriv1.row(2)) +
+                                          geoMapDeriv2.row(6).cwiseProduct(geoMapDeriv1.row(5)) +
+                                          geoMapDeriv2.row(8).cwiseProduct(geoMapDeriv1.row(4)) );
+
+                //          DvG12 = DvG21
+                gsMatrix<real_t> DvG21 = (     geoMapDeriv2.row(2).cwiseProduct(geoMapDeriv1.row(1)) +
+                                          geoMapDeriv2.row(1).cwiseProduct(geoMapDeriv1.row(0)) +
+                                          geoMapDeriv2.row(5).cwiseProduct(geoMapDeriv1.row(3)) +
+                                          geoMapDeriv2.row(4).cwiseProduct(geoMapDeriv1.row(2)) +
+                                          geoMapDeriv2.row(8).cwiseProduct(geoMapDeriv1.row(5)) +
+                                          geoMapDeriv2.row(7).cwiseProduct(geoMapDeriv1.row(4)) );
+
+
+                gsMatrix<real_t> DuG22 = 2 * ( geoMapDeriv2.row(2).cwiseProduct(geoMapDeriv1.row(1)) +
+                                          geoMapDeriv2.row(5).cwiseProduct(geoMapDeriv1.row(3)) +
+                                          geoMapDeriv2.row(8).cwiseProduct(geoMapDeriv1.row(5)) );
+
+                gsMatrix<real_t> DvG22 = 2 *(  geoMapDeriv2.row(1).cwiseProduct(geoMapDeriv1.row(1)) +
+                                          geoMapDeriv2.row(4).cwiseProduct(geoMapDeriv1.row(3)) +
+                                          geoMapDeriv2.row(7).cwiseProduct(geoMapDeriv1.row(5)) );
+
+                gsMatrix<real_t> detG = G11.cwiseProduct(G22) - G12.cwiseProduct(G12);
+
+//          1 / sqrt^4( det( G ) )
+                gsMatrix<real_t> sqrt4DetG_inv;
+                sqrt4DetG_inv.resize(1, numPts);
+
+//          1 / sqrt( det( G ) )
+                gsMatrix<real_t> sqrtDetG_inv;
+                sqrtDetG_inv.resize(1, numPts);
+
+//          1 / ( 2 * det( G )^( 3/2 ) )
+                gsMatrix<real_t> sqrtDetG_inv_derivative;
+                sqrtDetG_inv_derivative.resize(1, numPts);
+
+//          Creating the vector of the determinant of the first fundamental form
+                for(index_t col = 0; col < numPts; col++)
+                {
+                    sqrtDetG_inv(0, col) = 1 / sqrt( detG(0, col) );
+                    sqrt4DetG_inv(0, col) = 1 / ( sqrt( sqrt( detG(0, col) ) ) );
+                    sqrtDetG_inv_derivative(0, col) = 1 / ( 2 * detG(0, col) * sqrt( detG(0, col) ) );
+                }
+
+                gsMatrix<real_t> basisGrads = _u.data().values[1].col(k);
+                gsMatrix<real_t> basis2ndDerivs = _u.data().values[2].col(k);
+
+                //gsDebugVar(_u.data().values[0].transpose());
+
+                gsMatrix<real_t> Du_SqrtDetGinv = sqrtDetG_inv_derivative.cwiseProduct(
+                        2 * G12.cwiseProduct( DuG12 )  -
+                        G22.cwiseProduct( DuG11 ) -
+                        G11.cwiseProduct( DuG22 ) );
+
+                gsMatrix<real_t> Dv_SqrtDetGinv = sqrtDetG_inv_derivative.cwiseProduct(
+                        2 * G12.cwiseProduct( DvG21 )  -
+                        G22.cwiseProduct( DvG11 ) -
+                        G11.cwiseProduct( DvG22 ) );
+
+//                gsDebugVar(sqrt4DetG_inv);
+//                gsDebugVar(basis2ndDerivs);
+//                gsDebugVar(basisGrads);
+//                gsDebugVar(G22);
+//                gsDebugVar(G11);
+//                gsDebugVar(G12);
+
+                for(index_t i = 0; i < numAct; i++)
+                {
+                    res.row(i) = ( ( G22.cwiseProduct( DvG11 ) -
+                                                       2 * G12.cwiseProduct( DvG21 ) +
+                                                       G11.cwiseProduct( DvG22 ) ).cwiseProduct(
+                            G12.cwiseProduct( basisGrads.row( i * 2 ) ) -
+                            G11.cwiseProduct( basisGrads.row( i * 2 + 1) ) ) -
+                                                     ( G22.cwiseProduct( DuG11 ) -
+                                                       2 * G12.cwiseProduct( DuG12 ) +
+                                                       G11.cwiseProduct( DuG22 ) ).cwiseProduct(
+                                                             G22.cwiseProduct( basisGrads.row( i * 2 ) ) -
+                                                             G12.cwiseProduct( basisGrads.row( i * 2 + 1 ) ) ) + 2 *
+                                                                                                                 ( G12.cwiseProduct( G12 ) -
+                                                                                                                   G11.cwiseProduct( G22 ) ).cwiseProduct(
+                                                                                                                         DvG21.cwiseProduct( basisGrads.row( i * 2 ) ) -
+                                                                                                                         DvG11.cwiseProduct( basisGrads.row( i * 2 + 1 ) ) -
+                                                                                                                         G11.cwiseProduct( basis2ndDerivs.row( i * 3 + 1 ) ) +
+                                                                                                                         G12.cwiseProduct( basis2ndDerivs.row( i * 3 + 2 ) ) ) + 2 *
+                                                                                                                                                                                 ( G12.cwiseProduct( G12 ) -
+                                                                                                                                                                                   G11.cwiseProduct( G22 ) ).cwiseProduct(
+                                                                                                                                                                                         DuG12.cwiseProduct( basisGrads.row( i * 2 + 1 ) ) -
+                                                                                                                                                                                         DuG22.cwiseProduct( basisGrads.row( i * 2 ) ) +
+                                                                                                                                                                                         G12.cwiseProduct( basis2ndDerivs.row( i * 3 + 2 ) ) -
+                                                                                                                                                                                         G22.cwiseProduct( basis2ndDerivs.row( i * 3 ) ) ) ).cwiseProduct(
+                            sqrtDetG_inv_derivative );
+
+
+                    //res.row(i) = sqrt4DetG_inv.cwiseProduct(res.row(i));
+                }
+
+                return res;
+            }
+
+            template<class U> inline
+            typename util::enable_if< util::is_same<U,gsFeSolution<Scalar> >::value, const gsMatrix<Scalar> & >::type
+            eval_impl(const U & u, const index_t k)  const
+            {
+                GISMO_ASSERT(1==_u.data().actives.cols(), "Single actives expected");
+                grad_expr<gsFeSolution<Scalar>> sGrad =  grad_expr<gsFeSolution<Scalar>>(_u);
+                res.resize(rows(), cols()); // rows()*
+
+                gsMatrix<real_t> Jk = _G.data().jacobian(k);
+                gsMatrix<real_t> geoMapDeriv1 = _G.data().values[1].col(k); // First derivative of the geometric mapping with respect to the parameter coordinates
+                gsMatrix<real_t> geoMapDeriv2 = _G.data().values[2].col(k); // Second derivative of the geometric mapping with respect to the parameter coordinates
+
+//            FIRST FUNDAMENTAL FORM: G = J^T * J
+//
+//            G = | G11   G12|
+//                | G21   G22|
+//
+//            INVERSE OF THE FIRST FUNDAMENTAL FORM
+//
+//                      1    | G22  -G12|      1
+//            G^-1 = ------- |          | = ------- G* ^-1
+//                    det(G) | -G21  G11|    det(G)
+
+                // First fundamental form
+                real_t G11 = ( geoMapDeriv1(0, 0) * (geoMapDeriv1(0, 0)) +
+                               geoMapDeriv1(2, 0) * (geoMapDeriv1(2, 0)) +
+                               geoMapDeriv1(4, 0) * (geoMapDeriv1(4, 0)));
+
+//          G12 = G21
+                real_t G12 = (  geoMapDeriv1(0, 0) * (geoMapDeriv1(1, 0)) +
+                                geoMapDeriv1(2, 0) * (geoMapDeriv1(3, 0)) +
+                                geoMapDeriv1(4, 0) * (geoMapDeriv1(5, 0)));
+
+
+                real_t G22 = (  geoMapDeriv1(1, 0) * (geoMapDeriv1(1, 0)) +
+                                geoMapDeriv1(3, 0) * (geoMapDeriv1(3, 0)) +
+                                geoMapDeriv1(5, 0) * (geoMapDeriv1(5, 0)));
+
+
+                // Derivative of the first fundamental form
+                real_t DuG11 = 2 * (  geoMapDeriv2(0, 0) * (geoMapDeriv1(0, 0)) +
+                                      geoMapDeriv2(3, 0) * (geoMapDeriv1(2, 0)) +
+                                      geoMapDeriv2(6, 0) * (geoMapDeriv1(4, 0)) );
+
+
+
+                real_t DvG11 = 2 * (  geoMapDeriv2(2, 0) * (geoMapDeriv1(0, 0)) +
+                                      geoMapDeriv2(5, 0) * (geoMapDeriv1(2, 0)) +
+                                      geoMapDeriv2(8, 0) * (geoMapDeriv1(4, 0)) );
+
+
+//          DuG12 = DuG21
+                real_t DuG12 = (  geoMapDeriv2(0, 0) * (geoMapDeriv1(1, 0)) +
+                                  geoMapDeriv2(2, 0) * (geoMapDeriv1(0, 0)) +
+                                  geoMapDeriv2(3, 0) * (geoMapDeriv1(3, 0)) +
+                                  geoMapDeriv2(5, 0) * (geoMapDeriv1(2, 0)) +
+                                  geoMapDeriv2(6, 0) * (geoMapDeriv1(5, 0)) +
+                                  geoMapDeriv2(8, 0) * (geoMapDeriv1(4, 0)) );
+
+//          DvG12 = DvG21
+                real_t DvG21 = (  geoMapDeriv2(2, 0) * (geoMapDeriv1(1, 0)) +
+                                  geoMapDeriv2(1, 0) * (geoMapDeriv1(0, 0)) +
+                                  geoMapDeriv2(5, 0) * (geoMapDeriv1(3, 0)) +
+                                  geoMapDeriv2(4, 0) * (geoMapDeriv1(2, 0)) +
+                                  geoMapDeriv2(8, 0) * (geoMapDeriv1(5, 0)) +
+                                  geoMapDeriv2(7, 0) * (geoMapDeriv1(4, 0)) );
+
+
+                real_t DuG22 = 2 * (  geoMapDeriv2(2, 0) * (geoMapDeriv1(1, 0)) +
+                                      geoMapDeriv2(5, 0) * (geoMapDeriv1(3, 0)) +
+                                      geoMapDeriv2(8, 0) * (geoMapDeriv1(5, 0)) );
+
+                real_t DvG22 = 2 *(  geoMapDeriv2(1, 0) * (geoMapDeriv1(1, 0)) +
+                                     geoMapDeriv2(4, 0) * (geoMapDeriv1(3, 0)) +
+                                     geoMapDeriv2(7, 0) * (geoMapDeriv1(5, 0)) );
+
+
+                gsMatrix<real_t> G = Jk.transpose() * Jk;
+                gsMatrix<real_t> G_inv = G.cramerInverse();
+
+                real_t detG = G11 * (G22) - G12 * (G12);
+
+                gsMatrix<real_t> sqrt4DetG_inv(1, 1);
+
+//          1 / sqrt( det( G ) )
+                gsMatrix<real_t> sqrtDetG_inv(1, 1);
+
+//          1 / ( 2 * det( G )^( 3/2 ) )
+                gsMatrix<real_t> sqrtDetG_inv_derivative(1, 1);
+
+//          Creating the vector of the determinant of the first fundamental form
+
+                sqrtDetG_inv(0, 0) = 1 / sqrt( detG );
+                sqrt4DetG_inv(0, 0) = 1 / ( sqrt( sqrt( detG ) ) );
+                sqrtDetG_inv_derivative(0, 0) = 1 / ( 2 * detG * sqrt( detG ) );
+
+                gsMatrix<real_t> Du_SqrtDetGinv = sqrtDetG_inv_derivative * (
+                        2 * G12 * ( DuG12 )  -
+                        G22 * ( DuG11 ) -
+                        G11 * ( DuG22 ) );
+
+                gsMatrix<real_t> Dv_SqrtDetGinv = sqrtDetG_inv_derivative * (
+                        2 * G12 * ( DvG21 )  -
+                        G22 * ( DvG11 ) -
+                        G11 * ( DvG22 ) );
+
+                gsMatrix<real_t> f1ders = _u.data().values[1].block(2*k,0,2,1);
+                gsMatrix<real_t> f1ders2 = _u.data().values[2].block(3*k,0,3,1);
+
+                res = ( (    G22 * ( DvG11 ) -
+                                               2 * G12 * ( DvG21 ) +
+                                               G11 * ( DvG22 ) ) * (
+                                                  G12 * ( f1ders(0, 0) ) -
+                                                  G11 * ( f1ders(1, 0) ) ) -
+                                          ( G22 * ( DuG11 ) -
+                                            2 * G12 * ( DuG12 ) +
+                                            G11 * ( DuG22 ) ) * (
+                                                  G22 * ( f1ders(0, 0) ) -
+                                                  G12 * ( f1ders(1, 0) ) ) +
+                                          2 * ( G12 * ( G12 ) -
+                                                G11 * ( G22 ) ) * (
+                                                  DvG21 * ( f1ders(0, 0) ) -
+                                                  DvG11 * ( f1ders(1, 0) ) -
+                                                  G11 * ( f1ders2(1, 0) ) +
+                                                  G12 * ( f1ders2(2, 0) ) ) +
+                                          2 * ( G12 * ( G12 ) -
+                                                G11 * ( G22 ) ) * (
+                                                  DuG12 * ( f1ders(1, 0) ) -
+                                                  DuG22 * ( f1ders(0, 0) ) +
+                                                  G12 * ( f1ders2(2, 0) ) -
+                                                  G22 * ( f1ders2(0, 0) ) ) ) * (
+                                                sqrtDetG_inv_derivative );
+
+
+                res *= sqrtDetG_inv;
+
+                return res;
+            }
+        };
+
+        template<class E> EIGEN_STRONG_INLINE
+        var1_expr<E> var1(const E & u, const gsGeometryMap<typename E::Scalar> & G) { return var1_expr<E>(u, G); }
+
         template<class E> EIGEN_STRONG_INLINE
         deriv2_expr<E> deriv2(const E & u) { return deriv2_expr<E>(u); }
 
         template<class E1, class E2> EIGEN_STRONG_INLINE
         deriv2dot_expr<E1, E2> deriv2(const E1 & u, const E2 & v) { return deriv2dot_expr<E1, E2>(u,v); }
+
 
     }
 }
@@ -606,10 +962,12 @@ int main(int argc, char *argv[])
     mp.computeTopology();
     //! [Read geometry]
 
-    //gsFunctionExpr<> f  ("(64 * (x - y) * (x + y) * (13 + 64 * x^4 + 12 * y^2 + 64 * y^4 + x^2 * (12 - 768 * y^2)))/(1 + 4 * x^2 + 4 * y^2)^5",3);
+    //gsFunctionExpr<>f("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
+    //gsFunctionExpr<> f  (" (64 * (x - y) * (x + y) * (13 + 64*x^4 + 12*y^2 + 64*y^4 + x^2*(12 - 768*y^2)))/(1 + 4*x^2 + 4*y^2)^5",3);
     gsFunctionExpr<>f("5",3);
     gsInfo << "Source function: " << f << "\n";
 
+    //gsFunctionExpr<> ms("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",3);
     gsFunctionExpr<> ms("0",3);
     //gsFunctionExpr<> ms("z",3);
     gsInfo << "Exact function: " << ms << "\n";
@@ -654,10 +1012,14 @@ int main(int argc, char *argv[])
     // Neumann
 //    gsFunctionExpr<>sol1der ("(2 * x)/(1 + 4 * x^2 + 4 * y^2)",
 //                             "-((2 * y)/(1 + 4 * x^2 + 4 * y^2))",
-//                             "-((4 * (x^2 - y^2))/(1 + 4 * x^2 + 4 * y^2))",3);
+//                             "((4 * (x^2 + y^2))/(1 + 4 * x^2 + 4 * y^2))",3);
     gsFunctionExpr<> sol1der("0",
                      "0",
                      "0", 3);
+    // Neumann
+//    gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
+//                             "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)",
+//                             "0", 3);
 
     gsBoundaryConditions<> bc;
     for (gsMultiPatch<>::const_biterator bit = mp.bBegin(); bit != mp.bEnd(); ++bit)
@@ -698,6 +1060,8 @@ int main(int argc, char *argv[])
 
     // Recover manufactured solution
     auto u_ex = ev.getVariable(ms, G);
+    auto grad_u_ex = ev.getVariable(sol1der, G);
+    auto laplace_u_ex = ev.getVariable(laplace, G);
     //! [Problem setup]
 
 #ifdef _OPENMP
@@ -799,6 +1163,10 @@ int main(int argc, char *argv[])
 
             meshsize[r] = basis.basis(0).getMinCellLength();
 
+            gsDebugVar(basis.basis(0));
+            gsDebugVar(mp.patch(0));
+
+
             gsC1SurfSpline<2,real_t> smoothC1(mp,basis);
             smoothC1.init();
             smoothC1.compute();
@@ -812,8 +1180,7 @@ int main(int argc, char *argv[])
         }
 
         // Setup the mapper
-        if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1
-                                                                                || method == MethodFlags::SURFASG1) // MappedBasis
+        if (method != MethodFlags::NITSCHE) // MappedBasis
         {
             gsDofMapper map;
             setMapperForBiharmonic(bc, bb2,map);
@@ -841,17 +1208,35 @@ int main(int argc, char *argv[])
         timer.restart();
         // Compute the system matrix and right-hand side
         auto gg = pow(fform(G).det(),0.5);
-        auto G0 = 1.0/gg * fform(G);
+        auto gg2 = 1/gg * fform(G).det();
+        auto G0 = 1/gg * fform(G);
         auto G0inv = G0.inv();
-        A.assemble(( deriv2(u,G0inv) * (deriv2(u,G0inv)).tr()) * 1.0/gg,
-                   u * ff * gg);
+
+
+//        index_t N = 4;
+//        gsMatrix<> points;
+//        points.setZero(2,N);
+//        gsVector<> pp;
+//        pp.setLinSpaced(N,0,1);
+//        points.row(0) = pp;
+//
+//        for (index_t i = 0; i < points.cols(); i++)
+//        {
+//            gsDebugVar( ev.eval(fform(G).det(), points.col(i) ));
+//            gsDebugVar( ev.eval(gg, points.col(i) ));
+//        }
+//
+//        continue;
+
+        A.assemble(( var1(u,G) * (var1(u,G)).tr()) * 1/gg,
+                   u * ff * gg );
         //gsInfo << "Finished \n";
         // Enforce Laplace conditions to right-hand side
         // auto g_L = A.getBdrFunction(G); // Set the laplace bdy value  // Bug, doesnt work
         auto g_L = A.getCoeff(laplace, G);
         A.assembleBdr(bc.get("Laplace"), ((jac(G) * fform(G).inv() * igrad(u).tr()).tr() * nv(G).normalized()) * g_L.tr() * gg );
 
-        if (method == MethodFlags::NITSCHE)
+        if (method == MethodFlags::NITSCHE)  // Wrong not working yet
         {
             index_t i = 0;
             for ( typename gsMultiPatch<real_t>::const_iiterator it = mp.iBegin(); it != mp.iEnd(); ++it, ++i)
@@ -923,7 +1308,7 @@ int main(int argc, char *argv[])
         solver.compute( A.matrix() );
         solVector = solver.solve(A.rhs());
 
-        gsFileData<>fd;
+        gsFileData<> fd;
         fd << A.rhs();
         fd.save("rhs.xml");
 
@@ -941,8 +1326,8 @@ int main(int argc, char *argv[])
 //
 //        for (index_t i = 0; i < points.cols(); i++)
 //        {
-//            gsDebugVar(ev.eval(u_ex, points.col(i)));
-//            gsDebugVar( ev.eval(u_sol, points.col(i) ));
+//            gsDebugVar(ev.eval(laplace_u_ex, points.col(i)));
+//            gsDebugVar( ev.eval(var1(u_sol,G) , points.col(i) ));
 //        }
 
         //linferr[r] = ev.max( f-s ) / ev.max(f);
@@ -996,7 +1381,7 @@ int main(int argc, char *argv[])
         {
             l2err[r]= math::sqrt( ev.integral( (u_ex - u_sol).sqNorm() * gg ) ); // / ev.integral(ff.sqNorm()*meas(G)) );
             h1err[r]= l2err[r] +
-                      math::sqrt(ev.integral( ( igrad(u_ex) - (jac(G) * fform(G).inv() * igrad(u_sol).tr()).tr() ).sqNorm() * gg )); // /ev.integral( igrad(ff).sqNorm()*meas(G) ) );
+                      math::sqrt(ev.integral( ( grad_u_ex - (jac(G) * fform(G).inv() * igrad(u_sol).tr()) ).sqNorm() * gg )); // /ev.integral( igrad(ff).sqNorm()*meas(G) ) );
 
             //h2err[r]= h1err[r] +
             //          math::sqrt(ev.integral( ( ihess(u_ex) - 1.0/gg * (deriv2(u_sol,G0inv)).tr() ).sqNorm() * meas(G) )); // /ev.integral( ihess(ff).sqNorm()*meas(G) )

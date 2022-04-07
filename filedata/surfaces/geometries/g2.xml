@@ -16,10 +16,10 @@ B-splines meeting along one side
     </Basis>
     <coefs geoDim="3">
       0 0 0
-      0.5 0 0
+      1 0 0
 
       0 1 0
-      0.5 1 0
+      1 1 0
     </coefs>
   </Geometry>
 
@@ -45,7 +45,7 @@ B-splines meeting along one side
   <!-- A multipatch section describes the configuration
        of the two patches above -->
   <MultiPatch parDim="2" id="2">
-    <patches type="id_range">0 1</patches>
+    <patches type="id_range">0 0</patches>
   </MultiPatch>
 
 </xml>
