@@ -38,323 +38,324 @@ enum MethodFlags
 
 namespace gismo{
     namespace expr{
-        template<class E>
-        class deriv2_expr : public _expr<deriv2_expr<E> >
-        {
-            typename E::Nested_t _u;
-
-        public:
-            // enum {ColBlocks = E::rowSpan }; // ????
-            enum{ Space = E::Space, ScalarValued= 0, ColBlocks = (1==E::Space?1:0) };
-
-            typedef typename E::Scalar Scalar;
-
-            deriv2_expr(const E & u) : _u(u) { }
-
-            mutable gsMatrix<Scalar> res, tmp;
-
-            const gsMatrix<Scalar> & eval(const index_t k) const {return eval_impl(_u,k); }
-
-            index_t rows() const //(components)
-            {
-                return 3; // _u.dim() for space or targetDim() for geometry
-            }
-
-            index_t cols() const
-            {
-                return _u.source().domainDim() * ( _u.source().domainDim() + 1 ) / 2;
-            }
-
-            void parse(gsExprHelper<Scalar> & evList) const
-            {
-                _u.parse(evList);
-                _u.data().flags |= NEED_DERIV2;
-            }
-
-            const gsFeSpace<Scalar> & rowVar() const { return _u.rowVar(); }
-            const gsFeSpace<Scalar> & colVar() const { return _u.colVar(); }
-
-            index_t cardinality_impl() const { return _u.cardinality_impl(); }
-
-            void print(std::ostream &os) const { os << "deriv2("; _u.print(os); os <<")"; }
-
-            private:
-                template<class U> inline
-                typename util::enable_if< util::is_same<U,gsGeometryMap<Scalar> >::value, const gsMatrix<Scalar> & >::type
-                eval_impl(const U & u, const index_t k)  const
-                {
-                    /*
-                        Here, we compute the hessian of the geometry map.
-                        The hessian of the geometry map c has the form: hess(c)
-                        [d11 c1, d11 c2, d11 c3]
-                        [d22 c1, d22 c2, d22 c3]
-                        [d12 c1, d12 c2, d12 c3]
-                        The geometry map has components c=[c1,c2,c3]
-                    */
-                    // evaluate the geometry map of U
-                    res = _u.data().values[2].reshapeCol(k, cols(), _u.data().dim.second );
-                    return res;
-                }
-
-                template<class U> inline
-                typename util::enable_if< util::is_same<U,gsComposition<Scalar> >::value, const gsMatrix<Scalar> & >::type
-                eval_impl(const U & u, const index_t k)  const
-                {
-                    /*
-                        Here, we compute the hessian of the geometry map.
-                        The hessian of the geometry map c has the form: hess(c)
-                        [d11 c1, d11 c2, d11 c3]
-                        [d22 c1, d22 c2, d22 c3]
-                        [d12 c1, d12 c2, d12 c3]
-                        The geometry map has components c=[c1,c2,c3]
-                    */
-                    // evaluate the geometry map of U
-                    tmp =  _u.data().values[2];
-                    gsDebugVar(tmp);
-                    // Cast to Voight notation
-                    tmp.resize(4,1);
-                    std::swap( tmp(3,0), tmp(1,0) );
-
-                    res = tmp;
-                    return res;
-                }
-
-                template<class U> inline
-                typename util::enable_if< util::is_same<U,gsFeSolution<Scalar> >::value, const gsMatrix<Scalar> & >::type
-                eval_impl(const U & u, const index_t k)  const
-                {
-                    /*
-                        Here, we compute the hessian of the geometry map.
-                        The hessian of the geometry map c has the form: hess(c)
-                        [d11 c1, d11 c2, d11 c3]
-                        [d22 c1, d22 c2, d22 c3]
-                        [d12 c1, d12 c2, d12 c3]
-                        The geometry map has components c=[c1,c2,c3]
-                    */
-                    // evaluate the geometry map of U
-                    hess_expr<gsFeSolution<Scalar>> sHess = hess_expr<gsFeSolution<Scalar>>(_u);
-                    res = sHess.eval(k).transpose();
-                    return res;
-                }
-
-                /// Spexialization for a space
-                template<class U> inline
-                typename util::enable_if<util::is_same<U,gsFeSpace<Scalar> >::value, const gsMatrix<Scalar> & >::type
-                eval_impl(const U & u, const index_t k) const
-                {
-                    /*
-                        Here, we compute the hessian of the basis with n actives.
-                        The hessian of the basis u has the form: hess(u)
-                            active 1                active 2                        active n = cardinality
-                        [d11 u1, d11 u2, d11 u3] [d11 u1, d11 u2, d11 u3] ... [d11 u1, d11 u2, d11 u3]
-                        [d22 u1, d22 u2, d22 u3] [d22 u1, d22 u2, d22 u3] ... [d22 u1, d22 u2, d22 u3]
-                        [d12 u1, d12 u2, d12 u3] [d12 u1, d12 u2, d12 u3] ... [d12 u1, d12 u2, d12 u3]
-                        Here, the basis function has components u = [u1,u2,u3]. Since they are evaluated for scalars
-                        we use blockDiag to make copies for all components ui
-                            active 1     active 2     active k = cardinality/dim   active 1           active 2k       active 1           active 2k
-                        [d11 u, 0, 0] [d11 u, 0, 0] ... [d11 u, 0, 0]            [0, d11 u, 0]  ... [0, d11 u, 0]  [0, d11 u, 0]  ... [0, d11 u, 0]
-                        [d22 u, 0, 0] [d22 u, 0, 0] ... [d22 u, 0, 0]            [0, d22 u, 0]  ... [0, d22 u, 0]  [0, d22 u, 0]  ... [0, d22 u, 0]
-                        [d12 u, 0, 0] [d12 u, 0, 0] ... [d12 u, 0, 0]            [0, d12 u, 0]  ... [0, d12 u, 0]  [0, d12 u, 0]  ... [0, d12 u, 0]
-                    */
-                    const index_t numAct = u.data().values[0].rows();   // number of actives of a basis function
-                    const index_t cardinality = u.cardinality();        // total number of actives (=3*numAct)
-
-                    res.resize(rows(), _u.dim() *_u.cardinality()); // (3 x 3*cardinality)
-                    res.setZero();
-
-                    tmp = _u.data().values[2].reshapeCol(k, cols(), numAct );
-                    for (index_t d = 0; d != cols(); ++d)
-                    {
-                        const index_t s = d*(cardinality + 1);
-                        for (index_t i = 0; i != numAct; ++i)
-                            res.col(s+i*_u.cols()) = tmp.col(i);
-                    }
-
-                    return res;
-                }
-        };
-
-        // vector v should be a row vector
-        template<class E1, class E2>
-        class deriv2dot_expr : public _expr<deriv2dot_expr<E1, E2> >
-        {
-            typename E1::Nested_t _u;
-            typename E2::Nested_t _v;
-
-        public:
-            enum{ Space = E1::Space, ScalarValued= 0, ColBlocks= 0 };
-            // Note: what happens if E2 is a space? The following can fix it:
-            // enum{ Space = (E1::Space == 1 || E2::Space == 1) ? 1 : 0, ScalarValued= 0, ColBlocks= 0 };
-
-            typedef typename E1::Scalar Scalar;
-
-            deriv2dot_expr(const E1 & u, const E2 & v) : _u(u), _v(v) { }
-
-            mutable gsMatrix<Scalar> res,tmp, vEv;
-
-            const gsMatrix<Scalar> & eval(const index_t k) const {return eval_impl(_u,k); }
-
-            index_t rows() const
-            {
-                return 1; //since the product with another vector is computed
-            }
-
-            index_t cols() const
-            {
-                return 1;
-            }
-
-            void parse(gsExprHelper<Scalar> & evList) const
-            {
-                parse_impl<E1>(evList);
-            }
-
-            const gsFeSpace<Scalar> & rowVar() const
-            {
-                if      (E1::Space == 1 && E2::Space == 0)
-                    return _u.rowVar();
-                else if (E1::Space == 0 && E2::Space == 1)
-                    return _v.rowVar();
-                else
-                    return gsNullExpr<Scalar>::get();
-            }
-
-            const gsFeSpace<Scalar> & colVar() const
-            {
-                if      (E1::Space == 1 && E2::Space == 0)
-                    return _v.colVar();
-                else if (E1::Space == 0 && E2::Space == 1)
-                    return _u.colVar();
-                else
-                    return gsNullExpr<Scalar>::get();
-            }
-
-            void print(std::ostream &os) const { os << "deriv2("; _u.print(os); _v.print(os); os <<")"; }
-
-        private:
-            template<class U> inline
-            typename util::enable_if< !util::is_same<U,gsFeSolution<Scalar> >::value,void>::type
-            parse_impl(gsExprHelper<Scalar> & evList) const
-            {
-                evList.add(_u);   // We manage the flags of _u "manually" here (sets data)
-                _u.data().flags |= NEED_DERIV2; // define flags
-
-                _v.parse(evList); // We need to evaluate _v (_v.eval(.) is called)
-                //evList.add(_v);
-                //_v.data().flags |= NEED_DERIV;
-
-                // Note: evList.parse(.) is called only in exprAssembler for the global expression
-            }
-
-            template<class U> inline
-            typename util::enable_if< util::is_same<U,gsFeSolution<Scalar> >::value,void>::type
-            parse_impl(gsExprHelper<Scalar> & evList) const
-            {
-                _u.parse(evList); //
-                hess(_u).parse(evList); //
-
-                // evList.add(_u);   // We manage the flags of _u "manually" here (sets data)
-                _v.parse(evList); // We need to evaluate _v (_v.eval(.) is called)
-            }
-
-            template<class U> inline
-            typename util::enable_if< util::is_same<U,gsGeometryMap<Scalar> >::value, const gsMatrix<Scalar> & >::type
-            eval_impl(const U & u, const index_t k)  const
-            {
-                /*
-                    Here, we multiply the hessian of the geometry map by a vector, which possibly has multiple actives.
-                    The hessian of the geometry map c has the form: hess(c)
-                    [d11 c1, d11 c2, d11 c3]
-                    [d22 c1, d22 c2, d22 c3]
-                    [d12 c1, d12 c2, d12 c3]
-                    And we want to compute [d11 c .v; d22 c .v;  d12 c .v] ( . denotes a dot product and c and v are both vectors)
-                    So we simply evaluate for every active basis function v_k the product hess(c).v_k
-                */
-                // evaluate the geometry map of U
-                tmp =_u.data().values[2].reshapeCol(k, cols(), _u.data().dim.second );
-                vEv = _v.eval(k);
-
-                res = vEv * tmp.transpose();
-                return res;
-            }
-
-            template<class U> inline
-            typename util::enable_if<util::is_same<U,gsFeSpace<Scalar> >::value, const gsMatrix<Scalar> & >::type
-            eval_impl(const U & u, const index_t k) const
-            {
-                /*
-                    We assume that the basis has the form v*e_i where e_i is the unit vector with 1 on index i and 0 elsewhere
-                    This implies that hess(v) = [hess(v_1), hess(v_2), hess(v_3)] only has nonzero entries in column i. Hence,
-                    hess(v) . normal = hess(v_i) * n_i (vector-scalar multiplication. The result is then of the form
-                    [hess(v_1)*n_1 .., hess(v_2)*n_2 .., hess(v_3)*n_3 ..]. Here, the dots .. represent the active basis functions.
-                */
-                GISMO_ASSERT(_u.source().domainDim()==2,"Domain dimension should be 2x2. Other dimensions are not yet implemented");
-                GISMO_ASSERT(_v.rows()==2,"v must be 2x2, but is = "<<_v.rows()<<" x "<<_v.cols());
-                GISMO_ASSERT(_v.cols()==2,"v must be 2x2, but is = "<<_v.rows()<<" x "<<_v.cols());
-                const index_t numAct = u.data().values[0].rows();   // number of actives of a basis function
-                const index_t cardinality = u.cardinality();        // total number of actives (=3*numAct)
-                const index_t nDers = _u.source().domainDim() * ( _u.source().domainDim() + 1 ) / 2;
-                res.resize(rows()*cardinality, cols() );
-                // tmp is ordered as
-                // [d11 d22 d12] (in 2D)
-                tmp =_u.data().values[2].reshapeCol(k, nDers, numAct );
-
-                // vEv is ordered as
-                // [v11, v12; v21 v22] (in 2D)
-                vEv = _v.eval(k);
-
-                // Cast to Voight notation
-                vEv.resize(4,1);
-                std::swap( vEv(3,0), vEv(1,0) );
-                vEv.conservativeResize(3,1);
-
-                // [dxx u, dyy u, dxy u] [1 0 0] [v11]
-                //                       [0 1 0] [v22]
-                //                       [0 0 2] [v12]
-                gsMatrix<Scalar,3,3> ones;
-                ones.setIdentity();
-                ones(2,2) = 2.0;
-                for (index_t i = 0; i!=numAct; i++)
-                    res.row(i) = tmp.col(i).transpose() * ones * vEv;
-
-                return res;
-            }
-
-            template<class U> inline
-            typename util::enable_if<util::is_same<U,gsFeSolution<Scalar> >::value, const gsMatrix<Scalar> & >::type
-            eval_impl(const U & u, const index_t k) const
-            {
-                /*
-                    We assume that the basis has the form v*e_i where e_i is the unit vector with 1 on index i and 0 elsewhere
-                    This implies that hess(v) = [hess(v_1), hess(v_2), hess(v_3)] only has nonzero entries in column i. Hence,
-                    hess(v) . normal = hess(v_i) * n_i (vector-scalar multiplication. The result is then of the form
-                    [hess(v_1)*n_1 .., hess(v_2)*n_2 .., hess(v_3)*n_3 ..]. Here, the dots .. represent the active basis functions.
-                */
-                hess_expr<gsFeSolution<Scalar>> sHess = hess_expr<gsFeSolution<Scalar>>(_u); // NOTE: This does not parse automatically!
-                tmp = sHess.eval(k);
-                vEv = _v.eval(k);
-
-                // Cast to Voight notation
-                vEv.resize(4,1);
-                std::swap( vEv(3,0), vEv(1,0) );
-                vEv.conservativeResize(3,1);
-
-                // Cast to Voight notation
-                tmp.resize(4,1);
-                std::swap( tmp(3,0), tmp(1,0) );
-                tmp.conservativeResize(3,1);
-
-
-                // [dxx u, dyy u, dxy u] [1 0 0] [v11]
-                //                       [0 1 0] [v22]
-                //                       [0 0 2] [v12]
-                gsMatrix<Scalar,3,3> ones;
-                ones.setIdentity();
-                ones(2,2) = 2.0;
-                res = tmp.transpose() * ones * vEv;
-                return res;
-            }
-        };
+//
+//        template<class E>
+//        class deriv2_expr : public _expr<deriv2_expr<E> >
+//        {
+//            typename E::Nested_t _u;
+//
+//        public:
+//            // enum {ColBlocks = E::rowSpan }; // ????
+//            enum{ Space = E::Space, ScalarValued= 0, ColBlocks = (1==E::Space?1:0) };
+//
+//            typedef typename E::Scalar Scalar;
+//
+//            deriv2_expr(const E & u) : _u(u) { }
+//
+//            mutable gsMatrix<Scalar> res, tmp;
+//
+//            const gsMatrix<Scalar> & eval(const index_t k) const {return eval_impl(_u,k); }
+//
+//            index_t rows() const //(components)
+//            {
+//                return 3; // _u.dim() for space or targetDim() for geometry
+//            }
+//
+//            index_t cols() const
+//            {
+//                return _u.source().domainDim() * ( _u.source().domainDim() + 1 ) / 2;
+//            }
+//
+//            void parse(gsExprHelper<Scalar> & evList) const
+//            {
+//                _u.parse(evList);
+//                _u.data().flags |= NEED_DERIV2;
+//            }
+//
+//            const gsFeSpace<Scalar> & rowVar() const { return _u.rowVar(); }
+//            const gsFeSpace<Scalar> & colVar() const { return _u.colVar(); }
+//
+//            index_t cardinality_impl() const { return _u.cardinality_impl(); }
+//
+//            void print(std::ostream &os) const { os << "deriv2("; _u.print(os); os <<")"; }
+//
+//            private:
+//                template<class U> inline
+//                typename util::enable_if< util::is_same<U,gsGeometryMap<Scalar> >::value, const gsMatrix<Scalar> & >::type
+//                eval_impl(const U & u, const index_t k)  const
+//                {
+//                    /*
+//                        Here, we compute the hessian of the geometry map.
+//                        The hessian of the geometry map c has the form: hess(c)
+//                        [d11 c1, d11 c2, d11 c3]
+//                        [d22 c1, d22 c2, d22 c3]
+//                        [d12 c1, d12 c2, d12 c3]
+//                        The geometry map has components c=[c1,c2,c3]
+//                    */
+//                    // evaluate the geometry map of U
+//                    res = _u.data().values[2].reshapeCol(k, cols(), _u.data().dim.second );
+//                    return res;
+//                }
+//
+//                template<class U> inline
+//                typename util::enable_if< util::is_same<U,gsComposition<Scalar> >::value, const gsMatrix<Scalar> & >::type
+//                eval_impl(const U & u, const index_t k)  const
+//                {
+//                    /*
+//                        Here, we compute the hessian of the geometry map.
+//                        The hessian of the geometry map c has the form: hess(c)
+//                        [d11 c1, d11 c2, d11 c3]
+//                        [d22 c1, d22 c2, d22 c3]
+//                        [d12 c1, d12 c2, d12 c3]
+//                        The geometry map has components c=[c1,c2,c3]
+//                    */
+//                    // evaluate the geometry map of U
+//                    tmp =  _u.data().values[2];
+//                    gsDebugVar(tmp);
+//                    // Cast to Voight notation
+//                    tmp.resize(4,1);
+//                    std::swap( tmp(3,0), tmp(1,0) );
+//
+//                    res = tmp;
+//                    return res;
+//                }
+//
+//                template<class U> inline
+//                typename util::enable_if< util::is_same<U,gsFeSolution<Scalar> >::value, const gsMatrix<Scalar> & >::type
+//                eval_impl(const U & u, const index_t k)  const
+//                {
+//                    /*
+//                        Here, we compute the hessian of the geometry map.
+//                        The hessian of the geometry map c has the form: hess(c)
+//                        [d11 c1, d11 c2, d11 c3]
+//                        [d22 c1, d22 c2, d22 c3]
+//                        [d12 c1, d12 c2, d12 c3]
+//                        The geometry map has components c=[c1,c2,c3]
+//                    */
+//                    // evaluate the geometry map of U
+//                    hess_expr<gsFeSolution<Scalar>> sHess = hess_expr<gsFeSolution<Scalar>>(_u);
+//                    res = sHess.eval(k).transpose();
+//                    return res;
+//                }
+//
+//                /// Spexialization for a space
+//                template<class U> inline
+//                typename util::enable_if<util::is_same<U,gsFeSpace<Scalar> >::value, const gsMatrix<Scalar> & >::type
+//                eval_impl(const U & u, const index_t k) const
+//                {
+//                    /*
+//                        Here, we compute the hessian of the basis with n actives.
+//                        The hessian of the basis u has the form: hess(u)
+//                            active 1                active 2                        active n = cardinality
+//                        [d11 u1, d11 u2, d11 u3] [d11 u1, d11 u2, d11 u3] ... [d11 u1, d11 u2, d11 u3]
+//                        [d22 u1, d22 u2, d22 u3] [d22 u1, d22 u2, d22 u3] ... [d22 u1, d22 u2, d22 u3]
+//                        [d12 u1, d12 u2, d12 u3] [d12 u1, d12 u2, d12 u3] ... [d12 u1, d12 u2, d12 u3]
+//                        Here, the basis function has components u = [u1,u2,u3]. Since they are evaluated for scalars
+//                        we use blockDiag to make copies for all components ui
+//                            active 1     active 2     active k = cardinality/dim   active 1           active 2k       active 1           active 2k
+//                        [d11 u, 0, 0] [d11 u, 0, 0] ... [d11 u, 0, 0]            [0, d11 u, 0]  ... [0, d11 u, 0]  [0, d11 u, 0]  ... [0, d11 u, 0]
+//                        [d22 u, 0, 0] [d22 u, 0, 0] ... [d22 u, 0, 0]            [0, d22 u, 0]  ... [0, d22 u, 0]  [0, d22 u, 0]  ... [0, d22 u, 0]
+//                        [d12 u, 0, 0] [d12 u, 0, 0] ... [d12 u, 0, 0]            [0, d12 u, 0]  ... [0, d12 u, 0]  [0, d12 u, 0]  ... [0, d12 u, 0]
+//                    */
+//                    const index_t numAct = u.data().values[0].rows();   // number of actives of a basis function
+//                    const index_t cardinality = u.cardinality();        // total number of actives (=3*numAct)
+//
+//                    res.resize(rows(), _u.dim() *_u.cardinality()); // (3 x 3*cardinality)
+//                    res.setZero();
+//
+//                    tmp = _u.data().values[2].reshapeCol(k, cols(), numAct );
+//                    for (index_t d = 0; d != cols(); ++d)
+//                    {
+//                        const index_t s = d*(cardinality + 1);
+//                        for (index_t i = 0; i != numAct; ++i)
+//                            res.col(s+i*_u.cols()) = tmp.col(i);
+//                    }
+//
+//                    return res;
+//                }
+//        };
+//
+//        // vector v should be a row vector
+//        template<class E1, class E2>
+//        class deriv2dot_expr : public _expr<deriv2dot_expr<E1, E2> >
+//        {
+//            typename E1::Nested_t _u;
+//            typename E2::Nested_t _v;
+//
+//        public:
+//            enum{ Space = E1::Space, ScalarValued= 0, ColBlocks= 0 };
+//            // Note: what happens if E2 is a space? The following can fix it:
+//            // enum{ Space = (E1::Space == 1 || E2::Space == 1) ? 1 : 0, ScalarValued= 0, ColBlocks= 0 };
+//
+//            typedef typename E1::Scalar Scalar;
+//
+//            deriv2dot_expr(const E1 & u, const E2 & v) : _u(u), _v(v) { }
+//
+//            mutable gsMatrix<Scalar> res,tmp, vEv;
+//
+//            const gsMatrix<Scalar> & eval(const index_t k) const {return eval_impl(_u,k); }
+//
+//            index_t rows() const
+//            {
+//                return 1; //since the product with another vector is computed
+//            }
+//
+//            index_t cols() const
+//            {
+//                return 1;
+//            }
+//
+//            void parse(gsExprHelper<Scalar> & evList) const
+//            {
+//                parse_impl<E1>(evList);
+//            }
+//
+//            const gsFeSpace<Scalar> & rowVar() const
+//            {
+//                if      (E1::Space == 1 && E2::Space == 0)
+//                    return _u.rowVar();
+//                else if (E1::Space == 0 && E2::Space == 1)
+//                    return _v.rowVar();
+//                else
+//                    return gsNullExpr<Scalar>::get();
+//            }
+//
+//            const gsFeSpace<Scalar> & colVar() const
+//            {
+//                if      (E1::Space == 1 && E2::Space == 0)
+//                    return _v.colVar();
+//                else if (E1::Space == 0 && E2::Space == 1)
+//                    return _u.colVar();
+//                else
+//                    return gsNullExpr<Scalar>::get();
+//            }
+//
+//            void print(std::ostream &os) const { os << "deriv2("; _u.print(os); _v.print(os); os <<")"; }
+//
+//        private:
+//            template<class U> inline
+//            typename util::enable_if< !util::is_same<U,gsFeSolution<Scalar> >::value,void>::type
+//            parse_impl(gsExprHelper<Scalar> & evList) const
+//            {
+//                evList.add(_u);   // We manage the flags of _u "manually" here (sets data)
+//                _u.data().flags |= NEED_DERIV2; // define flags
+//
+//                _v.parse(evList); // We need to evaluate _v (_v.eval(.) is called)
+//                //evList.add(_v);
+//                //_v.data().flags |= NEED_DERIV;
+//
+//                // Note: evList.parse(.) is called only in exprAssembler for the global expression
+//            }
+//
+//            template<class U> inline
+//            typename util::enable_if< util::is_same<U,gsFeSolution<Scalar> >::value,void>::type
+//            parse_impl(gsExprHelper<Scalar> & evList) const
+//            {
+//                _u.parse(evList); //
+//                hess(_u).parse(evList); //
+//
+//                // evList.add(_u);   // We manage the flags of _u "manually" here (sets data)
+//                _v.parse(evList); // We need to evaluate _v (_v.eval(.) is called)
+//            }
+//
+//            template<class U> inline
+//            typename util::enable_if< util::is_same<U,gsGeometryMap<Scalar> >::value, const gsMatrix<Scalar> & >::type
+//            eval_impl(const U & u, const index_t k)  const
+//            {
+//                /*
+//                    Here, we multiply the hessian of the geometry map by a vector, which possibly has multiple actives.
+//                    The hessian of the geometry map c has the form: hess(c)
+//                    [d11 c1, d11 c2, d11 c3]
+//                    [d22 c1, d22 c2, d22 c3]
+//                    [d12 c1, d12 c2, d12 c3]
+//                    And we want to compute [d11 c .v; d22 c .v;  d12 c .v] ( . denotes a dot product and c and v are both vectors)
+//                    So we simply evaluate for every active basis function v_k the product hess(c).v_k
+//                */
+//                // evaluate the geometry map of U
+//                tmp =_u.data().values[2].reshapeCol(k, cols(), _u.data().dim.second );
+//                vEv = _v.eval(k);
+//
+//                res = vEv * tmp.transpose();
+//                return res;
+//            }
+//
+//            template<class U> inline
+//            typename util::enable_if<util::is_same<U,gsFeSpace<Scalar> >::value, const gsMatrix<Scalar> & >::type
+//            eval_impl(const U & u, const index_t k) const
+//            {
+//                /*
+//                    We assume that the basis has the form v*e_i where e_i is the unit vector with 1 on index i and 0 elsewhere
+//                    This implies that hess(v) = [hess(v_1), hess(v_2), hess(v_3)] only has nonzero entries in column i. Hence,
+//                    hess(v) . normal = hess(v_i) * n_i (vector-scalar multiplication. The result is then of the form
+//                    [hess(v_1)*n_1 .., hess(v_2)*n_2 .., hess(v_3)*n_3 ..]. Here, the dots .. represent the active basis functions.
+//                */
+//                GISMO_ASSERT(_u.source().domainDim()==2,"Domain dimension should be 2x2. Other dimensions are not yet implemented");
+//                GISMO_ASSERT(_v.rows()==2,"v must be 2x2, but is = "<<_v.rows()<<" x "<<_v.cols());
+//                GISMO_ASSERT(_v.cols()==2,"v must be 2x2, but is = "<<_v.rows()<<" x "<<_v.cols());
+//                const index_t numAct = u.data().values[0].rows();   // number of actives of a basis function
+//                const index_t cardinality = u.cardinality();        // total number of actives (=3*numAct)
+//                const index_t nDers = _u.source().domainDim() * ( _u.source().domainDim() + 1 ) / 2;
+//                res.resize(rows()*cardinality, cols() );
+//                // tmp is ordered as
+//                // [d11 d22 d12] (in 2D)
+//                tmp =_u.data().values[2].reshapeCol(k, nDers, numAct );
+//
+//                // vEv is ordered as
+//                // [v11, v12; v21 v22] (in 2D)
+//                vEv = _v.eval(k);
+//
+//                // Cast to Voight notation
+//                vEv.resize(4,1);
+//                std::swap( vEv(3,0), vEv(1,0) );
+//                vEv.conservativeResize(3,1);
+//
+//                // [dxx u, dyy u, dxy u] [1 0 0] [v11]
+//                //                       [0 1 0] [v22]
+//                //                       [0 0 2] [v12]
+//                gsMatrix<Scalar,3,3> ones;
+//                ones.setIdentity();
+//                ones(2,2) = 2.0;
+//                for (index_t i = 0; i!=numAct; i++)
+//                    res.row(i) = tmp.col(i).transpose() * ones * vEv;
+//
+//                return res;
+//            }
+//
+//            template<class U> inline
+//            typename util::enable_if<util::is_same<U,gsFeSolution<Scalar> >::value, const gsMatrix<Scalar> & >::type
+//            eval_impl(const U & u, const index_t k) const
+//            {
+//                /*
+//                    We assume that the basis has the form v*e_i where e_i is the unit vector with 1 on index i and 0 elsewhere
+//                    This implies that hess(v) = [hess(v_1), hess(v_2), hess(v_3)] only has nonzero entries in column i. Hence,
+//                    hess(v) . normal = hess(v_i) * n_i (vector-scalar multiplication. The result is then of the form
+//                    [hess(v_1)*n_1 .., hess(v_2)*n_2 .., hess(v_3)*n_3 ..]. Here, the dots .. represent the active basis functions.
+//                */
+//                hess_expr<gsFeSolution<Scalar>> sHess = hess_expr<gsFeSolution<Scalar>>(_u); // NOTE: This does not parse automatically!
+//                tmp = sHess.eval(k);
+//                vEv = _v.eval(k);
+//
+//                // Cast to Voight notation
+//                vEv.resize(4,1);
+//                std::swap( vEv(3,0), vEv(1,0) );
+//                vEv.conservativeResize(3,1);
+//
+//                // Cast to Voight notation
+//                tmp.resize(4,1);
+//                std::swap( tmp(3,0), tmp(1,0) );
+//                tmp.conservativeResize(3,1);
+//
+//
+//                // [dxx u, dyy u, dxy u] [1 0 0] [v11]
+//                //                       [0 1 0] [v22]
+//                //                       [0 0 2] [v12]
+//                gsMatrix<Scalar,3,3> ones;
+//                ones.setIdentity();
+//                ones(2,2) = 2.0;
+//                res = tmp.transpose() * ones * vEv;
+//                return res;
+//            }
+//        };
 
 
 /**
@@ -544,18 +545,18 @@ namespace gismo{
                                                        G11.cwiseProduct( DuG22 ) ).cwiseProduct(
                                                              G22.cwiseProduct( basisGrads.row( i * 2 ) ) -
                                                              G12.cwiseProduct( basisGrads.row( i * 2 + 1 ) ) ) + 2 *
-                                                                                                                 ( G12.cwiseProduct( G12 ) -
-                                                                                                                   G11.cwiseProduct( G22 ) ).cwiseProduct(
-                                                                                                                         DvG21.cwiseProduct( basisGrads.row( i * 2 ) ) -
-                                                                                                                         DvG11.cwiseProduct( basisGrads.row( i * 2 + 1 ) ) -
-                                                                                                                         G11.cwiseProduct( basis2ndDerivs.row( i * 3 + 1 ) ) +
-                                                                                                                         G12.cwiseProduct( basis2ndDerivs.row( i * 3 + 2 ) ) ) + 2 *
-                                                                                                                                                                                 ( G12.cwiseProduct( G12 ) -
-                                                                                                                                                                                   G11.cwiseProduct( G22 ) ).cwiseProduct(
-                                                                                                                                                                                         DuG12.cwiseProduct( basisGrads.row( i * 2 + 1 ) ) -
-                                                                                                                                                                                         DuG22.cwiseProduct( basisGrads.row( i * 2 ) ) +
-                                                                                                                                                                                         G12.cwiseProduct( basis2ndDerivs.row( i * 3 + 2 ) ) -
-                                                                                                                                                                                         G22.cwiseProduct( basis2ndDerivs.row( i * 3 ) ) ) ).cwiseProduct(
+                     ( G12.cwiseProduct( G12 ) -
+                       G11.cwiseProduct( G22 ) ).cwiseProduct(
+                             DvG21.cwiseProduct( basisGrads.row( i * 2 ) ) -
+                             DvG11.cwiseProduct( basisGrads.row( i * 2 + 1 ) ) -
+                             G11.cwiseProduct( basis2ndDerivs.row( i * 3 + 1 ) ) +
+                             G12.cwiseProduct( basis2ndDerivs.row( i * 3 + 2 ) ) ) + 2 *
+                               ( G12.cwiseProduct( G12 ) -
+                             G11.cwiseProduct( G22 ) ).cwiseProduct(
+                            DuG12.cwiseProduct( basisGrads.row( i * 2 + 1 ) ) -
+                             DuG22.cwiseProduct( basisGrads.row( i * 2 ) ) +
+                             G12.cwiseProduct( basis2ndDerivs.row( i * 3 + 2 ) ) -
+                             G22.cwiseProduct( basis2ndDerivs.row( i * 3 ) ) ) ).cwiseProduct(
                             sqrtDetG_inv_derivative );
 
 
@@ -708,11 +709,11 @@ namespace gismo{
         template<class E> EIGEN_STRONG_INLINE
         var1_expr<E> var1(const E & u, const gsGeometryMap<typename E::Scalar> & G) { return var1_expr<E>(u, G); }
 
-        template<class E> EIGEN_STRONG_INLINE
-        deriv2_expr<E> deriv2(const E & u) { return deriv2_expr<E>(u); }
-
-        template<class E1, class E2> EIGEN_STRONG_INLINE
-        deriv2dot_expr<E1, E2> deriv2(const E1 & u, const E2 & v) { return deriv2dot_expr<E1, E2>(u,v); }
+//        template<class E> EIGEN_STRONG_INLINE
+//        deriv2_expr<E> deriv2(const E & u) { return deriv2_expr<E>(u); }
+//
+//        template<class E1, class E2> EIGEN_STRONG_INLINE
+//        deriv2dot_expr<E1, E2> deriv2(const E1 & u, const E2 & v) { return deriv2dot_expr<E1, E2>(u,v); }
 
 
     }
@@ -963,13 +964,13 @@ int main(int argc, char *argv[])
     //! [Read geometry]
 
     //gsFunctionExpr<>f("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
-    //gsFunctionExpr<> f  (" (64 * (x - y) * (x + y) * (13 + 64*x^4 + 12*y^2 + 64*y^4 + x^2*(12 - 768*y^2)))/(1 + 4*x^2 + 4*y^2)^5",3);
-    gsFunctionExpr<>f("5",3);
+    gsFunctionExpr<> f  (" (64 * (x - y) * (x + y) * (13 + 64*x^4 + 12*y^2 + 64*y^4 + x^2*(12 - 768*y^2)))/(1 + 4*x^2 + 4*y^2)^5",3);
+    //gsFunctionExpr<>f("5",3);
     gsInfo << "Source function: " << f << "\n";
 
     //gsFunctionExpr<> ms("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",3);
-    gsFunctionExpr<> ms("0",3);
-    //gsFunctionExpr<> ms("z",3);
+    //gsFunctionExpr<> ms("0",3);
+    gsFunctionExpr<> ms("z",3);
     gsInfo << "Exact function: " << ms << "\n";
 
     //! [Refinement]
@@ -1006,16 +1007,16 @@ int main(int argc, char *argv[])
 
     //! [Boundary condition]
     // Laplace
-    //gsFunctionExpr<> laplace ("-((8 * (x^2 - y^2))/(1 + 4 * x^2 + 4 * y^2)^2)",3);
-    gsFunctionExpr<> laplace ("0",3);
+    gsFunctionExpr<> laplace ("-((8 * (x^2 - y^2))/(1 + 4 * x^2 + 4 * y^2)^2)",3);
+    //gsFunctionExpr<> laplace ("0",3);
 
     // Neumann
-//    gsFunctionExpr<>sol1der ("(2 * x)/(1 + 4 * x^2 + 4 * y^2)",
-//                             "-((2 * y)/(1 + 4 * x^2 + 4 * y^2))",
-//                             "((4 * (x^2 + y^2))/(1 + 4 * x^2 + 4 * y^2))",3);
-    gsFunctionExpr<> sol1der("0",
-                     "0",
-                     "0", 3);
+    gsFunctionExpr<>sol1der ("(2 * x)/(1 + 4 * x^2 + 4 * y^2)",
+                             "-((2 * y)/(1 + 4 * x^2 + 4 * y^2))",
+                             "((4 * (x^2 + y^2))/(1 + 4 * x^2 + 4 * y^2))",3);
+//    gsFunctionExpr<> sol1der("0",
+//                     "0",
+//                     "0", 3);
     // Neumann
 //    gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
 //                             "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)",
@@ -1251,38 +1252,38 @@ int main(int argc, char *argv[])
 
                 penalty(r,i) = mu;
 
-                auto ggL = pow(fform(G.left()).det(),0.5);
-                auto G0L = 1.0/ggL * fform(G.left());
-                auto G0invL = G0L.inv();
+                //auto ggL = pow(fform(G.left()).det(),0.5);
+                //auto G0L = 1.0/ggL * fform(G.left());
+                //auto G0invL = G0L.inv();
 
-                auto ggR = pow(fform(G.right()).det(),0.5);
-                auto G0R = 1.0/ggR * fform(G.right());
-                auto G0invR = G0R.inv();
+                //auto ggR = pow(fform(G.right()).det(),0.5);
+                //auto G0R = 1.0/ggR * fform(G.right());
+                //auto G0invR = G0R.inv();
 
                 std::vector<boundaryInterface> iFace;
                 iFace.push_back(*it);
                 A.assembleIfc(iFace,
                         //B11
                               -alpha * 0.5 * ((jac(G.left()) * fform(G.left()).inv() * igrad(u.left()).tr()).tr() * nv(G.left()).normalized()) *
-                              (deriv2(u.left(),G0invL)).tr() * gg,
+                              (var1(u.left(),G.left())).tr() * gg,
                               -alpha * 0.5 *
                                       (((jac(G.left()) * fform(G.left()).inv() * igrad(u.left()).tr()).tr() * nv(G.left()).normalized())
-                              * (deriv2(u.left(),G0invL)).tr()).tr() * gg,
+                              * (var1(u.left(),G.left())).tr()).tr() * gg,
                         //B12
                               -alpha * 0.5 * ((jac(G.left()) * fform(G.left()).inv() * igrad(u.left()).tr()).tr() * nv(G.left()).normalized()) *
-                              (deriv2(u.right(),G0invR)).tr() * gg,
+                              (var1(u.right(),G.right())).tr() * gg,
                               -alpha * 0.5 * (((jac(G.left()) * fform(G.left()).inv() * igrad(u.left()).tr()).tr() * nv(G.left()).normalized()) *
-                                              (deriv2(u.right(),G0invR)).tr()).tr() * gg,
+                                              (var1(u.right(),G.right())).tr()).tr() * gg,
                         //B21
                               alpha * 0.5 * ((jac(G.right()) * fform(G.right()).inv() * igrad(u.right()).tr()).tr() * nv(G.left()).normalized()) *
-                              (deriv2(u.left(),G0invL)).tr() * gg,
+                              (var1(u.left(),G.left())).tr() * gg,
                               alpha * 0.5 * (((jac(G.right()) * fform(G.right()).inv() * igrad(u.right()).tr()).tr() * nv(G.left()).normalized()) *
-                                             (deriv2(u.left(),G0invL)).tr()).tr() * gg,
+                                             (var1(u.left(),G.left())).tr()).tr() * gg,
                         //B22
                               alpha * 0.5 * ((jac(G.right()) * fform(G.right()).inv() * igrad(u.right()).tr()).tr() * nv(G.left()).normalized()) *
-                              (deriv2(u.right(),G0invR)).tr() * gg,
+                              (var1(u.right(),G.right())).tr() * gg,
                               alpha * 0.5 * (((jac(G.right()) * fform(G.right()).inv() * igrad(u.right()).tr()).tr() * nv(G.left()).normalized()) *
-                                             (deriv2(u.right(),G0invR)).tr()).tr() * gg,
+                                             (var1(u.right(),G.right())).tr()).tr() * gg,
 
                         // E11
                               mu * ((jac(G.left()) * fform(G.left()).inv() * igrad(u.left()).tr()).tr() * nv(G.left()).normalized()) *
