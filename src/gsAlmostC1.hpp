@@ -912,7 +912,7 @@ namespace gismo
     typename std::enable_if<  _boundary && _v==-1 && _smooth, void>::type
     gsAlmostC1<d,T>::_computeVertexMapper_impl(patchCorner pcorner, index_t valence)
     {
-        // std::vector<std::pair<index_t,index_t>> indices0  = _getAllInterfaceIndices(pcorner,0,m_bases);
+        std::vector<std::pair<index_t,index_t>> indices0  = _getAllInterfaceIndices(pcorner,0,m_bases);
         std::vector<std::pair<index_t,index_t>> indices1  = _getAllInterfaceIndices(pcorner,1,m_bases);
         std::vector<patchCorner> pcorners;
         m_patches.getCornerList(pcorner,pcorners);
@@ -924,6 +924,10 @@ namespace gismo
 
         // Eliminate the 1,0 and 0,1s
         for (std::vector<std::pair<index_t,index_t>>::iterator it=indices1.begin(); it!=indices1.end(); it++)
+            m_mapModified.eliminateDof(it->second,it->first);
+
+        _removeLowestIndices(indices0,3);
+        for (std::vector<std::pair<index_t,index_t>>::iterator it=indices0.begin(); it!=indices0.end(); it++)
             m_mapModified.eliminateDof(it->second,it->first);
     }
 
@@ -1296,7 +1300,6 @@ namespace gismo
         }
 
         // Lastly, give the 0,0 a weight 1 to itself
-        // Influence of 1,1 to itself
         index_t b00_p1 = _indexFromVert(0,pcorner,psides[0],0); // point 0,0 (does not matter which reference side is taken)
         rowIdx = m_mapModified.index(b00_p1,pcorner.patch);
         colIdx = m_mapOriginal.index(b00_p1,pcorner.patch);
