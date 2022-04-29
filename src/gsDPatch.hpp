@@ -256,7 +256,8 @@ namespace gismo
                     {
                         patches.insert(std::make_pair(side.patch,i));
                         corners[i] = corner;
-                        GISMO_ASSERT(m_patches.getInterface(side,interfaces[i]),"Side must be an interface!");
+                        bool isInterface = m_patches.getInterface(side,interfaces[i]);
+                        GISMO_ASSERT(isInterface,"Side must be an interface!");
 
                         std::vector<boxCorner> adjcorners;
                         m_patches.getNeighbour(side,otherSide);
@@ -1084,7 +1085,8 @@ namespace gismo
             for (std::vector<patchSide>::iterator side = psides.begin(); side != psides.end(); ++side)
             {
                 boundaryInterface iface;
-                GISMO_ASSERT(m_patches.getInterface(*side,iface),"Side must be an interface!");
+                bool isInterface = m_patches.getInterface(*side,iface);
+                GISMO_ASSERT(isInterface,"Side must be an interface!");
                 patchSide otherSide;
                 m_patches.getNeighbour(*side,otherSide);
                 patchCorner otherCorner = iface.mapCorner(pcorner);
