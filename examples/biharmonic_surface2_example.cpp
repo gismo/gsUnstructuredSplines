@@ -964,13 +964,13 @@ int main(int argc, char *argv[])
     //! [Read geometry]
 
     //gsFunctionExpr<>f("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
-    gsFunctionExpr<> f  (" (64 * (x - y) * (x + y) * (13 + 64*x^4 + 12*y^2 + 64*y^4 + x^2*(12 - 768*y^2)))/(1 + 4*x^2 + 4*y^2)^5",3);
-    //gsFunctionExpr<>f("5",3);
+    //gsFunctionExpr<> f  (" (64 * (x - y) * (x + y) * (13 + 64*x^4 + 12*y^2 + 64*y^4 + x^2*(12 - 768*y^2)))/(1 + 4*x^2 + 4*y^2)^5",3);
+    gsFunctionExpr<>f("5",3);
     gsInfo << "Source function: " << f << "\n";
 
     //gsFunctionExpr<> ms("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",3);
-    //gsFunctionExpr<> ms("0",3);
-    gsFunctionExpr<> ms("z",3);
+    gsFunctionExpr<> ms("0",3);
+    //gsFunctionExpr<> ms("z",3);
     gsInfo << "Exact function: " << ms << "\n";
 
     //! [Refinement]
@@ -1007,16 +1007,16 @@ int main(int argc, char *argv[])
 
     //! [Boundary condition]
     // Laplace
-    gsFunctionExpr<> laplace ("-((8 * (x^2 - y^2))/(1 + 4 * x^2 + 4 * y^2)^2)",3);
-    //gsFunctionExpr<> laplace ("0",3);
+    //gsFunctionExpr<> laplace ("-((8 * (x^2 - y^2))/(1 + 4 * x^2 + 4 * y^2)^2)",3);
+    gsFunctionExpr<> laplace ("0",3);
 
     // Neumann
-    gsFunctionExpr<>sol1der ("(2 * x)/(1 + 4 * x^2 + 4 * y^2)",
-                             "-((2 * y)/(1 + 4 * x^2 + 4 * y^2))",
-                             "((4 * (x^2 + y^2))/(1 + 4 * x^2 + 4 * y^2))",3);
-//    gsFunctionExpr<> sol1der("0",
-//                     "0",
-//                     "0", 3);
+//    gsFunctionExpr<>sol1der ("(2 * x)/(1 + 4 * x^2 + 4 * y^2)",
+//                             "-((2 * y)/(1 + 4 * x^2 + 4 * y^2))",
+//                             "((4 * (x^2 + y^2))/(1 + 4 * x^2 + 4 * y^2))",3);
+    gsFunctionExpr<> sol1der("0",
+                     "0",
+                     "0", 3);
     // Neumann
 //    gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
 //                             "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)",

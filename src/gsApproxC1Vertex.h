@@ -164,11 +164,19 @@ public:
             patchCorner pC(m_patchesAroundVertex[i], m_vertexIndices[i]);
             pC.getContainingSides(d, containingSides);
 
+//            std::vector<bool> isInterface(2);
+//            isInterface[0] = m_mp.isInterface(patchSide(m_patchesAroundVertex[i], containingSides.at(0).side()));
+//            isInterface[1] = m_mp.isInterface(patchSide(m_patchesAroundVertex[i], containingSides.at(1).side()));
+
             if (containingSides.at(0).side() < 3) // If isInterface_1 == v, then switch
             {
                 patchSide side_temp = containingSides[0];
                 containingSides[0] = containingSides[1];
                 containingSides[1] = side_temp;
+
+//                bool isInterface_tmp = isInterface[0];
+//                isInterface[0] = isInterface[1];
+//                isInterface[1] = isInterface_tmp;
             }
 
             std::vector<bool> isInterface(2);
