@@ -287,9 +287,9 @@ void computeStabilityParameter(gsMultiPatch<> mp, gsMultiBasis<> dbasis, gsMatri
 int main(int argc, char *argv[])
 {
     //! [Parse command line]
-    bool plot = false;
+    bool plot  = false;
     bool plotApproxC1 = false;
-    bool mesh = false;
+    bool mesh  = false;
 
     index_t method = 0;
 
@@ -309,6 +309,7 @@ int main(int argc, char *argv[])
     real_t penalty_init = -1.0;
     std::string xml;
     std::string output;
+    std::string write;
     std::string geometry = "g1000";
 
     std::string fn;
@@ -347,6 +348,7 @@ int main(int argc, char *argv[])
     //cmd.addSwitch("cond", "Estimate condition number (slow!)", cond);
 
     cmd.addString("o", "output", "Output in xml (for python)", output);
+    cmd.addString("w", "write", "Write to csv", write);
     try { cmd.getValues(argc,argv); } catch (int rv) { return rv; }
     //! [Parse command line]
 
@@ -935,6 +937,18 @@ int main(int argc, char *argv[])
         gsInfo << "XML saved to " + output << "\n";
     }
     //! [Export data to xml]
+
+    if (!write.empty())
+    {
+        std::ofstream file(write.c_str());
+        file<<"Meshsize, dofs, l2err, h1err, h2err, iFaceErr"<<"\n";
+        for (index_t k=0; k<meshsize.size(); ++k)
+        {
+            file<<meshsize[k]<<","<<dofs[k]<<","<<l2err[k]<<","<<h1err[k]<<","<<h2err[k]<<","<<IFaceErr[k]<<"\n";
+        }
+        file.close();
+    }
+
 
     return EXIT_SUCCESS;
 }// end main
