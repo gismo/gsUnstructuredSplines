@@ -53,6 +53,7 @@ public:
         {
             for (size_t dir = 0; dir < sidesContainer.size(); dir++)
             {
+                // Map global side to local side
                 index_t localSide = auxPatchContainer[0].getMapIndex(sidesContainer[dir].index());
                 //gsInfo << "Global: " << sidesContainer[dir] << " : " << localSide << "\n";
                 index_t localDir = localSide < 3 ? 1 : 0;
