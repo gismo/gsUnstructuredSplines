@@ -42,7 +42,7 @@ namespace gismo
 //            return repTop;
 
         // Right patch along the interface. Patch 0 -> v coordinate. Edge west along interface
-        switch (item.second().side().index())
+        switch (item.first().side().index())
         {
             case 1:
                 break;
@@ -57,7 +57,7 @@ namespace gismo
         }
 
         // Left patch along the interface. Patch 1 -> u coordinate. Edge south along interface
-        switch (item.first().side().index())
+        switch (item.second().side().index())
         {
             case 3:
                 break;
@@ -70,6 +70,8 @@ namespace gismo
             default:
                 break;
         }
+
+        computeAuxTopology();
     }
 
 
@@ -109,6 +111,8 @@ namespace gismo
                     break;
             }
         }
+
+        computeAuxTopology();
     }
 
 } // namespace gismo
