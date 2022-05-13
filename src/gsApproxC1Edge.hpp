@@ -195,7 +195,7 @@ namespace gismo
 
 
     template<short_t d,class T>
-    void gsApproxC1Edge<d,T>::reparametrizeInterfacePatches()
+    void gsApproxC1Edge<d,T>::reparametrizeInterfacePatches(std::vector<patchSide> & sidesContainer)
     {
         computeAuxTopology();
 
@@ -206,7 +206,7 @@ namespace gismo
         temp_mp.computeTopology();
 
         // Right patch along the interface. Patch 0 -> v coordinate. Edge west along interface
-        switch (temp_mp.interfaces()[0].second().side().index())
+        switch (sidesContainer[0].side().index())
         {
             case 1:
                 break;
@@ -221,7 +221,7 @@ namespace gismo
         }
 
         // Left patch along the interface. Patch 1 -> u coordinate. Edge south along interface
-        switch (temp_mp.interfaces()[0].first().side().index())
+        switch (sidesContainer[1].side().index())
         {
             case 3:
                 break;

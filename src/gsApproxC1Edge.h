@@ -60,7 +60,7 @@ public:
         sidesContainer[0] = item.first();
         sidesContainer[1] = item.second();
 
-        reparametrizeInterfacePatches();
+        reparametrizeInterfacePatches(sidesContainer);
 
         compute(sidesContainer);
 
@@ -146,7 +146,7 @@ private:
     //          in auxTop: 2->0, 3->1, 4->2, 1->3, 0->4
     void computeAuxTopology();
 
-    void reparametrizeInterfacePatches();
+    void reparametrizeInterfacePatches(std::vector<patchSide> & sidesContainer);
 
     void reparametrizeSinglePatch(index_t side);
 
