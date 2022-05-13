@@ -154,13 +154,13 @@ public:
                 rotPatch.addPatch(m_auxPatches[np].getPatchRotated());
         }
 
-
+        // TODO fix the gluing Data stuff
         for(size_t i = 0; i < m_patchesAroundVertex.size(); i++)
         {
             C1AuxPatchContainer auxPatchSingle;
             auxPatchSingle.push_back(m_auxPatches[i]);
 
-            std::vector<patchSide> containingSides;
+            std::vector<patchSide> containingSides;  // global sides plus index
             patchCorner pC(m_patchesAroundVertex[i], m_vertexIndices[i]);
             pC.getContainingSides(d, containingSides);
 
@@ -180,8 +180,8 @@ public:
             }
 
             std::vector<bool> isInterface(2);
-            isInterface[0] = m_mp.isInterface(patchSide(m_patchesAroundVertex[i], containingSides.at(0).side()));
-            isInterface[1] = m_mp.isInterface(patchSide(m_patchesAroundVertex[i], containingSides.at(1).side()));
+            isInterface[0] = m_mp.isInterface(patchSide(m_patchesAroundVertex[i], containingSides.at(0).side()));  // global interface at u
+            isInterface[1] = m_mp.isInterface(patchSide(m_patchesAroundVertex[i], containingSides.at(1).side()));  // global interface at v
 
             //Problem setup
             std::vector<gsBSpline<T>> alpha, beta;
@@ -213,13 +213,14 @@ public:
                             0));
                     index_t dir_1 = auxPatchSingle[0].getMapIndex(containingSides[dir].side()) < 3 ? 1 : 0;
                     index_t dir_2 = m_auxPatches[patch2].getMapIndex(result.side().index()) < 3 ? 1 : 0;
-//                    if (basis.component(dir_1).numElements() > basis2.component(dir_2).numElements())
-//                        basis_pm.component(dir_1) = basis2.component(dir_2);
+                    if (basis.component(dir_1).numElements() > basis2.component(dir_2).numElements())
+                        basis_pm.component(dir_1) = basis2.component(dir_2);
 
                 }
             }
 
             // Compute Gluing data
+            // Stored locally
             gsApproxC1GluingData<d, T> approxGluingData(auxPatchSingle, m_optionList, containingSides, isInterface, basis_pm);
 
             //gsGeometry<T> & geo = auxPatchSingle[0].getPatchRotated();
@@ -229,35 +230,35 @@ public:
             {
                 index_t localdir = auxPatchSingle[0].getMapIndex(containingSides[dir].index()) < 3 ? 1 : 0;
 
-                if (isInterface[localdir])
+                if (isInterface[dir])
                 {
-                    alpha[dir] = approxGluingData.alphaS(dir);
-                    beta[dir] = approxGluingData.betaS(dir);
+                    alpha[localdir] = approxGluingData.alphaS(localdir);
+                    beta[localdir] = approxGluingData.betaS(localdir);
                 }
-
+                // Store the isInterface locally
                 kindOfEdge[localdir] = isInterface[dir];
 
                 gsBSplineBasis<T> b_plus, b_minus;
-                if (isInterface[localdir])
+                if (isInterface[dir])
                 {
                     // TODO FIX
-                    //createPlusSpace(geo, basis_pm, localdir, b_plus);
-                    //createMinusSpace(geo, basis_pm, localdir, b_minus);
-                    createPlusSpace(geo, initSpace.basis(0), dir, b_plus);
-                    createMinusSpace(geo, initSpace.basis(0), dir, b_minus);
+                    createPlusSpace(geo, basis_pm, localdir, b_plus);
+                    createMinusSpace(geo, basis_pm, localdir, b_minus);
+                    //createPlusSpace(geo, initSpace.basis(0), dir, b_plus);
+                    //createMinusSpace(geo, initSpace.basis(0), dir, b_minus);
                 }
                 else
                 {
-                    createPlusSpace(geo, initSpace.basis(0), dir, b_plus);
-                    createMinusSpace(geo, initSpace.basis(0), dir, b_minus);
+                    createPlusSpace(geo, initSpace.basis(0), localdir, b_plus);
+                    createMinusSpace(geo, initSpace.basis(0), localdir, b_minus);
                 }
 
 //                gsDebugVar(b_plus);
 //                gsDebugVar(b_minus);
 //                gsDebugVar(dir);
-//                gsDebugVar(isInterface[localdir]);application/paraview3/2334063
-                basis_plus[dir] = b_plus;
-                basis_minus[dir] = b_minus;
+//                gsDebugVar(isInterface[localdir]);
+                basis_plus[localdir] = b_plus;
+                basis_minus[localdir] = b_minus;
             }
 
             gsSparseSolver<real_t>::SimplicialLDLT solver;
