@@ -18,6 +18,7 @@
 #include <gsUnstructuredSplines/src/gsApproxC1Spline.h>
 #include <gsUnstructuredSplines/src/gsDPatch.h>
 #include <gsUnstructuredSplines/src/gsAlmostC1.h>
+#include <gsUnstructuredSplines/src/gsC1SurfSpline.h>
 
 using namespace gismo;
 //! [Include namespace]
@@ -35,7 +36,7 @@ enum MethodFlags
     DPATCH         = 1, // D-Patch
     ALMOSTC1       = 2, // Almost C1
     NITSCHE        = 3, // Nitsche
-    //????      = 1 << 3, // ????
+    SURFASG1       = 5, // AS-G1
     // Add more [...]
 };
 
@@ -627,10 +628,28 @@ int main(int argc, char *argv[])
             dbasis = almostC1.localBasis();
             bb2.init(dbasis,global2local);
         }
+        else if (method == MethodFlags::SURFASG1) // Andrea
+        {
+            mp.uniformRefine(1,degree-smoothness);
+            dbasis.uniformRefine(1,degree-smoothness);
+
+            meshsize[r] = dbasis.basis(0).getMinCellLength();
+
+            gsC1SurfSpline<2,real_t> smoothC1(mp,dbasis);
+            smoothC1.init();
+            smoothC1.compute();
+
+            gsSparseMatrix<real_t> global2local;
+            global2local = smoothC1.getSystem();
+            global2local = global2local.transpose();
+            gsMultiBasis<> basis_temp;
+            smoothC1.getMultiBasis(basis_temp);
+            bb2.init(basis_temp,global2local);
+        }
         gsInfo<< "." <<std::flush; // Approx C1 construction done
 
         // Setup the mapper
-        if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1) // MappedBasis
+        if (method != MethodFlags::NITSCHE) // MappedBasis
         {
             gsDofMapper map;
             setMapperForBiharmonic(bc, bb2,map);
@@ -748,7 +767,7 @@ int main(int argc, char *argv[])
         h2err[r]= h1err[r] +
                  math::sqrt(ev.integral( ( ihess(u_ex) - ihess(u_sol,G) ).sqNorm() * meas(G) )); // /ev.integral( ihess(f).sqNorm()*meas(G) )
 
-        if (method == MethodFlags::APPROXC1 || method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
+        if (method != MethodFlags::NITSCHE)
         {
             gsMatrix<real_t> solFull;
             u_sol.extractFull(solFull);

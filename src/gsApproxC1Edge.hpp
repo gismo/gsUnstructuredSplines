@@ -199,11 +199,11 @@ namespace gismo
     {
         computeAuxTopology();
 
-        gsMultiPatch<> temp_mp;
-        for(unsigned i = 0; i <  m_auxPatches.size(); i++)
-            temp_mp.addPatch(m_auxPatches[i].getPatchRotated());
-
-        temp_mp.computeTopology();
+//        gsMultiPatch<> temp_mp;
+//        for(unsigned i = 0; i <  m_auxPatches.size(); i++)
+//            temp_mp.addPatch(m_auxPatches[i].getPatchRotated());
+//
+//        temp_mp.computeTopology();
 
         // Right patch along the interface. Patch 0 -> v coordinate. Edge west along interface
         switch (sidesContainer[0].side().index())

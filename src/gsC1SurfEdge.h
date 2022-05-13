@@ -40,6 +40,7 @@ public:
     gsC1SurfEdge(const gsMultiPatch<> & mp, const boundaryInterface & item){
         auxGeom.push_back(gsG1AuxiliaryPatch(mp.patch(item.first().patch), item.first().patch));
         auxGeom.push_back(gsG1AuxiliaryPatch(mp.patch(item.second().patch), item.second().patch));
+        m_item = item;
     }
 
     gsC1SurfEdge(const gsMultiPatch<> & sp, const patchSide & item){
@@ -54,7 +55,10 @@ public:
         mp_init.addPatch(auxGeom[0].getPatch());// Right -> 0 ====> v along the interface
         mp_init.addPatch(auxGeom[1].getPatch()); // Left -> 1 ====> u along the interface
 
-        gsMultiPatch<> test_mp(reparametrizeInterface()); // auxGeom contains now the reparametrized geometry
+        reparametrizeInterface(m_item);
+        gsMultiPatch<> test_mp; // auxGeom contains now the reparametrized geometry
+        test_mp.addPatch(auxGeom[0].getPatch());
+        test_mp.addPatch(auxGeom[1].getPatch());
         gsMultiBasis<> test_mb(test_mp);
         gsMultiPatch<> g1Basis_0, g1Basis_1;
 
@@ -90,7 +94,8 @@ public:
     {
         basisEdgeResult.clear();
 
-        gsMultiPatch<> test_mp(reparametrizeBoundary(boundaryInd));
+        reparametrizeBoundary(boundaryInd);
+        gsMultiPatch<> test_mp(auxGeom[0].getPatch());
         gsMultiBasis<> test_mb(test_mp);
         gsMultiPatch<> g1Basis_edge;
 
@@ -117,17 +122,20 @@ protected:
 
     std::vector<gsG1AuxiliaryPatch> auxGeom;
 
+    // Need for avoiding the computeTopology
+    boundaryInterface m_item;
+
 private:
 
     // Compute topology
     // After computeTopology() the patches will have the same patch-index as the position-index in auxGeom
     // EXAMPLE: global patch-index-order inside auxGeom: [2, 3, 4, 1, 0]
     //          in auxTop: 2->0, 3->1, 4->2, 1->3, 0->4
-    gsMultiPatch<> computeAuxTopology();
+    void computeAuxTopology();
 
-    gsMultiPatch<> reparametrizeInterface();
+    void reparametrizeInterface(const boundaryInterface & item);
 
-    gsMultiPatch<> reparametrizeBoundary(index_t side);
+    void reparametrizeBoundary(index_t side);
 
 
 }; // Class gsC1SurfEdge

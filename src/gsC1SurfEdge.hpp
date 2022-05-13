@@ -19,30 +19,30 @@ namespace gismo
 {
 
     template<short_t d,class T>
-    gsMultiPatch<> gsC1SurfEdge<d,T>::computeAuxTopology(){
-        gsMultiPatch<> auxTop;
+    void gsC1SurfEdge<d,T>::computeAuxTopology(){
+        //gsMultiPatch<> auxTop;
         for(unsigned i = 0; i <  auxGeom.size(); i++){
             if(auxGeom[i].getPatch().orientation() == -1)
             {
                 auxGeom[i].swapAxis();
 //                gsInfo << "Changed axis on patch: " << auxGeom[i].getGlobalPatchIndex() << "\n";
             }
-            auxTop.addPatch(auxGeom[i].getPatch());
+            //auxTop.addPatch(auxGeom[i].getPatch());
         }
-        auxTop.computeTopology();
-        return auxTop;
+        //auxTop.computeTopology();
+        //return auxTop;
     }
 
 
     template<short_t d,class T>
-    gsMultiPatch<> gsC1SurfEdge<d,T>::reparametrizeInterface(){
-        gsMultiPatch<> repTop(computeAuxTopology());
+    void gsC1SurfEdge<d,T>::reparametrizeInterface(const boundaryInterface & item){
+        computeAuxTopology();
 
-        if(repTop.interfaces()[0].second().side().index() == 1 && repTop.interfaces()[0].first().side().index() == 3)
-            return repTop;
+//        if(item.second().side().index() == 1 && item.first().side().index() == 3)
+//            return repTop;
 
         // Right patch along the interface. Patch 0 -> v coordinate. Edge west along interface
-        switch (repTop.interfaces()[0].second().side().index())
+        switch (item.second().side().index())
         {
             case 1:
                 break;
@@ -57,7 +57,7 @@ namespace gismo
         }
 
         // Left patch along the interface. Patch 1 -> u coordinate. Edge south along interface
-        switch (repTop.interfaces()[0].first().side().index())
+        switch (item.first().side().index())
         {
             case 3:
                 break;
@@ -70,14 +70,13 @@ namespace gismo
             default:
                 break;
         }
-
-        return this->computeAuxTopology();
     }
 
 
     template<short_t d,class T>
-    gsMultiPatch<> gsC1SurfEdge<d,T>::reparametrizeBoundary(const int bInd){
-        gsMultiPatch<> repTop(computeAuxTopology());
+    void gsC1SurfEdge<d,T>::reparametrizeBoundary(const int bInd){
+        computeAuxTopology();
+
         if(auxGeom[0].getOrient())
         {
             switch (bInd)
@@ -95,10 +94,8 @@ namespace gismo
                     break;
             }
         }
-        else
-        {
-            switch (bInd)
-            {
+        else {
+            switch (bInd) {
                 case 1:
                     break;
                 case 4:
@@ -112,7 +109,6 @@ namespace gismo
                     break;
             }
         }
-        return this->computeAuxTopology();
     }
 
 } // namespace gismo
