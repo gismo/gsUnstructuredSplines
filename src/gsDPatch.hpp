@@ -17,7 +17,7 @@
 #include <gsSolver/gsMatrixOp.h>
 #include <typeinfo>
 
-#define PI 3.141592653589793
+// #define PI 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148086513282306647
 
 namespace gismo
 {
@@ -425,7 +425,8 @@ namespace gismo
         gsMatrix<T> P(valence,9);
         P.setZero();
 
-        T phi = 2*PI / valence;
+        T pi = 4*std::atan(1);
+        T phi = 2*pi / valence;
         std::complex<T> I(1,1);
         T beta = 0.4;
         T psi = std::arg( (T(1.0)+I*beta*T(math::sin(phi)) ) * std::complex<T>(math::exp( -I*phi / T(2.0) ) ));
