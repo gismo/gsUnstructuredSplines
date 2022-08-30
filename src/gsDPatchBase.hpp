@@ -32,6 +32,7 @@ namespace gismo
         _makeTHB();
         _computeEVs();
         GISMO_ASSERT(this->_checkMatrix(m_matrix),"Mapper does not have column sum equal to 1");
+        m_computed=true;
     }
 
 
@@ -578,6 +579,7 @@ namespace gismo
     template<short_t d,class T>
     gsGeometry<T>* gsDPatchBase<d,T>::exportPatch(index_t patch, bool computeCoefs)
     {
+        GISMO_ASSERT(m_computed,"The method has not been computed! Call compute().");
         ////////////////////////////////////////////////
         // This can be done more efficient!!
         // Do it once instead of for every patch
@@ -749,9 +751,9 @@ namespace gismo
         std::vector<index_t> result(index.size());
 
         // gsBasis<T> * basis = &bases.basis(corner.patch);
-        gsHTensorBasis<2,T> *basis = dynamic_cast<gsHTensorBasis<2,T>*>(&bases.basis(corner.patch));
+        gsHTensorBasis<d,T> *basis = dynamic_cast<gsHTensorBasis<d,T>*>(&bases.basis(corner.patch));
         index_t level = basis->levelAtCorner(corner.corner()) + levelOffset;
-        gsTensorBSplineBasis<2,T> tbasis = basis->tensorLevel(level);
+        gsTensorBSplineBasis<d,T> tbasis = basis->tensorLevel(level);
 
         gsVector<index_t,2> sizes;
         tbasis.size_cwise(sizes);
@@ -1002,12 +1004,12 @@ namespace gismo
 //                     boxes.col(0) << mat;
 //                     boxes.col(1) << mat;
 
-//                     gsHTensorBasis<2,T> *basis = dynamic_cast<gsHTensorBasis<2,T>*>(&m_RefPatches.basis(corner.patch));
+//                     gsHTensorBasis<d,T> *basis = dynamic_cast<gsHTensorBasis<d,T>*>(&m_RefPatches.basis(corner.patch));
 //                     std::vector<index_t> elements = basis->asElements(boxes,0); // 0-ring
 
 //                     elVec.at(corner.patch).insert(elVec.at(corner.patch).end(), elements.begin(), elements.end());
 
-//                     // gsHTensorBasis<2,T> *basis = dynamic_cast<gsHTensorBasis<2,T>*>(&m_RefPatches.basis(corner.patch));
+//                     // gsHTensorBasis<d,T> *basis = dynamic_cast<gsHTensorBasis<d,T>*>(&m_RefPatches.basis(corner.patch));
 
 //                     // basis->refineElements(elements, m_tMatrix);
 //                 }
@@ -1017,7 +1019,7 @@ namespace gismo
 //             std::vector<Eigen::Triplet<T,index_t>> tripletList;
 //             for (size_t p=0; p!=m_RefPatches.nPatches(); p++)
 //             {
-//                 gsHTensorBasis<2,T> *basis = dynamic_cast<gsHTensorBasis<2,T>*>(&m_RefPatches.basis(p));
+//                 gsHTensorBasis<d,T> *basis = dynamic_cast<gsHTensorBasis<d,T>*>(&m_RefPatches.basis(p));
 //                 std::vector< gsSortedVector< index_t > > xmat = basis->getXmatrix();
 
 //                 m_RefPatches.patch(p).refineElements(elVec[p]);
@@ -1196,15 +1198,15 @@ namespace gismo
     {
         // Cast all patches of the mp object to THB splines
         gsTHBSpline<d,T> thb;
-        gsTensorBSpline<2,real_t> * geo;
+        gsTensorBSpline<d,T> * geo;
         for (size_t k=0; k!=m_patches.nPatches(); ++k)
         {
-            if ( (geo = dynamic_cast< gsTensorBSpline<2,real_t> * > (&m_patches.patch(k))) )
+            if ( (geo = dynamic_cast< gsTensorBSpline<d,T> * > (&m_patches.patch(k))) )
             {
-                thb = gsTHBSpline<2,real_t>(*geo);
+                thb = gsTHBSpline<d,T>(*geo);
                 m_patches.patch(k) = thb;
             }
-            else if (dynamic_cast< gsTHBSpline<2,real_t> * > (&m_patches.patch(k)))
+            else if (dynamic_cast< gsTHBSpline<d,T> * > (&m_patches.patch(k)))
             { }
             else
                 gsWarn<<"No THB basis was constructed";

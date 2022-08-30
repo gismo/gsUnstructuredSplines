@@ -52,7 +52,8 @@ public:
     {
     }
 
-    using Base::compute;
+    // using Base::compute;
+    // void compute();
 
     /**
      * @brief      Default constructor

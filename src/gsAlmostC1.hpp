@@ -32,8 +32,6 @@ namespace gismo
         for (size_t p=0; p!=m_patches.nPatches(); p++)
             for (short_t dim=0; dim!=d; dim++)
                 GISMO_ENSURE(m_patches.basis(p).degree(dim)==2,"Degree of the basis ( dimension "<<dim<<" ) of patch "<<p<<" is "<<m_patches.basis(p).degree(dim)<<", but should be 2!");
-
-        compute();
     }
 
     template<short_t d,class T>
@@ -49,6 +47,19 @@ namespace gismo
         m_options.addReal("SharpCornerTolerance","Sharp corner tolerance",1e-2);
         m_options.addSwitch("Verbose","Verbose output",false);
     }
+
+    // template<short_t d,class T>
+    // void gsAlmostC1<d,T>::compute()
+    // {
+    //     // m_RefPatches = m_patches;
+    //     _initialize();
+    //     _computeMapper();
+    //     _computeSmoothMatrix();
+    //     GISMO_ASSERT(this->_checkMatrix(m_matrix),"Mapper does not have column sum equal to 1");
+    //     _makeTHB();
+    //     _computeEVs();
+    //     GISMO_ASSERT(this->_checkMatrix(m_matrix),"Mapper does not have column sum equal to 1");
+    // }
 
 
     /*=====================================================================================

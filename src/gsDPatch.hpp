@@ -27,8 +27,7 @@ namespace gismo
     :
     Base(patches)
     {
-        defaultOptions();
-        compute();
+        this->defaultOptions();
     }
 
     template<short_t d,class T>
@@ -71,12 +70,12 @@ namespace gismo
         {
             for (index_t c=1; c<5; c++)
             {
-                index_t idx = _vertIndex(p,c);
+                index_t idx = this->_vertIndex(p,c);
                 if(m_vertCheck[ idx] )
                     continue;
 
                 patchCorner pcorner(p,c);
-                std::pair<index_t,bool> vdata = _vertexData(pcorner); // corner c
+                std::pair<index_t,bool> vdata = this->_vertexData(pcorner); // corner c
 
                 if (std::count(m_C0s.begin(), m_C0s.end(), pcorner))
                     continue;
@@ -92,9 +91,9 @@ namespace gismo
                     {
                         corner->getContainingSides(d,csides);
                         if ( m_patches.isBoundary(csides[0]) || m_patches.isBoundary(csides[1]) ) //
-                            b11b.push_back(m_mapModified.index( _indexFromVert(m_Bbases,1,*corner,csides[0],1) , corner->patch) );
+                            b11b.push_back(m_mapModified.index( this->_indexFromVert(m_Bbases,1,*corner,csides[0],1) , corner->patch) );
                         else if (b11i==-1)
-                            b11i = m_mapModified.index( _indexFromVert(m_Bbases,1,*corner,csides[0],1) , corner->patch);
+                            b11i = m_mapModified.index( this->_indexFromVert(m_Bbases,1,*corner,csides[0],1) , corner->patch);
                         else
                             GISMO_ERROR("b11i is already assigned?");
 
@@ -104,7 +103,7 @@ namespace gismo
                             b00 = m_mapModified.index( basis->functionAtCorner(corner->corner()), corner->patch );
                         }
 
-                        idx = _vertIndex(corner->patch,corner->corner());
+                        idx = this->_vertIndex(corner->patch,corner->corner());
                         m_vertCheck[ idx ] = true;
                     }
                     coefs.row(b00) = coefs.row(b11b[0]) + coefs.row(b11b[1]) - coefs.row(b11i);
@@ -304,13 +303,13 @@ namespace gismo
                             side = interfaces[i].second();
                         }
 
-                        c11(patches[side.patch],0) = _indexFromVert(1,corners[i],side,1,0);
-                        c12(patches[side.patch],0) = _indexFromVert(2,corners[i],side,1,0);
-                        c21(patches[otherSide.patch],0) = _indexFromVert(2,otherCorner,otherSide,1,0);
+                        c11(patches[side.patch],0) = this->_indexFromVert(1,corners[i],side,1,0);
+                        c12(patches[side.patch],0) = this->_indexFromVert(2,corners[i],side,1,0);
+                        c21(patches[otherSide.patch],0) = this->_indexFromVert(2,otherCorner,otherSide,1,0);
 
-                        c11o(patches[side.patch],0) = _indexFromVert(m_Bbases,1,corners[i],side,1);
-                        c12o(patches[side.patch],0) = _indexFromVert(m_Bbases,2,corners[i],side,1);
-                        c21o(patches[otherSide.patch],0) = _indexFromVert(m_Bbases,2,otherCorner,otherSide,1);
+                        c11o(patches[side.patch],0) = this->_indexFromVert(m_Bbases,1,corners[i],side,1);
+                        c12o(patches[side.patch],0) = this->_indexFromVert(m_Bbases,2,corners[i],side,1);
+                        c21o(patches[otherSide.patch],0) = this->_indexFromVert(m_Bbases,2,otherCorner,otherSide,1);
 
                     }
 
@@ -321,7 +320,7 @@ namespace gismo
                         corner = corners[i];
                         corner.getContainingSides(d,sides);
                         // we look for the 1,1 index so it does not matter which side we use
-                        // rowIndices(i,0) = m_mapModified.index(_indexFromVert(1,corner,sides[0],1,-1),corner.patch);
+                        // rowIndices(i,0) = m_mapModified.index(this->_indexFromVert(1,corner,sides[0],1,-1),corner.patch);
                         rowIndices(i,0)     = m_mapModified.index(c11o(i,0),corners[i].patch);
                         rowIndices(i+N,0)   = m_mapModified.index(c12o(i,0),corners[i].patch);
                         rowIndices(i+2*N,0) = m_mapModified.index(c21o(i,0),corners[i].patch);
@@ -363,15 +362,15 @@ namespace gismo
                             for (index_t j=0; j!=N; j++) // loop over the connected corners
                             {
                                 corners[j].getContainingSides(d,sides);
-                                colIdx = _indexFromVert(0,corners[j],sides[0],0,0); // 0,0
+                                colIdx = this->_indexFromVert(0,corners[j],sides[0],0,0); // 0,0
                                 colIdx = m_mapOriginal.index(colIdx,corners[j].patch);
                                 m_matrix(rowIndices(i+k*N,0),colIdx) = m_matrix.coeff(rowIndices(i+k*N,0),c11(i,0)); // by construction >>>> PROBLEMATIC
 
-                                colIdx = _indexFromVert(1,corners[j],sides[0],0,0); // 1,0
+                                colIdx = this->_indexFromVert(1,corners[j],sides[0],0,0); // 1,0
                                 colIdx = m_mapOriginal.index(colIdx,corners[j].patch);
                                 m_matrix(rowIndices(i+k*N,0),colIdx) = m_matrix.coeff(rowIndices(i+k*N,0),c11(i,0)); // by construction >>>> PROBLEMATIC
 
-                                colIdx = _indexFromVert(1,corners[j],sides[1],0,0); // 0,1
+                                colIdx = this->_indexFromVert(1,corners[j],sides[1],0,0); // 0,1
                                 colIdx = m_mapOriginal.index(colIdx,corners[j].patch);
                                 m_matrix(rowIndices(i+k*N,0),colIdx) = m_matrix.coeff(rowIndices(i+k*N,0),c11(i,0)); // by construction >>>> PROBLEMATIC
                             }
@@ -388,16 +387,16 @@ namespace gismo
                             patchSide side = interfaces[i][0];
                             patchSide otherSide = interfaces[i][1];
 
-                            idx = _indexFromVert(k,corner,side,0,0);
+                            idx = this->_indexFromVert(k,corner,side,0,0);
                             index_t j0k = m_mapOriginal.index(idx,side.patch);
 
-                            idx = _indexFromVert(k,otherCorner,otherSide,0,0);
+                            idx = this->_indexFromVert(k,otherCorner,otherSide,0,0);
                             index_t jk0 = m_mapOriginal.index(idx,otherSide.patch);
 
-                            idx = _indexFromVert(k,corner,side,1,0);         // point (k,0)
+                            idx = this->_indexFromVert(k,corner,side,1,0);         // point (k,0)
                             index_t jk1 = m_mapOriginal.index(idx,side.patch); // point (k,0)
 
-                            idx = _indexFromVert(k,otherCorner,otherSide,1,0);         // point (k,0)
+                            idx = this->_indexFromVert(k,otherCorner,otherSide,1,0);         // point (k,0)
                             index_t j1k = m_mapOriginal.index(idx,otherSide.patch); // point (k,0)
 
                             index_t row;
@@ -537,15 +536,15 @@ namespace gismo
         for (size_t p=0; p!=m_patches.nPatches(); p++)
             for (index_t c=1; c<5; c++)
             {
-                index_t idx = _vertIndex(p,c);
+                index_t idx = this->_vertIndex(p,c);
                 if (!passed.at(idx))
                 {
                     m_patches.getCornerList(patchCorner(p,c),corners);
 
                     for (size_t k=0; k!=corners.size(); k++)
-                        passed.at(_vertIndex(corners[k].patch,corners[k])) = true;
+                        passed.at(this->_vertIndex(corners[k].patch,corners[k])) = true;
 
-                    std::pair<index_t,bool> vdata = _vertexData(patchCorner(p,c)); // corner c
+                    std::pair<index_t,bool> vdata = this->_vertexData(patchCorner(p,c)); // corner c
                     if (!vdata.second) // boundary vertex
                         tmp += 4;
                     else
@@ -566,7 +565,7 @@ namespace gismo
     void gsDPatch<d,T>::_computeMapper() // also initialize the mappers!
     {
         // interfaces
-        _resetChecks(false);
+        this->_resetChecks(false);
 
         gsBasis<T> * basis;
 
@@ -580,7 +579,7 @@ namespace gismo
 
         for(gsBoxTopology::const_iiterator iit = m_patches.iBegin(); iit!= m_patches.iEnd(); iit++)
         {
-            sidx = _sideIndex( iit->second().patch,iit->second().side());
+            sidx = this->_sideIndex( iit->second().patch,iit->second().side());
             if (m_sideCheck.at(sidx))
                 continue;
 
@@ -591,7 +590,7 @@ namespace gismo
 
             for (index_t p = 0; p != 2; p++)
             {
-                sidx = _sideIndex( patches[p] ,psides[p] );
+                sidx = this->_sideIndex( patches[p] ,psides[p] );
                 if (m_sideCheck.at(sidx))
                     continue;
 
@@ -627,8 +626,8 @@ namespace gismo
                 // for both vertices of the side, add the indices at the vertex and one inside
                 for (index_t c =0; c!=2; c++)
                 {
-                    selectedIndices.push_back(_indexFromVert(0,pcorners[c],psides[p],0,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
-                    selectedIndices.push_back(_indexFromVert(1,pcorners[c],psides[p],0,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
+                    selectedIndices.push_back(this->_indexFromVert(0,pcorners[c],psides[p],0,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
+                    selectedIndices.push_back(this->_indexFromVert(1,pcorners[c],psides[p],0,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
                 }
 
                 std::sort(selectedIndices.begin(),selectedIndices.end());
@@ -650,7 +649,7 @@ namespace gismo
         // boundaries
         for(gsBoxTopology::const_biterator bit = m_patches.bBegin(); bit!= m_patches.bEnd(); bit++)
         {
-            sidx = _sideIndex(bit->patch,bit->side());
+            sidx = this->_sideIndex(bit->patch,bit->side());
             m_sideCheck.at(sidx) = true;
         }
 
@@ -659,7 +658,7 @@ namespace gismo
         {
             for (index_t c=1; c<5; c++)
             {
-                cidx = _vertIndex(p,c);
+                cidx = this->_vertIndex(p,c);
                 if (m_vertCheck.at(cidx))
                     continue;
 
@@ -668,7 +667,7 @@ namespace gismo
                 basis = &m_bases.basis(p);
 
                 // get valence and vertex info of corner
-                std::pair<index_t,bool> vdata = _vertexData(pcorner); // corner c
+                std::pair<index_t,bool> vdata = this->_vertexData(pcorner); // corner c
 
                 if (!vdata.second) // boundary vertex
                 {
@@ -692,13 +691,13 @@ namespace gismo
                             {
                                 if (std::count(m_C0s.begin(), m_C0s.end(), pcorner))
                                 {
-                                    m_mapModified.eliminateDof(_indexFromVert(1,pcorner,psides[p],0),pcorner.patch);
+                                    m_mapModified.eliminateDof(this->_indexFromVert(1,pcorner,psides[p],0),pcorner.patch);
                                 }
                                 else
                                 {
-                                    m_mapModified.eliminateDof(_indexFromVert(0,pcorner,psides[p],0),pcorner.patch);
-                                    m_mapModified.eliminateDof(_indexFromVert(1,pcorner,psides[p],0),pcorner.patch);
-                                    // gsDebug<<"Eliminated "<<_indexFromVert(1,pcorner,psides[p],0)<<" and "<<_indexFromVert(1,pcorner,psides[p],0)<<" of basis "<<pcorner.patch<<"\n";
+                                    m_mapModified.eliminateDof(this->_indexFromVert(0,pcorner,psides[p],0),pcorner.patch);
+                                    m_mapModified.eliminateDof(this->_indexFromVert(1,pcorner,psides[p],0),pcorner.patch);
+                                    // gsDebug<<"Eliminated "<<this->_indexFromVert(1,pcorner,psides[p],0)<<" and "<<this->_indexFromVert(1,pcorner,psides[p],0)<<" of basis "<<pcorner.patch<<"\n";
                                 }
                             }
                         }
@@ -734,20 +733,20 @@ namespace gismo
 
                             // Eliminate their 0,1 and 1,0 vertices
                             pcorners[c].getContainingSides(d,psides);
-                            m_mapModified.eliminateDof(_indexFromVert(1,pcorners[c],psides[0]),pcorners[c].patch);
-                            m_mapModified.eliminateDof(_indexFromVert(1,pcorners[c],psides[1]),pcorners[c].patch);
+                            m_mapModified.eliminateDof(this->_indexFromVert(1,pcorners[c],psides[0]),pcorners[c].patch);
+                            m_mapModified.eliminateDof(this->_indexFromVert(1,pcorners[c],psides[1]),pcorners[c].patch);
 
                             // And match the 0,0 vertex (i.e. the corner) to the corner that is first in the list pcorners.
                             if (c!=0)
                             {
-                                patchSide pseudo = patchSide(pcorner.patch,1); // this side does not contribute since we use index = 0 in _indexFromVert
-                                // m_mapModified.eliminateDof(_indexFromVert(0,pcorners[c],pseudo),pcorners[c].patch);
-                                m_mapModified.matchDof(pcorners[0].patch,_indexFromVert(0,pcorners[0],pseudo),pcorners[c].patch,_indexFromVert(0,pcorners[c],pseudo));
-                                // gsDebug<<"Matched "<<_indexFromVert(0,pcorners[0],pseudo)<<" of basis "<<pcorners[0].patch<<" with "<<_indexFromVert(0,pcorners[c],pseudo)<<" of basis "<<pcorners[c].patch<<"\n";
+                                patchSide pseudo = patchSide(pcorner.patch,1); // this side does not contribute since we use index = 0 in this->_indexFromVert
+                                // m_mapModified.eliminateDof(this->_indexFromVert(0,pcorners[c],pseudo),pcorners[c].patch);
+                                m_mapModified.matchDof(pcorners[0].patch,this->_indexFromVert(0,pcorners[0],pseudo),pcorners[c].patch,this->_indexFromVert(0,pcorners[c],pseudo));
+                                // gsDebug<<"Matched "<<this->_indexFromVert(0,pcorners[0],pseudo)<<" of basis "<<pcorners[0].patch<<" with "<<this->_indexFromVert(0,pcorners[c],pseudo)<<" of basis "<<pcorners[c].patch<<"\n";
 
                             }
                             // mark the vertex as passed
-                            m_vertCheck[ _vertIndex(pcorners[c].patch, pcorners[c].corner()) ] = true;
+                            m_vertCheck[ this->_vertIndex(pcorners[c].patch, pcorners[c].corner()) ] = true;
                         }
                         // }
                         // else
@@ -757,7 +756,7 @@ namespace gismo
                             // {
                             //     if (m_patches.isInterface(psides[p]))
                             //     {
-                            //             m_mapModified.eliminateDof(_indexFromVert(1,pcorner,psides[p],0),pcorner.patch);
+                            //             m_mapModified.eliminateDof(this->_indexFromVert(1,pcorner,psides[p],0),pcorner.patch);
                             //     }
                             // }
                         // }
@@ -791,8 +790,8 @@ namespace gismo
                     pcorner.getContainingSides(d,psides);
                     for (size_t p=0; p!=psides.size(); p++)
                     {
-                        m_mapModified.eliminateDof(_indexFromVert(0,pcorner,psides[p],0),pcorner.patch);
-                        m_mapModified.eliminateDof(_indexFromVert(1,pcorner,psides[p],0),pcorner.patch);
+                        m_mapModified.eliminateDof(this->_indexFromVert(0,pcorner,psides[p],0),pcorner.patch);
+                        m_mapModified.eliminateDof(this->_indexFromVert(1,pcorner,psides[p],0),pcorner.patch);
                     }
                 }
 
@@ -813,7 +812,7 @@ namespace gismo
     void gsDPatch<d,T>::_handleVertex(patchCorner pcorner)
     {
 
-        if (m_vertCheck[ _vertIndex(pcorner.patch, pcorner.corner()) ])
+        if (m_vertCheck[ this->_vertIndex(pcorner.patch, pcorner.corner()) ])
         {
             // gsDebug<<"corner "<<pcorner.corner()<<" ("<<pcorner.patch<<") skipped!\n";
             return;
@@ -821,7 +820,7 @@ namespace gismo
         // if (std::count(m_C0s.begin(), m_C0s.end(), pcorner))
         // {
         //     gsInfo<<"patch = "<<pcorner.patch<<", corner = "<<pcorner.corner()<<"\n";
-        //     m_vertCheck[ _vertIndex(pcorner.patch, pcorner.corner()) ] = true;
+        //     m_vertCheck[ this->_vertIndex(pcorner.patch, pcorner.corner()) ] = true;
         //     return;
         // }
 
@@ -831,7 +830,7 @@ namespace gismo
         std::vector<index_t> weights;
 
 
-        std::pair<index_t,bool> vdata = _vertexData(pcorner); // corner c
+        std::pair<index_t,bool> vdata = this->_vertexData(pcorner); // corner c
         pcorner.getContainingSides(d,psides);
 
         if (!vdata.second) // boundary vertices
@@ -841,10 +840,10 @@ namespace gismo
             {
                 GISMO_ASSERT(psides.size()==2,"Must have 2 adjacent sides");
                 indices.resize(4);
-                indices[0] = _indexFromVert(0,pcorner,psides[0],0); // b00
-                indices[1] = _indexFromVert(1,pcorner,psides[0],0); // b01
-                indices[2] = _indexFromVert(1,pcorner,psides[1],0); // b10
-                indices[3] = _indexFromVert(1,pcorner,psides[1],1); // b11
+                indices[0] = this->_indexFromVert(0,pcorner,psides[0],0); // b00
+                indices[1] = this->_indexFromVert(1,pcorner,psides[0],0); // b01
+                indices[2] = this->_indexFromVert(1,pcorner,psides[1],0); // b10
+                indices[3] = this->_indexFromVert(1,pcorner,psides[1],1); // b11
 
                 for (std::vector<index_t>::iterator it = indices.begin(); it!=indices.end(); ++it)
                 {
@@ -855,7 +854,7 @@ namespace gismo
                     m_basisCheck[rowIdx] = true;
                 }
 
-                m_vertCheck[ _vertIndex(pcorner.patch, pcorner.corner()) ] = true;
+                m_vertCheck[ this->_vertIndex(pcorner.patch, pcorner.corner()) ] = true;
                 // gsInfo<<"patch = "<<pcorner.patch<<", corner = "<<pcorner.corner()<<"\n";
                 return;
             }
@@ -875,9 +874,9 @@ namespace gismo
                 patchCorner otherCorner = iface.mapCorner(pcorner);
                 for (index_t k = (C0 ? 1 : 0); k!=2; k++) // index of point over the interface
                 {
-                    indices[0] = _indexFromVert(k,pcorner,psides[iindex],1); // bk1 on patch of iface
-                    indices[1] = _indexFromVert(k,pcorner,psides[iindex],0); // bk0 on patch of iface
-                    indices[2] = _indexFromVert(k,otherCorner,otherSide,0); // bk0 on other patch
+                    indices[0] = this->_indexFromVert(k,pcorner,psides[iindex],1); // bk1 on patch of iface
+                    indices[1] = this->_indexFromVert(k,pcorner,psides[iindex],0); // bk0 on patch of iface
+                    indices[2] = this->_indexFromVert(k,otherCorner,otherSide,0); // bk0 on other patch
 
                     index_t rowIdx = m_mapModified.index(indices[0],pcorner.patch);
                     index_t colIdx = m_mapOriginal.index(indices[0],pcorner.patch);
@@ -892,7 +891,7 @@ namespace gismo
                 }
 
 
-                m_vertCheck[ _vertIndex(pcorner.patch, pcorner.corner()) ] = true;
+                m_vertCheck[ this->_vertIndex(pcorner.patch, pcorner.corner()) ] = true;
             }
             // Correct
             else if (vdata.first==3)
@@ -926,7 +925,7 @@ namespace gismo
 
                 lowest.getContainingSides(d,psides);
                 // get (0,0) index from the corner with lowest patch number and store the row index.
-                extraRow = _indexFromVert(0,lowest,psides[0],0);
+                extraRow = this->_indexFromVert(0,lowest,psides[0],0);
                 extraRow = m_mapModified.index(extraRow,lowest.patch);
 
                 // 2. loop over the adjacent vertices
@@ -940,8 +939,8 @@ namespace gismo
                     it->getContainingSides(d,psides);
 
                     // store the 0,0 indices
-                    colIndices.push_back( _indexFromVert(0,*it,psides[0],0) );
-                    rowIndices.push_back( _indexFromVert(1,*it,psides[0],1) );
+                    colIndices.push_back( this->_indexFromVert(0,*it,psides[0],0) );
+                    rowIndices.push_back( this->_indexFromVert(1,*it,psides[0],1) );
                     patches.push_back(it->patch);
 
                     for (index_t k = 0; k!=2; k++) // index of point over the interface
@@ -953,8 +952,8 @@ namespace gismo
                         else                                            // if not, then store the side
                         {
                             //
-                            index_t colIdx = m_mapOriginal.index(_indexFromVert(1,*it,psides[k],0),it->patch);
-                            index_t rowIdx = m_mapModified.index(_indexFromVert(1,*it,psides[k],1),it->patch);
+                            index_t colIdx = m_mapOriginal.index(this->_indexFromVert(1,*it,psides[k],0),it->patch);
+                            index_t rowIdx = m_mapModified.index(this->_indexFromVert(1,*it,psides[k],1),it->patch);
                             m_matrix(rowIdx,colIdx) = 0.5;
                             m_matrix(extraRow,colIdx) = 0.5;
                             m_basisCheck[rowIdx] = true;
@@ -1006,7 +1005,7 @@ namespace gismo
                         if ( std::find(corners.begin(), corners.end(), *corn) == corners.end() ) // the contained corner is not in corners
                             continue;
 
-                        index_t colIdx = _indexFromVert(1,*corn,*it,0);
+                        index_t colIdx = this->_indexFromVert(1,*corn,*it,0);
                         colIdx = m_mapOriginal.index(colIdx,corn->patch);
                         m_matrix(extraRow,colIdx) = 0.5;
 
@@ -1043,8 +1042,8 @@ namespace gismo
                         // get rowIndices
                         for (size_t k=0; k!=icorners.size(); k++)
                         {
-                            rowIndices[k] = _indexFromVert(1,icorners[k],isides[k],1);
-                            colIndices[k] = _indexFromVert(1,icorners[k],isides[k],0);
+                            rowIndices[k] = this->_indexFromVert(1,icorners[k],isides[k],1);
+                            colIndices[k] = this->_indexFromVert(1,icorners[k],isides[k],0);
                             patches[k] = icorners[k].patch;
                         }
 
@@ -1065,7 +1064,7 @@ namespace gismo
 
 
                 for (std::vector<patchCorner>::iterator it = corners.begin(); it!=corners.end(); ++it)
-                    m_vertCheck[ _vertIndex(it->patch, it->corner()) ] = true;
+                    m_vertCheck[ this->_vertIndex(it->patch, it->corner()) ] = true;
             }
             else
                 GISMO_ERROR("Boundaries with valence higher than 3 cannot be handled.");
@@ -1078,7 +1077,7 @@ namespace gismo
             // find the patch corner which shares the interface
 
             // 1. give the basis function a weight 1 from itself
-            index_t b11_p1 = _indexFromVert(1,pcorner,psides[0],1); // point 1,1 (does not matter which reference side is taken)
+            index_t b11_p1 = this->_indexFromVert(1,pcorner,psides[0],1); // point 1,1 (does not matter which reference side is taken)
             index_t rowIdx = m_mapModified.index(b11_p1,pcorner.patch);
             index_t colIdx = m_mapOriginal.index(b11_p1,pcorner.patch);
             m_matrix(rowIdx,colIdx) = 1.0;
@@ -1092,8 +1091,8 @@ namespace gismo
                 m_patches.getNeighbour(*side,otherSide);
                 patchCorner otherCorner = iface.mapCorner(pcorner);
 
-                index_t b10_p1 = _indexFromVert(1,pcorner,*side,0); // index from vertex pcorners[c] along side psides[0] with offset 0.
-                index_t b10_p2 = _indexFromVert(1,otherCorner,otherSide,0); // point 0,1
+                index_t b10_p1 = this->_indexFromVert(1,pcorner,*side,0); // index from vertex pcorners[c] along side psides[0] with offset 0.
+                index_t b10_p2 = this->_indexFromVert(1,otherCorner,otherSide,0); // point 0,1
 
                 // 2. give the basis function a weight 1/valence from the other (0,0) basis functions
                 index_t index;
@@ -1114,14 +1113,14 @@ namespace gismo
 
             }
             m_basisCheck[rowIdx] = true;
-            m_vertCheck[ _vertIndex(pcorner.patch, pcorner.corner()) ] = true;
+            m_vertCheck[ this->_vertIndex(pcorner.patch, pcorner.corner()) ] = true;
         }
     }
 
     template<short_t d,class T>
     void gsDPatch<d,T>::_handleInterface(boundaryInterface iface)
     {
-        if (m_sideCheck[ _sideIndex(iface.first().patch, iface.first().side()) ] || m_sideCheck[ _sideIndex(iface.second().patch, iface.second().side()) ])
+        if (m_sideCheck[ this->_sideIndex(iface.first().patch, iface.first().side()) ] || m_sideCheck[ this->_sideIndex(iface.second().patch, iface.second().side()) ])
         {
             // gsDebug<<"sides "<<iface.first().side()<<" ("<<iface.first().patch<<") and "<<iface.second().side()<<" ("<<iface.second().patch<<") skipped!\n";
             return;
@@ -1152,11 +1151,11 @@ namespace gismo
             iface[p].getContainedCorners(d,pcorners);
             for (index_t c =0; c!=2; c++)
             {
-                selectedIndices[p].push_back(_indexFromVert(0,pcorners[c],iface[p],0,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
-                selectedIndices[p].push_back(_indexFromVert(1,pcorners[c],iface[p],0,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
+                selectedIndices[p].push_back(this->_indexFromVert(0,pcorners[c],iface[p],0,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
+                selectedIndices[p].push_back(this->_indexFromVert(1,pcorners[c],iface[p],0,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
 
-                selectedOIndices[p].push_back(_indexFromVert(0,pcorners[c],iface[p],1,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
-                selectedOIndices[p].push_back(_indexFromVert(1,pcorners[c],iface[p],1,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
+                selectedOIndices[p].push_back(this->_indexFromVert(0,pcorners[c],iface[p],1,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
+                selectedOIndices[p].push_back(this->_indexFromVert(1,pcorners[c],iface[p],1,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
             }
 
             std::vector<index_t> allIndices(indices[p].data(), indices[p].data() + indices[p].rows() * indices[p].cols());
@@ -1203,7 +1202,7 @@ namespace gismo
 
                 m_basisCheck[rowIdx] = true;
             }
-            m_sideCheck[ _sideIndex(iface[p].patch, iface[p].side()) ] = true; // side finished
+            m_sideCheck[ this->_sideIndex(iface[p].patch, iface[p].side()) ] = true; // side finished
         }
     }
 
@@ -1217,8 +1216,8 @@ namespace gismo
             side.getContainedCorners(d,pcorners);
             for (index_t c =0; c!=2; c++)
             {
-                selectedIndices.push_back(_indexFromVert(0,pcorners[c],side,0,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
-                selectedIndices.push_back(_indexFromVert(1,pcorners[c],side,0,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
+                selectedIndices.push_back(this->_indexFromVert(0,pcorners[c],side,0,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
+                selectedIndices.push_back(this->_indexFromVert(1,pcorners[c],side,0,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
             }
 
             std::sort(selectedIndices.begin(),selectedIndices.end());
@@ -1236,7 +1235,7 @@ namespace gismo
                 m_basisCheck[rowIdx] = true;
             }
 
-            m_sideCheck.at( _sideIndex(side.patch,side.side()) ) = true;
+            m_sideCheck.at( this->_sideIndex(side.patch,side.side()) ) = true;
     }
 
     template<short_t d,class T>
@@ -1262,7 +1261,7 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatch<d,T>::_computeSmoothMatrix()
     {
-        _resetChecks(true);
+        this->_resetChecks(true);
 
         // iterate over the vertices
         for (size_t p=0; p!=m_patches.nPatches(); p++)
@@ -1278,9 +1277,9 @@ namespace gismo
 
         _handleInterior();
 
-        if (m_options.getSwitch("Verbose")) { _whichHandled(); }
+        if (m_options.getSwitch("Verbose")) { this->_whichHandled(); }
 
-        _performChecks(true);
+        this->_performChecks(true);
 
         m_matrix.makeCompressed();
     }

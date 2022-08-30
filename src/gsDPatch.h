@@ -45,7 +45,7 @@ public:
     gsDPatch() : Base()
     { }
 
-    using Base::compute;
+    // using Base::compute;
 
     /**
      * @brief      Default constructor
@@ -58,9 +58,9 @@ public:
 
     ~gsDPatch();
 
-    void defaultOptions();
+    virtual void defaultOptions();
 
-    using Base::exportToPatches;
+    // using Base::exportToPatches;
 
 
 protected:
@@ -70,49 +70,49 @@ protected:
      * Takes the coefficients which are tagged as "free" in the modified DoFMapper (m_mapModified) and when a boundary vertex with valence=3 is present, this one is shifted.
      *
      */
-    gsMatrix<T> _preCoefficients();
+    virtual gsMatrix<T> _preCoefficients();
 
-    using Base::allCoefficients;
+    // using Base::allCoefficients;
 
-    using Base::exportPatch;
-
-protected:
-
-    using Base::_indexFromSides;
-
-    using Base::_indicesFromVert;
-
-    using Base::_indexFromVert;
-
-    using Base::_vertexData;
-
-    using Base::_sideIndex;
-
-    using Base::_vertIndex;
-
-    using Base::_getLowestCorners;
-
-    using Base::_removeLowestCorners;
-
-    using Base::_getLowestIndices;
-
-    using Base::_removeLowestIndices;
-
-    using Base::_getInterfaceIndices;
-
-    using Base::_getAllInterfaceIndices;
+    // using Base::exportPatch;
 
 protected:
 
-    void _countDoFs();
+    // using Base::_indexFromSides;
 
-    void _computeMapper(); // also initialize the mappers!
+    // using Base::_indicesFromVert;
 
-    void _computeSmoothMatrix();
+    // using Base::_indexFromVert;
 
-    void _makeTHB();
+    // using Base::_vertexData;
 
-    void _computeEVs();
+    // using Base::_sideIndex;
+
+    // using Base::_vertIndex;
+
+    // using Base::_getLowestCorners;
+
+    // using Base::_removeLowestCorners;
+
+    // using Base::_getLowestIndices;
+
+    // using Base::_removeLowestIndices;
+
+    // using Base::_getInterfaceIndices;
+
+    // using Base::_getAllInterfaceIndices;
+
+protected:
+
+    virtual void _countDoFs();
+
+    virtual void _computeMapper(); // also initialize the mappers!
+
+    virtual void _computeSmoothMatrix();
+
+    virtual void _makeTHB();
+
+    virtual void _computeEVs();
 
     /**
      * @brief      Makes the Pi matrix
@@ -127,8 +127,8 @@ protected:
 
 protected:
 
-    using Base::_performChecks;
-    using Base::_resetChecks;
+    // using Base::_performChecks;
+    // using Base::_resetChecks;
 
 protected:
 
@@ -161,7 +161,7 @@ protected:
      *
      * @param[in]  pcorner  The patchcorner
      */
-    void _handleVertex(patchCorner pcorner);
+    virtual void _handleVertex(patchCorner pcorner);
     /**
      * @brief      Handles an interface in the global matrix
      *
@@ -170,7 +170,7 @@ protected:
      *
      * @param[in]  iface  The interface
      */
-    void _handleInterface(boundaryInterface iface);
+    virtual void _handleInterface(boundaryInterface iface);
     /**
      * @brief      Handles a boundary in the global matrix
      *
@@ -178,22 +178,24 @@ protected:
      *
      * @param[in]  side  The boundary side
      */
-    void _handleBoundary(patchSide side);
+    virtual void _handleBoundary(patchSide side);
     /**
      * @brief      Handles the interior in the global matrix
      *
      * Gives all left-over DoFs, which are in the interior, weight 1 w.r.t. itself
      */
-    void _handleInterior();
+    virtual void _handleInterior();
     /**
      * @brief      Prints which DoFs have been handled and which have been eliminated
      */
 
 protected:
-    using Base::_whichHandled;
+    // using Base::_whichHandled;
 
 protected:
     using Base::m_patches;
+    using Base::m_computed;
+
     using Base::m_RefPatches;
     using Base::m_bases;
     using Base::m_Bbases;
