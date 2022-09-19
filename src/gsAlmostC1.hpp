@@ -199,7 +199,7 @@ namespace gismo
         for (index_t k = 0; k!=ub.cols(); k++)
         {
             ub.col(k) = A.colPivHouseholderQr().solve(up.col(k));
-            GISMO_ASSERT((Cp * ub.col(k)-up.col(k).head(2)).norm()<1e-14,"Something went wrong with the computation of the barycentric coordinates");
+            GISMO_ASSERT((Cp * ub.col(k)-up.col(k).head(2)).norm()<1e-14,"Something went wrong with the computation of the barycentric coordinates. (Cp * ub.col(k)-up.col(k).head(2)).norm() = "<<(Cp * ub.col(k)-up.col(k).head(2)).norm()<<"; Cp * ub.col(k) = "<<Cp * ub.col(k)<<"; up.col(k).head(2) = "<<up.col(k).head(2));
         }
 
         // 9. Move the corners of the triangle back to physical coordinates
@@ -1003,19 +1003,19 @@ namespace gismo
         std::pair<index_t,bool> vdata1, vdata2, vdata;
 
         // For the interfaces, we eliminate all DoFs located on the interface, except the ones coinciding with the end vertices
-#pragma omp parallel
-{
-        #pragma omp parallel for
+// #pragma omp parallel
+// {
+//         #pragma omp parallel for
         for(gsBoxTopology::const_iiterator iit = m_patches.iBegin(); iit!= m_patches.iEnd(); iit++)
             _computeInterfaceMapper(*iit);
-}
+// }
         // On the boundaries, we don't do anything
-#pragma omp parallel
-{
-        #pragma omp parallel for
+// #pragma omp parallel
+// {
+        // #pragma omp parallel for
         for(gsBoxTopology::const_biterator bit = m_patches.bBegin(); bit!= m_patches.bEnd(); bit++)
             _computeBoundaryMapper(*bit);
-}
+// }
 
 // m_mapModified.finalize();
 // m_mapOriginal.finalize();
