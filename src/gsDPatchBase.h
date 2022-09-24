@@ -294,8 +294,20 @@ protected:
      *
      * @return     Index of \a index places from \a corner along \a side, with offset \a offset and with offset \a levelOffset from the deepest level
      */
-    virtual const index_t _indexFromVert(gsMultiBasis<T> bases, index_t index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
     virtual const index_t _indexFromVert(index_t index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
+    virtual const index_t _indexFromVert(const gsMultiBasis<T> & bases, index_t index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
+    virtual const index_t _indexFromVert(const gsBasis<T> * basis, index_t index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
+private:
+    template<class U>
+    typename util::enable_if<util::is_same<U, const gsHTensorBasis<d,T> *>::value,const index_t>::type
+    _indexFromVert_impl(U basis, index_t index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
+
+    template<class U>
+    typename util::enable_if<util::is_same<U, const gsTensorBSplineBasis<d,T> *>::value,const index_t>::type
+    _indexFromVert_impl(U basis, index_t index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
+protected:
+    virtual const std::vector<index_t> _indexFromVert(const gsHTensorBasis<d,T> * basis, const std::vector<index_t> & index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
+    virtual const std::vector<index_t> _indexFromVert(const gsTensorBSplineBasis<d,T> * tbasis, const std::vector<index_t> & index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
 
 
     /**
@@ -310,8 +322,8 @@ protected:
      *
      * @return     { description_of_the_return_value }
      */
-    virtual const std::vector<index_t> _indexFromVert(gsMultiBasis<T> bases, std::vector<index_t> index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
-    virtual const std::vector<index_t> _indexFromVert(std::vector<index_t> index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
+    virtual const std::vector<index_t> _indexFromVert(const gsMultiBasis<T> & bases, const std::vector<index_t> & index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
+    virtual const std::vector<index_t> _indexFromVert(const std::vector<index_t> & index, const patchCorner corner, const patchSide side, index_t offset, index_t levelOffset) const;
 
     /**
      * @brief      Returns the valence and whether a corner is interior or boundary

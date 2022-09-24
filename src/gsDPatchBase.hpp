@@ -717,11 +717,33 @@ namespace gismo
     }
 
     template<short_t d,class T>
-    const index_t gsDPatchBase<d,T>::_indexFromVert(gsMultiBasis<T> bases, index_t index, const patchCorner corner, const patchSide side, index_t offset, index_t levelOffset) const
+    const index_t gsDPatchBase<d,T>::_indexFromVert(const gsMultiBasis<T> & bases, index_t index, const patchCorner corner, const patchSide side, index_t offset, index_t levelOffset) const
+    {
+        return _indexFromVert(&bases.basis(corner.patch),index, corner, side, offset, levelOffset);
+    }
+
+    template<short_t d,class T>
+    const index_t gsDPatchBase<d,T>::_indexFromVert(const gsBasis<T> * basis, index_t index, const patchCorner corner, const patchSide side, index_t offset, index_t levelOffset) const
+    {
+        const gsTensorBSplineBasis<d,T> * tbbasis;
+        const gsHTensorBasis<d,T> * thbasis;
+        if ((tbbasis = dynamic_cast<const gsTensorBSplineBasis<d,T> * >(basis)))
+            return _indexFromVert_impl(tbbasis,index,corner,side,offset,levelOffset);
+        else if ((thbasis = dynamic_cast<const gsHTensorBasis<d,T> * >(basis)))
+            return _indexFromVert_impl(thbasis,index,corner,side,offset,levelOffset);
+        else
+            GISMO_ERROR("Basis type unknown");
+    }
+
+    template<short_t d,class T>
+    template<class U>
+    typename util::enable_if<util::is_same<U,   const gsHTensorBasis<d,T> *>::value,
+                                                const index_t>::type
+    gsDPatchBase<d,T>::_indexFromVert_impl(U basis, index_t index, const patchCorner corner, const patchSide side, index_t offset, index_t levelOffset) const
     {
         if ((index==0) && (offset==0))
         {
-            gsHTensorBasis<d,T> *basis = dynamic_cast<gsHTensorBasis<d,T>*>(&bases.basis(corner.patch));
+            // gsHTensorBasis<d,T> *basis = dynamic_cast<gsHTensorBasis<d,T>*>(&bases.basis(corner.patch));
             index_t idx = basis->functionAtCorner(corner.corner());
             return idx;
         }
@@ -729,19 +751,68 @@ namespace gismo
         {
             std::vector<index_t> indices(1);
             indices.at(0) = index;
-            std::vector<index_t> result = _indexFromVert(bases,indices,corner,side,offset,levelOffset);
+            std::vector<index_t> result = _indexFromVert(basis,indices,corner,side,offset,levelOffset);
             return result.at(0);
         }
     }
 
     template<short_t d,class T>
-    const std::vector<index_t> gsDPatchBase<d,T>::_indexFromVert(std::vector<index_t> index, const patchCorner corner, const patchSide side, index_t offset, index_t levelOffset) const
+    template<class U>
+    typename util::enable_if<util::is_same<U,   const gsTensorBSplineBasis<d,T> *>::value,
+                                                const index_t>::type
+    gsDPatchBase<d,T>::_indexFromVert_impl(U basis, index_t index, const patchCorner corner, const patchSide side, index_t offset, index_t levelOffset) const
+    {
+        if ((index==0) && (offset==0))
+        {
+            // gsHTensorBasis<d,T> *basis = dynamic_cast<gsHTensorBasis<d,T>*>(&bases.basis(corner.patch));
+            index_t idx = basis->functionAtCorner(corner.corner());
+            return idx;
+        }
+        else
+        {
+            std::vector<index_t> indices(1);
+            indices.at(0) = index;
+            std::vector<index_t> result = _indexFromVert(basis,indices,corner,side,offset,levelOffset);
+            return result.at(0);
+        }
+    }
+
+    template<short_t d,class T>
+    const std::vector<index_t> gsDPatchBase<d,T>::_indexFromVert(const std::vector<index_t> & index, const patchCorner corner, const patchSide side, index_t offset, index_t levelOffset) const
     {
         return _indexFromVert(m_bases,index,corner,side,offset,levelOffset);
     }
 
     template<short_t d,class T>
-    const std::vector<index_t> gsDPatchBase<d,T>::_indexFromVert(gsMultiBasis<T> bases, std::vector<index_t> index, const patchCorner corner, const patchSide side, index_t offset, index_t levelOffset) const
+    const std::vector<index_t> gsDPatchBase<d,T>::_indexFromVert(const gsMultiBasis<T> & bases, const std::vector<index_t> & index, const patchCorner corner, const patchSide side, index_t offset, index_t levelOffset) const
+    {
+        return _indexFromVert(bases,index, corner, side, offset, levelOffset);
+    }
+
+
+    template<short_t d,class T>
+    const std::vector<index_t> gsDPatchBase<d,T>::_indexFromVert(const gsHTensorBasis<d,T> * basis, const std::vector<index_t> & index, const patchCorner corner, const patchSide side, index_t offset, index_t levelOffset) const
+    {
+        /*
+            Finds indices i in the direction of side away from the vertex
+            if index = 0, the corner index is requested
+        */
+
+        std::vector<index_t> result(index.size());
+        for (size_t k=0; k!=index.size(); k++)
+        {
+            index_t level = basis->levelAtCorner(corner.corner()) + levelOffset;
+            gsTensorBSplineBasis<d,T> tbasis = basis->tensorLevel(level);
+            result = this->_indexFromVert(&tbasis,index,corner,side,offset);
+            if (levelOffset==0) // if levelOffset!=0, the index in the original basis is requested
+                result[k] = basis->flatTensorIndexToHierachicalIndex(result[k],level);
+        }
+
+        return result;
+    }
+
+    template<short_t d,class T>
+    const std::vector<index_t> gsDPatchBase<d,T>::_indexFromVert(const gsTensorBSplineBasis<d,T> * tbasis, const std::vector<index_t> & index, const patchCorner corner, const patchSide side, index_t offset, index_t levelOffset) const
     {
         /*
             Finds indices i in the direction of side away from the vertex
@@ -750,54 +821,47 @@ namespace gismo
 
         std::vector<index_t> result(index.size());
 
-        // gsBasis<T> * basis = &bases.basis(corner.patch);
-        gsHTensorBasis<d,T> *basis = dynamic_cast<gsHTensorBasis<d,T>*>(&bases.basis(corner.patch));
-        index_t level = basis->levelAtCorner(corner.corner()) + levelOffset;
-        gsTensorBSplineBasis<d,T> tbasis = basis->tensorLevel(level);
-
         gsVector<index_t,2> sizes;
-        tbasis.size_cwise(sizes);
+        tbasis->size_cwise(sizes);
         for (size_t k=0; k!=index.size(); k++)
         {
             if (side.side()==1) //west
             {
                 if (corner.corner()==1)//southwest
-                    result[k] = tbasis.index(offset,index[k]);
+                    result[k] = tbasis->index(offset,index[k]);
                 else if (corner.corner()==3) //northwest
-                    result[k] = tbasis.index(offset,sizes[1]-1-index[k],0);
+                    result[k] = tbasis->index(offset,sizes[1]-1-index[k],0);
                 else
                     GISMO_ERROR(corner.corner() << " is not adjacent to side "<<side.side()<<"!");
             }
             else if (side.side()==2) //east
             {
                 if (corner.corner()==2)//southeast
-                    result[k] = tbasis.index(sizes[0]-1-offset,index[k]);
+                    result[k] = tbasis->index(sizes[0]-1-offset,index[k]);
                 else if (corner.corner()==4) //northeast
-                    result[k] = tbasis.index(sizes[0]-1-offset,sizes[1]-1-index[k]);
+                    result[k] = tbasis->index(sizes[0]-1-offset,sizes[1]-1-index[k]);
                 else
                     GISMO_ERROR(corner.corner() << " is not adjacent to side "<<side.side()<<"!");
             }
             else if (side.side()==3) //south
             {
                 if (corner.corner()==1)//southwest
-                    result[k] = tbasis.index(index[k],offset);
+                    result[k] = tbasis->index(index[k],offset);
                 else if (corner.corner()==2) //southeast
-                    result[k] = tbasis.index(sizes[0]-1-index[k],offset);
+                    result[k] = tbasis->index(sizes[0]-1-index[k],offset);
                 else
                     GISMO_ERROR(corner.corner() << " is not adjacent to side "<<side.side()<<"!");
             }
             else if (side.side()==4) //north
             {
                 if (corner.corner()==3)//northwest
-                    result[k] = tbasis.index(index[k],sizes[1]-1-offset,0);
+                    result[k] = tbasis->index(index[k],sizes[1]-1-offset,0);
                 else if (corner.corner()==4) //northeast
-                    result[k] = tbasis.index(sizes[0]-1-index[k],sizes[1]-1-offset);
+                    result[k] = tbasis->index(sizes[0]-1-index[k],sizes[1]-1-offset);
                 else
                     GISMO_ERROR(corner.corner() << " is not adjacent to side "<<side.side()<<"!");
 
             }
-            if (levelOffset==0) // if levelOffset!=0, the index in the original basis is requested
-                result[k] = basis->flatTensorIndexToHierachicalIndex(result[k],level);
         }
 
         return result;
