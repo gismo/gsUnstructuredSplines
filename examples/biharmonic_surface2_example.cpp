@@ -964,7 +964,7 @@ int main(int argc, char *argv[])
     //! [Read geometry]
 
     //gsFunctionExpr<>f("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",3);
-    //gsFunctionExpr<> f  (" (64 * (x - y) * (x + y) * (13 + 64*x^4 + 12*y^2 + 64*y^4 + x^2*(12 - 768*y^2)))/(1 + 4*x^2 + 4*y^2)^5",3);
+    // gsFunctionExpr<> f  (" (64 * (x - y) * (x + y) * (13 + 64*x^4 + 12*y^2 + 64*y^4 + x^2*(12 - 768*y^2)))/(1 + 4*x^2 + 4*y^2)^5",3);
     gsFunctionExpr<>f("5",3);
     gsInfo << "Source function: " << f << "\n";
 
