@@ -469,14 +469,14 @@ int main(int argc, char *argv[])
 //    fd.save("ScaledGeometry");
 
     //! [Refinement]
-    gsMultiBasis<real_t> dbasis(mp, true);//true: poly-splines (not NURBS)
+    gsMultiBasis<real_t> dbasis(mp, false);//true: poly-splines (not NURBS)
 
     // Elevate and p-refine the basis to order p + numElevate
     // where p is the highest degree in the bases
     dbasis.setDegree( degree); // preserve smoothness
     //dbasis.degreeElevate(degree- mp.patch(0).degree(0));
 
-    if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
+    if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1 || method == MethodFlags::SURFASG1)
         mp.degreeElevate(degree-mp.patch(0).degree(0));
 
     // h-refine each basis
@@ -489,13 +489,12 @@ int main(int argc, char *argv[])
 
     // Assume that the condition holds for each patch TODO
     // Refine once
-    if (method == MethodFlags::APPROXC1 || method == MethodFlags::NITSCHE)
-        if (dbasis.basis(0).numElements() < 4)
-        {
-            dbasis.uniformRefine(1, degree-smoothness);
-            if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1)
-                mp.uniformRefine(1, degree-smoothness);
-        }
+    if (dbasis.basis(0).numElements() < 4)
+    {
+        dbasis.uniformRefine(1, degree-smoothness);
+        if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1 || method == MethodFlags::SURFASG1)
+            mp.uniformRefine(1, degree-smoothness);
+    }
 
     gsInfo << "Patches: "<< mp.nPatches() <<", degree: "<< dbasis.minCwiseDegree() <<"\n";
 #ifdef _OPENMP

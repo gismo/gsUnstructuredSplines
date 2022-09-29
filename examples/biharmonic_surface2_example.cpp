@@ -1126,6 +1126,7 @@ int main(int argc, char *argv[])
 
             gsSparseMatrix<real_t> global2local;
             gsDPatch<2,real_t> dpatch(mp);
+            dpatch.compute();
             dpatch.matrix_into(global2local);
             global2local = global2local.transpose();
             mp = dpatch.exportToPatches();
@@ -1145,6 +1146,7 @@ int main(int argc, char *argv[])
 
             gsSparseMatrix<real_t> global2local;
             gsAlmostC1<2,real_t> almostC1(mp);
+            almostC1.compute();
             almostC1.matrix_into(global2local);
             global2local = global2local.transpose();
             mp = almostC1.exportToPatches();
