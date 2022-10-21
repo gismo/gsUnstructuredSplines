@@ -15,7 +15,7 @@ Module for the unstructured splines. The module is based on `gismo`'s Expression
 |Build status| [CDash](link) |
 |Repository|[gismo/gismo](https://github.com/gismo/gismo)|
 |Status|completed|
-|Developer|[Pascal Weinmueller](https://github.com/weinmueller),[Hugo Verhelst](https://github.com/hverhelst)|
+|Developer|[Pascal Weinmueller](https://github.com/weinmueller),[Hugo Verhelst](https://github.com/hverhelst),[Andrea Farahat](https://github.com/AndreaFarahat)|
 |Maintainer|[pascal.weinmueller@mtu.de](mailto:pascal.weinmueller@mtu.de),[h.m.verhelst@tudelft.nl](mailto:h.m.verhelst@tudelft.nl)|
 |Last checked|21-10-2022|
 
