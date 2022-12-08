@@ -26,6 +26,8 @@ namespace gismo
  * @brief      Constructs the D-Patch, from which the transformation matrix can be called
  *
  * @tparam     d     parametric dimension
+ *
+ * @ingroup    UnstructuredSplines
  */
 template<short_t d,class T>
 class gsAlmostC1 : public gsDPatchBase<d,T>

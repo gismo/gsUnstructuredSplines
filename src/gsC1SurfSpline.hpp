@@ -33,6 +33,19 @@ namespace gismo
     template<short_t d,class T>
     void gsC1SurfSpline<d,T>::init()
     {
+        // Check requirements
+        for (size_t p=0; p!=m_multiBasis.nBases(); p++)
+        {
+            gsTensorBSplineBasis<d, T> * basis_patch = dynamic_cast<gsTensorBSplineBasis<d, T> *>(&m_multiBasis.basis(p));
+            index_t degree;
+            for (short_t dd = 0; dd!=d; dd++)
+            {
+                degree = basis_patch->component(dd).knots().degree();
+                gsDebugVar(basis_patch->component(dd).knots().size()-2*(degree+1));
+                GISMO_ENSURE(basis_patch->component(dd).knots().size()-2*(degree+1)>=5-degree,"For a degree="<<degree<<" basis, the knot vector should at least have "<<5-degree<<" inner knots, but now it has "<<basis_patch->component(dd).knots().size()-2*(degree+1)<<" inner knots.");
+            }
+        }
+
         m_bases.clear();
         m_bases.reserve(m_patches.nPatches()); // For each Patch
         for (size_t np = 0; np < m_patches.nPatches(); np++)

@@ -240,32 +240,34 @@ int main(int argc, char *argv[])
     gsReadFile<>(string_geo, mp);
     mp.clearTopology();
     mp.computeTopology();
-
+    gsMultiBasis<real_t> dbasis(mp, false);//true: poly-splines (not NURBS)
     // Elevate and p-refine the basis to order p + numElevate
     // where p is the highest degree in the bases
-    //dbasis.degreeElevate(degree- mp.patch(0).degree(0));
-    mp.degreeElevate(degree-mp.patch(0).degree(0));
-    // if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1 || method == MethodFlags::SURFASG1)
-    //     mp.degreeElevate(degree-mp.patch(0).degree(0));
+    dbasis.setDegree( degree); // preserve smoothness
+
+    if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1 || method == MethodFlags::SURFASG1)
+        mp.degreeElevate(degree-mp.patch(0).degree(0));
 
     for (int r =0; r < numRefine; ++r)
-        mp.uniformRefine(1, degree-smoothness);
+    {
+        dbasis.uniformRefine(1, degree-smoothness);
+        if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1 || method == MethodFlags::SURFASG1)
+            mp.uniformRefine(1, degree-smoothness);
+    }
 
     // Assume that the condition holds for each patch TODO
     // Refine once
     if (mp.basis(0).numElements() < 4)
     {
+        dbasis.uniformRefine(1, degree-smoothness);
         if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1 || method == MethodFlags::SURFASG1)
             mp.uniformRefine(1, degree-smoothness);
     }
 
     //! [Refinement]
-    gsMultiBasis<real_t> dbasis(mp, false);//true: poly-splines (not NURBS)
 
     for (size_t p=0; p!=mp.nPatches(); p++)
         gsInfo<<"Basis "<<p<<": "<<mp.basis(p)<<"\n";
-
-
 
     // //! [Boundary condition]
     for (gsMultiPatch<>::const_biterator bit = mp.bBegin(); bit != mp.bEnd(); ++bit)
@@ -291,6 +293,7 @@ int main(int argc, char *argv[])
     {
         gsInfo << "ATTENTION: Patch 0 is one time uniform refined \n";
         dbasis.basis(0).component(1).uniformRefine(1);
+        mp.basis(0).component(1).uniformRefine(1);
     }
 
 

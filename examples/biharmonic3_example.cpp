@@ -483,7 +483,11 @@ int main(int argc, char *argv[])
     if (last)
     {
         for (int r =0; r < numRefine; ++r)
+        {
             dbasis.uniformRefine(1, degree-smoothness);
+            if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1 || method == MethodFlags::SURFASG1)
+                mp.uniformRefine(1, degree-smoothness);
+        }
         numRefine = 0;
     }
 

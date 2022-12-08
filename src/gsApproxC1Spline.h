@@ -23,6 +23,12 @@
 namespace gismo
 {
 
+/**
+ * @brief      Class describing the approximate \f$C^1\f$ spline
+ *
+ * @tparam     d     dimension
+ * @tparam     T     real type
+ */
 template<short_t d,class T>
 class gsApproxC1Spline : public gsContainerBasisBase<d,T>
 {
@@ -34,6 +40,12 @@ public:
     // - Vertex spaces:  [5] : southwest, [6] : southeast, [7] : northwest, [8] : northeast
     using Base = gsContainerBasisBase<d,T>;
 
+    /**
+     * @brief      Constructs a new instance of the approximate \f$C^1\f$ basis.
+     *
+     * @param      patches     The multi-patch object
+     * @param      multiBasis  The multi-basis object
+     */
     gsApproxC1Spline(gsMultiPatch<T> & patches, gsMultiBasis<T> & multiBasis)
     :
     Base(patches, multiBasis)
@@ -44,9 +56,17 @@ public:
 public:
     // To be overwritten in inheriting classes
 
+    /// Initializes the method
     void init();
+
+    /// Computes the basis
     void compute();
 
+    /**
+     * @brief      Updates the basis \a bb2 with the right basis and mapping matrix
+     *
+     * @param      bb2   The basis
+     */
     void update(gsMappedBasis<2,real_t> & bb2)
     {
         this->init();
@@ -59,6 +79,7 @@ public:
         bb2.init(dbasis_temp,m_matrix);
     }
 
+    /// Sets the default options
     void defaultOptions();
 
 private:
