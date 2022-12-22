@@ -44,6 +44,9 @@ namespace gismo
                 gsDebugVar(basis_patch->component(dd).knots().size()-2*(degree+1));
                 GISMO_ENSURE(basis_patch->component(dd).knots().size()-2*(degree+1)>=5-degree,"For a degree="<<degree<<" basis, the knot vector should at least have "<<5-degree<<" inner knots, but now it has "<<basis_patch->component(dd).knots().size()-2*(degree+1)<<" inner knots.");
             }
+
+            // regularity check (r=p-2)
+            // check for AS??
         }
 
         m_bases.clear();

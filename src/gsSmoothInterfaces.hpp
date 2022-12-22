@@ -21,7 +21,7 @@ namespace gismo
     template<short_t d,class T>
     gsSmoothInterfaces<d,T>::gsSmoothInterfaces(const gsMultiPatch<T> & patches)
     :
-    DPatch(patches)
+    Base(patches)
     {
         this->defaultOptions();
     }
@@ -87,78 +87,108 @@ namespace gismo
     void gsSmoothInterfaces<d,T>::_makeTHB()
     {
         m_RefPatches = gsMultiPatch<T>(m_patches);
-        // m_bases = m_Bbases;
-
-        // gsTHBSpline<d,T> thb;
-        // gsTensorBSpline<d,T> * geo;
-        // for (size_t k=0; k!=m_RefPatches.nPatches(); ++k)
-        // {
-        //     if ( (geo = dynamic_cast< gsTensorBSpline<d,T> * > (&m_RefPatches.patch(k))) )
-        //     {
-        //         gsDebugVar("BSpline");
-        //     }
-        //     else if (dynamic_cast< gsTHBSpline<d,T> * > (&m_RefPatches.patch(k)))
-        //     {
-        //         gsDebugVar("THBSpline");
-        //     }
-        //     else
-        //         gsWarn<<"No THB basis was constructed";
-        // }
-
-        // gsTHBSplineBasis<d,T> * thb_basis;
-        // gsTensorBSplineBasis<d,T> * geo_basis;
-        // for (size_t k=0; k!=m_bases.nBases(); ++k)
-        // {
-        //     if ( (geo_basis = dynamic_cast< gsTensorBSplineBasis<d,T> * > (&m_bases.basis(k))) )
-        //     {
-        //         gsDebugVar("BSpline");
-        //     }
-        //     else if ( (thb_basis = dynamic_cast< gsTHBSplineBasis<d,T> * > (&m_bases.basis(k))) )
-        //     {
-        //         m_bases.addBasis(&thb_basis->tensorLevel(0));
-        //         bool check = dynamic_cast< gsTHBSplineBasis<d,T> * > (&m_bases.basis(k));
-        //         gsDebugVar(check);
-        //         gsDebugVar("THBSpline");
-        //     }
-        //     else
-        //         gsWarn<<"No THB basis was constructed";
-        // }
-
     }
 
     template<short_t d,class T>
     void gsSmoothInterfaces<d,T>::_initTHB()
     {
-    //     // Cast all patches of the mp object to B splines
-    //     gsTHBSpline<d,T> * thb;
-    //     gsTensorBSpline<d,T> geo;
-    //     gsTensorBSplineBasis<d,T> basis;
-    //     gsDebugVar("hi");
-    //     for (size_t k=0; k!=m_RefPatches.nPatches(); ++k)
-    //     {
-    //         bool test1 = dynamic_cast< gsTHBSpline<d,T> * > (&m_RefPatches.patch(k));
-    //         bool test2 = dynamic_cast< gsTensorBSpline<d,T> * > (&m_RefPatches.patch(k));
-    //         gsDebugVar(test1);
-    //         gsDebugVar(test2);
-    //         if ( (thb = dynamic_cast< gsTHBSpline<d,T> * > (&m_RefPatches.patch(k))) )
-    //         {
-    //             gsDebugVar(thb->basis().maxLevel());
-    //             basis = thb->basis().tensorLevel(0);
-    //             geo = gsTensorBSpline<d,T>(basis,thb->coefs());
-    //             m_RefPatches.patch(k) = geo;
-    //         }
-    //         else if (dynamic_cast< gsTensorBSpline<d,T> * > (&m_RefPatches.patch(k)))
-    //         { }
-    //         else
-    //             gsWarn<<"No THB basis was constructed";
-    //     }
+
     }
 
     template<short_t d,class T>
     void gsSmoothInterfaces<d,T>::_computeEVs()
     {
         m_matrix.makeCompressed();
-        // gsDebugVar(m_matrix.toDense());
+    }
+
+    template<short_t d,class T>
+    void gsSmoothInterfaces<d,T>::_countDoFs() // also initialize the mappers!
+    {
+        size_t tmp;
+        m_size = tmp = 0;
+        // number of interior basis functions
+        for (size_t p=0; p!=m_patches.nPatches(); p++)
+        {
+            tmp += m_bases.basis(p).size();
+            for (index_t k=0; k!=2; k++)
+            {
+                tmp -= m_bases.basis(p).boundaryOffset(boxSide(1),k).size();
+                tmp -= m_bases.basis(p).boundaryOffset(boxSide(2),k).size();
+                tmp -= m_bases.basis(p).boundaryOffset(boxSide(3),k).size()-4;
+                tmp -= m_bases.basis(p).boundaryOffset(boxSide(4),k).size()-4;
+            }
+        }
+
+        // gsDebug<<"Number of interior DoFs: "<<tmp<<"\n";
+        m_size += tmp;
+
+        // interfaces
+        gsBasis<T> * basis1;
+        gsBasis<T> * basis2;
+        gsVector<index_t> indices1,indices2;
+        tmp = 0;
+        for(gsBoxTopology::const_iiterator iit = m_patches.iBegin(); iit!= m_patches.iEnd(); iit++)
+        {
+            basis1 = &m_bases.basis(iit->first().patch);
+            basis2 = &m_bases.basis(iit->second().patch);
+            tmp += basis1->boundary(iit->first().side()).size() - 4;
+            tmp += basis2->boundary(iit->second().side()).size() - 4;
+        }
+        // gsDebug<<"Number of interface DoFs: "<<tmp<<"\n";
+        m_size += tmp;
+
+        // boundaries
+        tmp = 0;
+        for(gsBoxTopology::const_biterator bit = m_patches.bBegin(); bit!= m_patches.bEnd(); bit++)
+        {
+            basis1 = &m_bases.basis(bit->patch);
+            tmp += (basis1->boundaryOffset(bit->side(),0).size() - 4);
+            tmp += (basis1->boundaryOffset(bit->side(),1).size() - 4);
+        }
+        // gsDebug<<"Number of boundary DoFs: "<<tmp<<"\n";
+        m_size += tmp;
+
+        // vertices
+        tmp = 0;
+        std::vector<bool> passed(m_patches.nPatches()*4);
+        std::fill(passed.begin(), passed.end(), false);
+
+        std::vector<patchCorner> corners;
+        // index_t corn = 0;
+        for (size_t p=0; p!=m_patches.nPatches(); p++)
+            for (index_t c=1; c<5; c++)
+            {
+                index_t idx = this->_vertIndex(p,c);
+                if (!passed.at(idx))
+                {
+                    m_patches.getCornerList(patchCorner(p,c),corners);
+
+                    for (size_t k=0; k!=corners.size(); k++)
+                        passed.at(this->_vertIndex(corners[k].patch,corners[k])) = true;
+
+                    std::pair<index_t,bool> vdata = this->_vertexData(patchCorner(p,c)); // corner c
+                    bool C0 = m_C0s[idx];
+                    if ((!vdata.second) && vdata.first==1) // valence = 1, must be a boundary vertex
+                        tmp += 4;
+                    else if ((!vdata.second) && vdata.first==2 && !C0)
+                        tmp += 4;
+                    else if ((!vdata.second) && vdata.first>2 && !C0)
+                        tmp += 2*vdata.first+2;
+                    else if ((!vdata.second) && vdata.first==2 && C0)
+                        tmp += 6;
+                    else if ((!vdata.second) && vdata.first>2 && C0)
+                        tmp += 2*vdata.first+2;
+                    else
+                        tmp += vdata.first; // valence;
+
+                    // corn +=1;
+                }
+            }
+        // gsDebug<<"Number of unique corners: "<<corn<<"\n";
+
+        // gsDebug<<"Number of vertex DoFs: "<<tmp<<"\n";
+
+        m_size += tmp;
     }
 
 } // namespace gismo

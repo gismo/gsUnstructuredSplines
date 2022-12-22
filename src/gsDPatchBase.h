@@ -32,7 +32,7 @@ template<short_t d,class T>
 class gsDPatchBase
 {
 protected:
-    typedef typename std::vector<std::tuple<index_t,index_t,T>> tuple_t;
+    typedef typename std::vector<std::tuple<index_t,index_t,T>> sparseEntry_t;
 
 public:
 
@@ -77,10 +77,7 @@ public:
     /**
      * @brief      Sets the default options
      */
-    virtual void defaultOptions()
-    {
-        GISMO_NO_IMPLEMENTATION;
-    }
+    virtual void defaultOptions();
     // {
     //     GISMO_NO_IMPLEMENTATION;
     // }
@@ -220,12 +217,120 @@ protected:
     /**
      * @brief      Calculates the mapper.
      */
-    virtual void _computeMapper() = 0;
+    virtual void _computeMapper();
+
+    virtual void _computeInterfaceMapper(boundaryInterface iface);
+
+    virtual void _computeBoundaryMapper(patchSide boundary);
+
+    virtual void _computeVertexMapper(patchCorner pcorner);
 
     /**
      * @brief      Calculates the smooth matrix.
      */
-    virtual void _computeSmoothMatrix() = 0;
+    virtual void _computeSmoothMatrix();
+
+    void _push(sparseEntry_t entries)
+    {
+        index_t rowIdx,colIdx;
+        T weight;
+        for (typename sparseEntry_t::const_iterator it=entries.begin(); it!=entries.end(); it++)
+        {
+            std::tie(rowIdx,colIdx,weight) = *it;
+            m_matrix(rowIdx,colIdx) = weight;
+        }
+    }
+
+    void _pushAndCheck(sparseEntry_t entries)
+    {
+        index_t rowIdx,colIdx;
+        T weight;
+        for (typename sparseEntry_t::const_iterator it=entries.begin(); it!=entries.end(); it++)
+        {
+            std::tie(rowIdx,colIdx,weight) = *it;
+            m_matrix(rowIdx,colIdx) = weight;
+            m_basisCheck[rowIdx] = true;
+        }
+    }
+
+    /**
+     * @brief      Handles a vertex in the global matrix
+     *
+     * We use the following notation convention (per patch!):
+     * b00 is the basis function at the vertex
+     * b10 is the basis function next to the vertex along the first interface that connects to the vertex
+     * b20 is the basis function next to b10 along the first interface that connects to the vertex
+     * etc.
+     *
+     * b01 is the basis function next to the vertex along the second interface that connects to the vertex
+     * b02 is the basis function next to b01 along the second interface that connects to the vertex
+     * etc.
+     *
+     * b11 is the basis function with offset 1 from both interfaces and from the vertex itself
+     * b22 is the basis function with offset 2 from both interfaces and from the vertex itself
+     * etc.
+     *
+     * There are different options.
+     * a) Boundary vertices
+     *      i)  Valence 1: b00, b10, b01 and b00 all get weight 1.0 w.r.t the same basis function in the local basis
+     *      ii) Valence 2: This case contains an interface between two patches. We use index k to denote the row basis functions along the interface. So k=0 corresponds to the basis functions on the boundary and k=1 corresponds to the basis functions with offset 1 from the boundaries. Using this convention, the functions bk1 in the local basis, are coupled to bk1 in the global basis with weight 1. The functions bk0 in the local basis (on the considered patch) are coupled to bk1 in the global basis with weight 0.5. The functions bk0 in the local basis (on the other patch) are coupled to bk1 (on the considered patch) in the global basis with weight 0.5.
+     *      iii)Valence 3: In this case, the matched vertices on all the adjacent patches are treated in one go! Note that all the basis functions corresponding to the vertex (b00) on all patches are matched! We couple the b00 functions of all patches (in the local basis) with weight 1/4 to the b00 of the adjacent patch with the lowest number in the global basis. Then, the b11 on the considered patch is coupled with weight 1 to itself and with weight 0.25 to the b00s of the other patches. Then, we will handle the vertices where an interface and a boundary meet (there are two of these). For the patch corners that are on an interface, we find the b11 and b10 vertices (orthogonal to the interface) and we give all b10s weight 0.5 w.r.t. the b11s in the global basis (on both patches). Lastly, we add weight 0.5 for the b10s along the boundaries (so only for two patches) to the (matched) b00 basis function (all b00s refer to the same dof in the global basis).
+     * b) Interior vertices (all valences):
+     *      i)  b11 gets weight 1.0 w.r.t the same basis function in the local basis
+     *      ii) all associated b00s in the local basis get weight 1/valence w.r.t. b11 in the global basis
+     *      iii)the b10 and b01 in the local basis get weight 1/2 w.r.t. b11 in the global basis
+     *
+     * @param[in]  pcorner  The patchcorner
+     */
+    virtual void _handleVertex(patchCorner pcorner);
+    // interior vertices
+    virtual void _handleInteriorVertex(patchCorner pcorner, index_t valence);
+
+    /**
+     * @brief      Handles an interface in the global matrix
+     *
+     * Gives all the DoFs that have offset 1 (orthogonal) from the interface weight 1.0 w.r.t itself. All the DoFs ON the interface (on both patches) will have weight 0.5 to the DoF with offset 1.
+     * This interface handling excludes the indices that are in the 0 and 1 ring around vertices.
+     *
+     * @param[in]  iface  The interface
+     */
+    virtual void _handleInterface(boundaryInterface iface);
+    /**
+     * @brief      Handles a boundary in the global matrix
+     *
+     * Handles all DoFs on the boundary with unit-weight, except the ones in the 0 and 1 rings around the vertices.
+     *
+     * @param[in]  side  The boundary side
+     */
+    virtual void _handleBoundary(patchSide side);
+    /**
+     * @brief      Handles the interior in the global matrix
+     *
+     * Gives all left-over DoFs, which are in the interior, weight 1 w.r.t. itself
+     */
+    virtual void _handleInterior();
+
+protected:
+    /**
+     * @brief      Handles a regular corner
+     *
+     * @param[in]  pcorner  The pcorner
+     */
+    virtual void _handleRegularCorner(patchCorner pcorner);
+
+    virtual void _handleRegularBoundaryVertexSmooth(patchCorner pcorner, index_t valence);
+
+    virtual void _handleRegularBoundaryVertexNonSmooth(patchCorner pcorner, index_t valence);
+
+    virtual void _handleIrregularBoundaryVertexSmooth(patchCorner pcorner, index_t valence);
+
+    virtual void _handleIrregularBoundaryVertexNonSmooth(patchCorner pcorner, index_t valence);
+
+    /**
+     * @brief      Prints which DoFs have been handled and which have been eliminated
+     */
+
+protected:
 
     /**
      * @brief      Makes a THB basis.
@@ -243,6 +348,44 @@ protected:
      * @brief       Computes the local coefficients and puts them in one big matrix
      */
     virtual gsMatrix<T> allCoefficients() const;
+
+protected:
+    // Boundary vertex of valence 1
+    // template<bool _boundary, index_t _v> // valence=2
+    // virtual typename std::enable_if<  _boundary && _v==1, void>::type
+    // SAME
+    virtual void _computeMapperRegularCorner_v1(patchCorner pcorner, index_t valence);
+
+    // Boundary vertex of valence 2 with C1 smoothness
+    // template<bool _boundary, index_t _v, bool _smooth> // valence=2
+    // virtual  typename std::enable_if<  _boundary && _v==2 && _smooth, void>::type
+    // SAME
+    virtual void _computeMapperRegularBoundaryVertexSmooth_v2(patchCorner pcorner, index_t valence);
+
+    // Boundary vertex of valence 2 with C0 smoothness
+    // template<bool _boundary, index_t _v, bool _smooth> // valence=2
+    // virtual  typename std::enable_if<  _boundary && _v==2 && (!_smooth), void>::type
+    // DIFFERENT
+    virtual void _computeMapperRegularBoundaryVertexNonSmooth_v2(patchCorner pcorner, index_t valence);
+
+    // Boundary vertex of valence !(1,2,3) with C1 smoothness
+    // template<bool _boundary, index_t _v, bool _smooth>
+    // virtual  typename std::enable_if<  _boundary && _v==-1 && _smooth, void>::type
+    // DIFFERENT
+    virtual void _computeMapperIrregularBoundaryVertexSmooth_v(patchCorner pcorner, index_t valence);
+
+    // Boundary vertex of valence !(1,2,3) with C0 smoothness
+    // template<bool _boundary, index_t _v, bool _smooth>
+    // virtual  typename std::enable_if<  _boundary && _v==-1 && (!_smooth), void>::type
+    // DIFFERENT
+    virtual void _computeMapperIrregularBoundaryVertexNonSmooth_v(patchCorner pcorner, index_t valence);
+
+    // Interior vertex
+    // template<bool _boundary, index_t _v>
+    // virtual  typename std::enable_if<  (!_boundary) && _v==-1, void>::type
+    // DIFFERENT
+    virtual void _computeMapperInteriorVertex_v(patchCorner pcorner, index_t valence);
+
 
 protected:
 //----------------------------------------------------------------------------------------------------------------------------

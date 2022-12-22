@@ -18,7 +18,6 @@
 #include <gsIO/gsOptionList.h>
 #include <gsUnstructuredSplines/src/gsDPatchBase.h>
 // #include <gsUnstructuredSplines/src/gsDPatchBase.hpp>
-
 namespace gismo
 {
 
@@ -33,6 +32,8 @@ namespace gismo
 template<short_t d,class T>
 class gsDPatch : public gsDPatchBase<d,T>
 {
+
+typedef typename std::vector<std::tuple<index_t,index_t,T>> sparseEntry_t;
 
 public:
     using Base = gsDPatchBase<d,T>;
@@ -60,7 +61,7 @@ public:
 
     ~gsDPatch();
 
-    virtual void defaultOptions();
+    void defaultOptions();
 
     // using Base::exportToPatches;
 
@@ -72,7 +73,7 @@ protected:
      * Takes the coefficients which are tagged as "free" in the modified DoFMapper (m_mapModified) and when a boundary vertex with valence=3 is present, this one is shifted.
      *
      */
-    virtual gsMatrix<T> _preCoefficients();
+    gsMatrix<T> _preCoefficients();
 
     // using Base::allCoefficients;
 
@@ -106,15 +107,20 @@ protected:
 
 protected:
 
-    virtual void _countDoFs();
+    using Base::_performChecks;
+    using Base::_resetChecks;
 
-    virtual void _computeMapper(); // also initialize the mappers!
+    void _countDoFs();
 
-    virtual void _computeSmoothMatrix();
+    // void _computeMapper(); // also initialize the mappers!
+    using Base::_computeMapper;
 
-    virtual void _makeTHB();
+    // void _computeSmoothMatrix();
+    using Base::_computeSmoothMatrix;
 
-    virtual void _computeEVs();
+    void _makeTHB();
+
+    void _computeEVs();
 
     /**
      * @brief      Makes the Pi matrix
@@ -127,10 +133,86 @@ protected:
      */
     gsMatrix<T> _makePi(index_t valence);
 
-protected:
+    using Base::getSharpCorners;
+    using Base::_indexFromSides;
+    using Base::_indicesFromVert;
+    using Base::_indexFromVert;
+    using Base::_vertexData;
+    using Base::_sideIndex;
+    using Base::_vertIndex;
+    using Base::_getLowestCorners;
+    using Base::_removeLowestCorners;
+    using Base::_getLowestIndices;
+    using Base::_removeLowestIndices;
+    using Base::_getInterfaceIndices;
+    using Base::_getAllInterfaceIndices;
 
-    // using Base::_performChecks;
-    // using Base::_resetChecks;
+    using Base::_push;
+    using Base::_pushAndCheck;
+
+
+
+protected:
+    // void _computeInterfaceMapper(boundaryInterface iface);
+    using Base::_computeInterfaceMapper;
+
+    // void _computeBoundaryMapper(patchSide boundary);
+    using Base::_computeBoundaryMapper;
+
+    void _computeVertexMapper(patchCorner pcorner);
+
+
+private:
+    // // Boundary vertex of valence 1
+    // template<bool _boundary, index_t _v> // valence=2
+    // typename std::enable_if<  _boundary && _v==1, void>::type
+    // // SAME
+    // _computeVertexMapperBoundary_v1(patchCorner pcorner, index_t valence);
+
+    using Base::_computeMapperRegularCorner_v1;
+
+    // // Boundary vertex of valence 2 with C1 smoothness
+    // template<bool _boundary, index_t _v, bool _smooth> // valence=2
+    // typename std::enable_if<  _boundary && _v==2 && _smooth, void>::type
+    // // SAME
+    // _computeVertexMapperBoundarySmooth_v2(patchCorner pcorner, index_t valence);
+    using Base::_computeMapperRegularBoundaryVertexSmooth_v2;
+
+    // // Boundary vertex of valence 2 with C0 smoothness
+    // template<bool _boundary, index_t _v, bool _smooth> // valence=2
+    // typename std::enable_if<  _boundary && _v==2 && (!_smooth), void>::type
+    // // DIFFERENT
+    // _computeVertexMapperBoundaryNonSmooth_v2(patchCorner pcorner, index_t valence);
+    using Base::_computeMapperRegularBoundaryVertexNonSmooth_v2;
+
+    // Boundary vertex of valence 3 with C1 smoothness
+    // ONLY DPATCH
+    void _computeMapperIrregularBoundaryVertexSmooth_v3(patchCorner pcorner, index_t valence);
+
+    // Boundary vertex of valence 3 with C0 smoothness
+    // template<bool _boundary, index_t _v, bool _smooth> // valence=2
+    // typename std::enable_if<  _boundary && _v==3 && (!_smooth), void>::type
+    // ONLY DPATCH
+    void _computeMapperIrregularBoundaryVertexNonSmooth_v3(patchCorner pcorner, index_t valence);
+
+    // Boundary vertex of valence !(1,2,3) with C1 smoothness
+    // template<bool _boundary, index_t _v, bool _smooth>
+    // typename std::enable_if<  _boundary && _v==-1 && _smooth, void>::type
+    // DIFFERENT
+    void _computeMapperIrregularBoundaryVertexSmooth_v(patchCorner pcorner, index_t valence);
+
+    // Boundary vertex of valence !(1,2,3) with C0 smoothness
+    // template<bool _boundary, index_t _v, bool _smooth>
+    // typename std::enable_if<  _boundary && _v==-1 && (!_smooth), void>::type
+    // DIFFERENT
+    void _computeMapperIrregularBoundaryVertexNonSmooth_v(patchCorner pcorner, index_t valence);
+
+    // // Interior vertex
+    // template<bool _boundary, index_t _v>
+    // typename std::enable_if<  (!_boundary) && _v==-1, void>::type
+    // // DIFFERENT
+    // _computeVertexMapperInterior_v(patchCorner pcorner, index_t valence);
+    using Base::_computeMapperInteriorVertex_v;
 
 protected:
 
@@ -163,7 +245,10 @@ protected:
      *
      * @param[in]  pcorner  The patchcorner
      */
-    virtual void _handleVertex(patchCorner pcorner);
+    // void _handleVertex(patchCorner pcorner);
+    // interior vertices
+    // void _handleInteriorVertex(patchCorner pcorner, index_t valence);
+
     /**
      * @brief      Handles an interface in the global matrix
      *
@@ -172,7 +257,7 @@ protected:
      *
      * @param[in]  iface  The interface
      */
-    virtual void _handleInterface(boundaryInterface iface);
+    // void _handleInterface(boundaryInterface iface);
     /**
      * @brief      Handles a boundary in the global matrix
      *
@@ -180,19 +265,50 @@ protected:
      *
      * @param[in]  side  The boundary side
      */
-    virtual void _handleBoundary(patchSide side);
+    // void _handleBoundary(patchSide side);
     /**
      * @brief      Handles the interior in the global matrix
      *
      * Gives all left-over DoFs, which are in the interior, weight 1 w.r.t. itself
      */
-    virtual void _handleInterior();
+    // void _handleInterior();
     /**
      * @brief      Prints which DoFs have been handled and which have been eliminated
      */
 
+private:
+    /**
+     * @brief      Handles a regular corner
+     *
+     * @param[in]  pcorner  The pcorner
+     */
+    // void _handleRegularCorner(patchCorner pcorner);
+
+
+    // template<bool _regular, bool _smooth> // valence=2
+    // typename std::enable_if<  _regular  &&   _smooth   , void>::type
+    // _handleBoundaryVertex(patchCorner pcorner, index_t valence);
+
+    // template<bool _regular, bool _smooth> // valence=2
+    // typename std::enable_if<  _regular  && (!_smooth)   , void>::type
+    // _handleBoundaryVertex(patchCorner pcorner, index_t valence);
+
+    // template<bool _regular, bool _smooth> // valence > 2
+    // typename std::enable_if<(!_regular) &&   _smooth    , void>::type
+    // _handleBoundaryVertex(patchCorner pcorner, index_t valence);
+
+    // template<bool _regular, bool _smooth> // valence > 1
+    // typename std::enable_if<(!_regular) && (!_smooth)   , void>::type
+    // _handleBoundaryVertex(patchCorner pcorner, index_t valence);
+
+    // void _handleRegularBoundaryVertexSmooth(patchCorner pcorner, index_t valence);
+
+    void _handleIrregularBoundaryVertexSmooth(patchCorner pcorner, index_t valence);
+
+    void _handleIrregularBoundaryVertexNonSmooth(patchCorner pcorner, index_t valence);
+
 protected:
-    // using Base::_whichHandled;
+    using Base::_whichHandled;
 
 protected:
     using Base::m_patches;

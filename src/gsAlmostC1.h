@@ -68,7 +68,7 @@ public:
 
     ~gsAlmostC1();
 
-    void defaultOptions();
+    using Base::defaultOptions;
 
     using Base::exportToPatches;
 
@@ -156,138 +156,17 @@ protected:
 
     gsMatrix<T,3,3> _getRotationMatrix(const gsVector<T,3> & a, const gsVector<T,3> & b) const;
 
-    /**
-     * @brief      Computes the index of a basis function using sides as reference
-     *
-     * @param[in]  index1  The index of the basis function parallel to the first side
-     * @param[in]  side1   The first side
-     * @param[in]  index2  The index of the basis function parallel to the second side
-     * @param[in]  side2   The second side
-     *
-     * @return     Index that is \a index1 in direction of \a side1 and \a index2 in direction of \a side2
-     */
     using Base::_indexFromSides;
-    // const index_t _indexFromSides(index_t index1, const patchSide side1, index_t index2, const patchSide side2);
-
-
-    /**
-     * @brief      Computes the index of a basis function taking one corner and one side as reference
-     *
-     * @param[in]  index   Offset of the basis function parallel to the side \a side, measured from \a corner
-     * @param[in]  corner  The corner to be measured from
-     * @param[in]  side    The side which contains \a corner
-     * @param[in]  offset  The offset from the side (orthogonal to the side)
-     *
-     * @return     Index of \a index places from \a corner along \a side, with offset \a offset
-     */
     using Base::_indicesFromVert;
-    // const gsVector<index_t> _indicesFromVert(index_t index, const patchCorner corner, const patchSide side, index_t offset = 0);
-
-
-    /**
-     * @brief      Computes the index of a basis function taking one corner and one side as reference
-     *
-     * @param[in]  bases   (optional) Multibasis to evaluate the index on
-     * @param[in]  index   Offset of the basis function parallel to the side \a side, measured from \a corner
-     * @param[in]  corner  The corner to be measured from
-     * @param[in]  side    The side which contains \a corner
-     * @param[in]  offset  The offset from the side (orthogonal to the side)
-     * @param[in]  levelOffset  The level to be computed from. \a levelOffset = 0 returns the deepest THB level, and any positive number will give one level coarser
-     *
-     * @return     Index of \a index places from \a corner along \a side, with offset \a offset and with offset \a levelOffset from the deepest level
-     */
-    // const index_t _indexFromVert(gsMultiBasis<T> bases, index_t index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
-    // const index_t _indexFromVert(index_t index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
-
-
-    /**
-     * @brief      Computes the index of a basis function taking one corner and one side as reference (multiple indices)
-     *
-     * @param[in]  bases   (optional) Multibasis to evaluate the index on
-     * @param[in]  index        Vector with offsets of the basis function parallel to the side \a side, measured from \a corner
-     * @param[in]  corner       The corner
-     * @param[in]  side         The side
-     * @param[in]  offset       The offset
-     * @param[in]  levelOffset  The level offset
-     *
-     * @return     { description_of_the_return_value }
-     */
-    // const std::vector<index_t> _indexFromVert(gsMultiBasis<T> bases, std::vector<index_t> index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
-    // const std::vector<index_t> _indexFromVert(std::vector<index_t> index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
-
     using Base::_indexFromVert;
-
-
-    /**
-     * @brief      Returns the valence and whether a corner is interior or boundary
-     *
-     * @param[in]  corner  The \ref patchCorner
-     *
-     * @return     A pair with .first giving the valence and .second being true if the vertex is interior and false if the vertex is on a boundary
-     */
-    // const std::pair<index_t,bool> _vertexData(const patchCorner corner) const;
     using Base::_vertexData;
-
-    /**
-     * @brief      Computes global index of the side
-     *
-     * @param[in]  patch    The patch number
-     * @param[in]  bside    The \ref boxSide
-     *
-     * @return     Returns a global index of the side
-     */
-    // const index_t _sideIndex( index_t patch,  boxSide bside)     const
-    // { return 4*patch + bside - 1; }
     using Base::_sideIndex;
-
-    /**
-     * @brief      Computes global index of the side
-     *
-     * @param[in]  pside    The \ref patchSide
-     *
-     * @return     Returns a global index of the side
-     */
-    // const index_t _sideIndex( patchSide pside)     const
-    // { return _sideIndex( pside.patch , pside.side() ); }
-
-    /**
-     * @brief      Computes global index of the corner
-     *
-     * @param[in]  patch    The patch number
-     * @param[in]  corner   The \ref boxCorner
-     *
-     * @return     Returns a global index of the corner
-     */
-    // const index_t _vertIndex( index_t patch,  boxCorner corner)  const
-    // { return 4*patch + corner -1; }
     using Base::_vertIndex;
-
-    /**
-     * @brief      Computes global index of the corner
-     *
-     * @param[in]  pcorner   The \ref patchCorner
-     *
-     * @return     Returns a global index of the side
-     */
-    // const index_t _vertIndex( patchCorner pcorner)     const
-    // { return _vertIndex( pcorner.patch , pcorner.corner() ); }
-
-    // void _getLowestCorners(std::vector<patchCorner> & pcorners, index_t n = 3) const;
     using Base::_getLowestCorners;
-
-    // void _removeLowestCorners(std::vector<patchCorner> & pcorners, index_t n = 3) const;
     using Base::_removeLowestCorners;
-
-    // void _getLowestIndices(std::vector<std::pair<index_t,index_t>> & indices, index_t n = 3) const;
     using Base::_getLowestIndices;
-
-    // void _removeLowestIndices(std::vector<std::pair<index_t,index_t>> & indices, index_t n = 3) const;
     using Base::_removeLowestIndices;
-
-    // std::vector<std::pair<index_t,index_t>> _getInterfaceIndices(patchCorner pcorner, index_t depth, const gsMultiBasis<T> & mbasis) const;
     using Base::_getInterfaceIndices;
-
-    // std::vector<std::pair<index_t,index_t>> _getAllInterfaceIndices(patchCorner pcorner, index_t depth, const gsMultiBasis<T> & mbasis) const;
     using Base::_getAllInterfaceIndices;
 
 protected:
@@ -295,17 +174,6 @@ protected:
     /**
      * @brief      Initializes the matrix, the basis and the mappers
      */
-    void _initialize();
-
-    using Base::_initChecks;
-    using Base::_initTHB;
-    using Base::_initBasis;
-    using Base::_initMappers;
-    using Base::_initMatrix;
-    using Base::_initCoefs;
-
-    using Base::_performChecks;
-    using Base::_resetChecks;
 
     void _countDoFs();
 
@@ -322,12 +190,14 @@ protected:
      *      iii)Valence 3: On all the patches, the basis functions corresponding to the vertex are coupled to eachother. The basis functions next to this one (on an interface OR on a boundary) are eliminated
      *  b) Interior vertices: all basis functions along the interface are eliminated if not done so
      */
-    void _computeMapper(); // also initialize the mappers!
+    // void _computeMapper(); // also initialize the mappers!
+    using Base::_computeMapper;
 
     /**
      * @brief      Calculates the smoothing matrix.
      */
-    void _computeSmoothMatrix();
+    // void _computeSmoothMatrix();
+    using Base::_computeSmoothMatrix;
 
     /**
      * @brief      Prepares the THB basis if needed.
@@ -347,73 +217,58 @@ protected:
 
     std::vector<std::vector<patchCorner> > _getSpecialCornerLists(const gsMultiPatch<T> & patches);
 
-    void _push(sparseEntry_t entries)
-    {
-        index_t rowIdx,colIdx;
-        T weight;
-        for (typename sparseEntry_t::const_iterator it=entries.begin(); it!=entries.end(); it++)
-        {
-            std::tie(rowIdx,colIdx,weight) = *it;
-            m_matrix(rowIdx,colIdx) = weight;
-        }
-    }
-
-    void _pushAndCheck(sparseEntry_t entries)
-    {
-        index_t rowIdx,colIdx;
-        T weight;
-        for (typename sparseEntry_t::const_iterator it=entries.begin(); it!=entries.end(); it++)
-        {
-            std::tie(rowIdx,colIdx,weight) = *it;
-            m_matrix(rowIdx,colIdx) = weight;
-            m_basisCheck[rowIdx] = true;
-        }
-    }
+    using Base::_push;
+    using Base::_pushAndCheck;
 
 
 protected:
-    void _computeInterfaceMapper(boundaryInterface iface);
+    // void _computeInterfaceMapper(boundaryInterface iface);
+    using Base::_computeInterfaceMapper;
 
-    void _computeBoundaryMapper(patchSide boundary);
+    // void _computeBoundaryMapper(patchSide boundary);
+    using Base::_computeBoundaryMapper;
 
     void _computeVertexMapper(patchCorner pcorner);
 
 
 private:
-    // Boundary vertex of valence 1
-    template<bool _boundary, index_t _v> // valence=2
-    typename std::enable_if<  _boundary && _v==1, void>::type
-    _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+    // // Boundary vertex of valence 1
+    // template<bool _boundary, index_t _v> // valence=2
+    // typename std::enable_if<  _boundary && _v==1, void>::type
+    // _computeVertexMapperBoundary_v1(patchCorner pcorner, index_t valence);
+    using Base::_computeMapperRegularCorner_v1;
 
-    // Boundary vertex of valence 2 with C1 smoothness
-    template<bool _boundary, index_t _v, bool _smooth> // valence=2
-    typename std::enable_if<  _boundary && _v==2 && _smooth, void>::type
-    _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+    // // Boundary vertex of valence 2 with C1 smoothness
+    // template<bool _boundary, index_t _v, bool _smooth> // valence=2
+    // typename std::enable_if<  _boundary && _v==2 && _smooth, void>::type
+    // _computeVertexMapperBoundarySmooth_v2(patchCorner pcorner, index_t valence);
+    using Base::_computeMapperRegularBoundaryVertexSmooth_v2;
 
     // Boundary vertex of valence 2 with C0 smoothness
-    template<bool _boundary, index_t _v, bool _smooth> // valence=2
-    typename std::enable_if<  _boundary && _v==2 && (!_smooth), void>::type
-    _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+    // template<bool _boundary, index_t _v, bool _smooth> // valence=2
+    // typename std::enable_if<  _boundary && _v==2 && (!_smooth), void>::type
+    void _computeMapperRegularBoundaryVertexNonSmooth_v2(patchCorner pcorner, index_t valence);
 
     // Boundary vertex of valence !(1,2,3) with C1 smoothness
-    template<bool _boundary, index_t _v, bool _smooth>
-    typename std::enable_if<  _boundary && _v==-1 && _smooth, void>::type
-    _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+    // template<bool _boundary, index_t _v, bool _smooth>
+    // typename std::enable_if<  _boundary && _v==-1 && _smooth, void>::type
+    void _computeMapperIrregularBoundaryVertexSmooth_v(patchCorner pcorner, index_t valence);
 
     // Boundary vertex of valence !(1,2,3) with C0 smoothness
-    template<bool _boundary, index_t _v, bool _smooth>
-    typename std::enable_if<  _boundary && _v==-1 && (!_smooth), void>::type
-    _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+    // template<bool _boundary, index_t _v, bool _smooth>
+    // typename std::enable_if<  _boundary && _v==-1 && (!_smooth), void>::type
+    // void _computeVertexMapperBoundaryNonSmooth_v(patchCorner pcorner, index_t valence);
+    using Base::_computeMapperIrregularBoundaryVertexNonSmooth_v;
 
     // Ordinary interior vertex
-    template<bool _boundary, index_t _v> // valence=2
-    typename std::enable_if<  (!_boundary) && _v==4, void>::type
-    _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+    // template<bool _boundary, index_t _v> // valence=2
+    // typename std::enable_if<  (!_boundary) && _v==4, void>::type
+    void _computeMapperInteriorVertex_v4(patchCorner pcorner, index_t valence);
 
     // Extraordinary interior vertex
-    template<bool _boundary, index_t _v>
-    typename std::enable_if<  (!_boundary) && _v==-1, void>::type
-    _computeVertexMapper_impl(patchCorner pcorner, index_t valence);
+    // template<bool _boundary, index_t _v>
+    // typename std::enable_if<  (!_boundary) && _v==-1, void>::type
+    void _computeMapperInteriorVertex_v(patchCorner pcorner, index_t valence);
 
 
 protected:
@@ -446,7 +301,7 @@ protected:
      *
      * @param[in]  pcorner  The patchcorner
      */
-    void _handleVertex(patchCorner pcorner);
+    // void _handleVertex(patchCorner pcorner);
 
     // interior vertices
     void _handleInteriorVertex(patchCorner pcorner, index_t valence);
@@ -459,7 +314,7 @@ protected:
      *
      * @param[in]  iface  The interface
      */
-    void _handleInterface(boundaryInterface iface);
+    // void _handleInterface(boundaryInterface iface);
     /**
      * @brief      Handles a boundary in the global matrix
      *
@@ -467,13 +322,13 @@ protected:
      *
      * @param[in]  side  The boundary side
      */
-    void _handleBoundary(patchSide side);
+    // void _handleBoundary(patchSide side);
     /**
      * @brief      Handles the interior in the global matrix
      *
      * Gives all left-over DoFs, which are in the interior, weight 1 w.r.t. itself
      */
-    void _handleInterior();
+    // void _handleInterior();
 
 private:
     /**
@@ -481,23 +336,31 @@ private:
      *
      * @param[in]  pcorner  The pcorner
      */
-    void _handleRegularCorner(patchCorner pcorner);
+    // void _handleRegularCorner(patchCorner pcorner);
 
-    template<bool _regular, bool _smooth> // valence=2
-    typename std::enable_if<  _regular  &&   _smooth   , void>::type
-    _handleBoundaryVertex(patchCorner pcorner, index_t valence);
+    // template<bool _regular, bool _smooth> // valence=2
+    // typename std::enable_if<  _regular  &&   _smooth   , void>::type
+    // _handleBoundaryVertex(patchCorner pcorner, index_t valence);
 
-    template<bool _regular, bool _smooth> // valence=2
-    typename std::enable_if<  _regular  && (!_smooth)   , void>::type
-    _handleBoundaryVertex(patchCorner pcorner, index_t valence);
+    // template<bool _regular, bool _smooth> // valence=2
+    // typename std::enable_if<  _regular  && (!_smooth)   , void>::type
+    // _handleBoundaryVertex(patchCorner pcorner, index_t valence);
 
-    template<bool _regular, bool _smooth> // valence > 2
-    typename std::enable_if<(!_regular) &&   _smooth    , void>::type
-    _handleBoundaryVertex(patchCorner pcorner, index_t valence);
+    // template<bool _regular, bool _smooth> // valence > 2
+    // typename std::enable_if<(!_regular) &&   _smooth    , void>::type
+    // _handleBoundaryVertex(patchCorner pcorner, index_t valence);
 
-    template<bool _regular, bool _smooth> // valence > 1
-    typename std::enable_if<(!_regular) && (!_smooth)   , void>::type
-    _handleBoundaryVertex(patchCorner pcorner, index_t valence);
+    // template<bool _regular, bool _smooth> // valence > 1
+    // typename std::enable_if<(!_regular) && (!_smooth)   , void>::type
+    // _handleBoundaryVertex(patchCorner pcorner, index_t valence);
+
+    // void _handleRegularBoundaryVertexSmooth(patchCorner pcorner, index_t valence);
+
+    void _handleRegularBoundaryVertexNonSmooth(patchCorner pcorner, index_t valence);
+
+    void _handleIrregularBoundaryVertexSmooth(patchCorner pcorner, index_t valence);
+
+    void _handleIrregularBoundaryVertexNonSmooth(patchCorner pcorner, index_t valence);
 
 protected:
     using Base::_whichHandled;
