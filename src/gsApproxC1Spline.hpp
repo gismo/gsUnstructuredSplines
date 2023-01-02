@@ -51,6 +51,9 @@ void gsApproxC1Spline<d,T>::init()
 {
     index_t row_dofs = 0;
 
+    // Fix orientation of each patch
+    m_patches.fixOrientation();
+
     m_bases.clear();
     m_bases.reserve(m_patches.nPatches()); // For each Patch
     for (size_t np = 0; np < m_patches.nPatches(); np++)
