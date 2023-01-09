@@ -244,8 +244,8 @@ namespace gismo
             }
         }
 
-        void matchWith(const boundaryInterface &bi, const gsBasis<T> &other, gsMatrix<int> &bndThis,
-                       gsMatrix<int> &bndOther) const {
+        void matchWith(const boundaryInterface &bi, const gsBasis<T> &other, gsMatrix<index_t> &bndThis,
+                       gsMatrix<index_t> &bndOther) const {
             // First side
             // edge
             gsDebug << "matchWith() function is not implemented yet \n";
@@ -272,9 +272,9 @@ namespace gismo
         }
 
 
-        gsMatrix<int> boundaryOffset(const boxSide & bside, int offset) const
+        gsMatrix<index_t> boundaryOffset(const boxSide & bside, index_t offset) const
         {
-            gsMatrix<int> result;
+            gsMatrix<index_t> result;
 
             // TODO TEST WITH:
             /*
@@ -282,7 +282,7 @@ namespace gismo
             result.resize(0, 1);
             for (size_t i=0; i< basisContainer.size(); ++i)
             {
-                gsMatrix<int> result_temp;
+                gsMatrix<index_t> result_temp;
                 result_temp = basisContainer[i].boundaryOffset(bside, offset);
                 result_temp.array() += shift;
                 result.conservativeResize(result.rows()+result_temp.rows(), 1);
@@ -313,14 +313,15 @@ namespace gismo
                 GISMO_ASSERT(containedCorners.size() != 0, "No contained corner");
 
 
-                for (size_t nc = 0; nc < containedCorners.size(); nc++) {
-                    index_t corner_id = containedCorners[nc].m_index + 4; // + 4 included bcs of 4 sides!
+                for (size_t nc = 0; nc < containedCorners.size(); nc++)
+                {
+                    index_t corner_id = containedCorners[nc].m_index + 4; // + 4 included because of 4 sides!
 
                     index_t shift = 0;
                     for (index_t i = 0; i < corner_id; ++i)
                         shift += basisContainer[i].size();
 
-                    gsMatrix<int> result_temp;
+                    gsMatrix<index_t> result_temp;
                     result_temp = basisContainer[corner_id].boundaryOffset(bside, offset);
                     result_temp.array() += shift;
 
@@ -332,6 +333,21 @@ namespace gismo
             return result;
         }
 
+        index_t functionAtCorner(const boxCorner & corner) const
+        {
+            if (basisContainer.size() != 1)
+            {
+                index_t corner_id = corner.m_index + 4; // + 4 included because of 4 sides!
+                index_t shift = 0;
+                for (index_t i = 0; i < corner_id; ++i)
+                    shift += basisContainer[i].size();
+
+                return basisContainer[corner_id].functionAtCorner(corner) + shift;
+            }
+            else
+                return basisContainer[0].functionAtCorner(corner);
+
+        }
 
 // implementations of gsContainerBasis
     public:
