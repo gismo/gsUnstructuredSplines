@@ -218,7 +218,7 @@ namespace gismo
     } // assemble()
 
     template <class T, class bhVisitor>
-    void gsC1SurfBasisEdge<T,bhVisitor>::apply(bhVisitor & visitor, int bf_index, std::string typeBf)
+    void gsC1SurfBasisEdge<T,bhVisitor>::apply(bhVisitor & visitor, index_t bf_index, std::string typeBf)
     {
 #pragma omp parallel
         {

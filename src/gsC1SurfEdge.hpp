@@ -76,7 +76,7 @@ namespace gismo
 
 
     template<short_t d,class T>
-    void gsC1SurfEdge<d,T>::reparametrizeBoundary(const int bInd){
+    void gsC1SurfEdge<d,T>::reparametrizeBoundary(const index_t bInd){
         computeAuxTopology();
 
         if(auxGeom[0].getOrient())

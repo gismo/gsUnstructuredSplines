@@ -139,7 +139,7 @@ void gsApproxC1Spline<d,T>::init()
         m_bases[item.first().patch].setBasis(item.first().side().index(), basis_edge_11);
         m_bases[item.second().patch].setBasis(item.second().side().index(), basis_edge_22);
 
-        index_t numDofs = math::max(basis_plus.size() + basis_minus.size() - 10, 0);
+        index_t numDofs = std::max(basis_plus.size() + basis_minus.size() - 10, (index_t)0);
         row_dofs += numDofs; // The same as side_2
     }
 
@@ -164,7 +164,7 @@ void gsApproxC1Spline<d,T>::init()
 
         m_bases[bit.patch].setBasis(bit.side().index(), basis_edge_11);
 
-        index_t numDofs = math::max(basis_plus.size() + basis_minus.size() - 10, 0);
+        index_t numDofs = std::max(basis_plus.size() + basis_minus.size() - 10, (index_t)0);
         row_dofs += numDofs;
     }
 

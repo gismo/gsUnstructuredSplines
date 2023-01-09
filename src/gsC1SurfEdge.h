@@ -90,7 +90,7 @@ public:
         basisEdgeResult.push_back(auxGeom[1].getG1Basis());
     }
 
-    void computeG1BoundaryBasis(const int boundaryInd)
+    void computeG1BoundaryBasis(const index_t boundaryInd)
     {
         basisEdgeResult.clear();
 
