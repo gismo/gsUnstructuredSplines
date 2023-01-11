@@ -41,8 +41,7 @@ namespace gismo
             for (short_t dd = 0; dd!=d; dd++)
             {
                 degree = basis_patch->component(dd).knots().degree();
-                gsDebugVar(basis_patch->component(dd).knots().size()-2*(degree+1));
-                GISMO_ENSURE(basis_patch->component(dd).knots().size()-2*(degree+1)>=5-degree,"For a degree="<<degree<<" basis, the knot vector should at least have "<<5-degree<<" inner knots, but now it has "<<basis_patch->component(dd).knots().size()-2*(degree+1)<<" inner knots.");
+                GISMO_ENSURE(basis_patch->component(dd).knots().size()-2*(degree+1)>=(size_t)(5-degree),"For a degree="<<degree<<" basis, the knot vector should at least have "<<5-degree<<" inner knots, but now it has "<<basis_patch->component(dd).knots().size()-2*(degree+1)<<" inner knots.");
             }
 
             // regularity check (r=p-2)
@@ -155,7 +154,7 @@ namespace gismo
             for (index_t j = 2; j < dim_v-2; ++j)
                 for (index_t i = 2; i < dim_u-2; ++i)
                 {
-                    m_matrix.insert(shift_row + row_i, shift_col + j*dim_u+i) = 1.0;
+                    m_matrix.insert(shift_row + row_i, shift_col + j*dim_u+i) = 1;
                     ++row_i;
                 }
             shift_row += row_i;
