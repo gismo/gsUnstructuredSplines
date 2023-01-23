@@ -19,7 +19,9 @@
 #include <gsUnstructuredSplines/src/gsDPatch.h>
 #include <gsUnstructuredSplines/src/gsAlmostC1.h>
 #include <gsUnstructuredSplines/src/gsC1SurfSpline.h>
-
+#ifdef GISMO_WITH_SPECTRA
+#include <gsSpectra/gsSpectra.h>
+#endif
 using namespace gismo;
 //! [Include namespace]
 
@@ -346,7 +348,7 @@ int main(int argc, char *argv[])
     cmd.addSwitch("last", "Solve solely for the last level of h-refinement", last);
     cmd.addSwitch("plot", "Create a ParaView visualization file with the solution", plot);
     cmd.addSwitch("mesh", "Plot the mesh", mesh);
-    //cmd.addSwitch("cond", "Estimate condition number (slow!)", cond);
+    cmd.addSwitch("cond", "Estimate condition number (slow!)", cond);
 
     cmd.addString("o", "output", "Output in xml (for python)", output);
     cmd.addString("w", "write", "Write to csv", write);
@@ -801,6 +803,23 @@ int main(int argc, char *argv[])
         // Compute the condition-number for the matrix (Slow)
         if (cond)
         {
+#ifdef GISMO_WITH_SPECTRA
+            real_t minev, maxev;
+            index_t sz = A.matrix().cols();
+            gsSpectraSymSolver<gsSparseMatrix<real_t>> ev(A.matrix(),1, sz);
+            ev.compute(Spectra::SortRule::SmallestAlge,1000,1e-10,Spectra::SortRule::SmallestAlge);
+            gsInfo << "Symmetric solver:\n";
+            gsInfo << "Eigenvalues A*x=lambda*x:\n" << ev.eigenvalues().transpose() <<"\n\n";
+            minev = ev.eigenvalues()(0);
+
+            ev.compute(Spectra::SortRule::LargestAlge,1000,1e-10,Spectra::SortRule::LargestAlge);
+            gsInfo << "Symmetric solver:\n";
+            gsInfo << "Eigenvalues A*x=lambda*x:\n" << ev.eigenvalues().transpose() <<"\n\n";
+            maxev = ev.eigenvalues()(0);
+
+            gsInfo << "Cond Number: " <<maxev/minev<< "\n";
+            cond_num[r] = maxev/minev;
+#else
             //Eigen::MatrixXd mat = A.matrix().toDense().cast<double>()
             //Eigen::SparseMatrix<double> mat = A.matrix().cast<double>();
 
@@ -862,6 +881,7 @@ int main(int argc, char *argv[])
             gsInfo << "Cond: " << max_ev/min_ev << "\n";
             cond_num[r] = max_ev/min_ev;
 */
+#endif
         }
         err_time += timer.stop();
         gsInfo<< ". " <<std::flush; // Error computations done
