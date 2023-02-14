@@ -127,7 +127,7 @@ public:
         gsMatrix<> zero;
         zero.setZero(2,1);
         for (index_t i = 0; i < val; i++)
-            sigma += auxGeom[i].getPatch().deriv(zero).lpNorm<Eigen::Infinity>();
+            sigma += auxGeom[i].getPatch().deriv(zero).template lpNorm<Eigen::Infinity>();
         sigma *= h_geo/(val*p);
         sigma = 1 / sigma;
     }

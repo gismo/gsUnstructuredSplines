@@ -55,7 +55,7 @@ public:
      *
      * @param      mp    Multipatch of the geometry
      */
-    gsDPatch(gsMultiPatch<T> const & mp) ;
+    gsDPatch(const gsMultiPatch<T> & mp) ;
 
     GISMO_CLONE_FUNCTION(gsDPatch)
 

@@ -54,7 +54,7 @@ public:
      *
      * @param      mp    Multipatch of the geometry
      */
-    gsDPatchBase(gsMultiPatch<T> const & mp)
+    gsDPatchBase(const gsMultiPatch<T> & mp)
     :
     m_patches(mp),
     m_computed(false)
@@ -672,7 +672,7 @@ protected:
 //     }
 
 protected:
-    const gsMultiPatch<T> & m_patches;
+    const gsMultiPatch<T> m_patches;
     bool m_computed;
     gsMultiPatch<T> m_RefPatches;
     gsMultiBasis<T> m_bases, m_Bbases;

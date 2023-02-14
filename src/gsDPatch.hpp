@@ -140,11 +140,15 @@ namespace gismo
                     patchCorner corner = cornerLists[v].at(c);
                     gsVector<bool> pars;
                     corner.corner().parameters_into(m_RefPatches.parDim(),pars); // get the parametric coordinates of the corner
-                    gsMatrix<T> mat = pars.template cast<T>(); // cast to real coordinates
+                    gsMatrix<T> supp = m_RefPatches.basis(corner.patch).support();
+                    gsVector<T> vec(supp.rows());
+                    for (index_t r = 0; r!=supp.rows(); r++)
+                        vec(r) = supp(r,pars(r));
 
                     gsMatrix<T> boxes(m_RefPatches.parDim(),2);
-                    boxes.col(0) << mat;
-                    boxes.col(1) << mat;
+                    boxes.col(0) << vec;
+                    boxes.col(1) << vec;
+
 
                     gsHTensorBasis<2,T> *basis = dynamic_cast<gsHTensorBasis<2,T>*>(&m_RefPatches.basis(corner.patch));
                     std::vector<index_t> elements = basis->asElements(boxes,1);

@@ -71,8 +71,12 @@ namespace gismo
         for (typename std::vector<patchCorner>::const_iterator it = corners.begin(); it!=corners.end(); it++, k++)
         {
             it->corner().parameters_into(m_patches.parDim(),pars); // get the parametric coordinates of the corner
-            mat = pars.template cast<T>(); // cast to real coordinates
-            normals.col(k) = ev.eval(sn(Gm).normalized(),mat,it->patch);
+            gsMatrix<T> supp = m_RefPatches.basis(it->patch).support();
+            gsVector<T> vec(supp.rows());
+            for (index_t r = 0; r!=supp.rows(); r++)
+                vec(r) = supp(r,pars(r));
+
+            normals.col(k) = ev.eval(sn(Gm).normalized(),vec,it->patch);
         }
         return normals;
     }
@@ -94,8 +98,12 @@ namespace gismo
         gsMatrix<T> um(3,1), midpoint;
         um.setZero();
         corner.corner().parameters_into(m_RefPatches.parDim(),pars); // get the parametric coordinates of the corner
-        mat = pars.template cast<T>(); // cast to real coordinates
-        um.block(0,0,tdim,1) = m_RefPatches.patch(corner.patch).eval(mat);
+        gsMatrix<T> supp = m_RefPatches.basis(corner.patch).support();
+        gsVector<T> vec(supp.rows());
+        for (index_t r = 0; r!=supp.rows(); r++)
+            vec(r) = supp(r,pars(r));
+
+        um.block(0,0,tdim,1) = m_RefPatches.patch(corner.patch).eval(vec);
         midpoint = um; // store the original midpoint
 
         // 2. Get the 0,0;0,1; 1,0; 1,1 coordinates
@@ -418,11 +426,14 @@ namespace gismo
                     patchCorner corner = cornerLists[v].at(c);
                     gsVector<bool> pars;
                     corner.corner().parameters_into(m_RefPatches.parDim(),pars); // get the parametric coordinates of the corner
-                    gsMatrix<T> mat = pars.template cast<T>(); // cast to real coordinates
+                    gsMatrix<T> supp = m_RefPatches.basis(corner.patch).support();
+                    gsVector<T> vec(supp.rows());
+                    for (index_t r = 0; r!=supp.rows(); r++)
+                        vec(r) = supp(r,pars(r));
 
                     gsMatrix<T> boxes(m_RefPatches.parDim(),2);
-                    boxes.col(0) << mat;
-                    boxes.col(1) << mat;
+                    boxes.col(0) << vec;
+                    boxes.col(1) << vec;
 
                     gsHTensorBasis<2,T> *basis = dynamic_cast<gsHTensorBasis<2,T>*>(&m_RefPatches.basis(corner.patch));
                     std::vector<index_t> elements = basis->asElements(boxes,0); // 0-ring
@@ -465,7 +476,7 @@ namespace gismo
         m_mapOriginal = gsDofMapper(m_bases);
         m_mapOriginal.finalize();
 
-        // gsWriteParaview<>(m_RefPatches,"mp_ref",1000,true);
+        // gsWriteParaview<>(m_RefPatches,"mp_ref",100,true);
     }
 
     template<short_t d, class T>
