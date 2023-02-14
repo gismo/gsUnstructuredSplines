@@ -22,6 +22,7 @@
 #ifdef GISMO_WITH_SPECTRA
 #include <gsSpectra/gsSpectra.h>
 #endif
+#include <gsUtils/gsL2Projection.h>
 using namespace gismo;
 //! [Include namespace]
 
@@ -458,6 +459,10 @@ int main(int argc, char *argv[])
         mesh = optionList.getSwitch("mesh");
         interpolation = optionList.getSwitch("interpolation");
     }
+
+    gsMultiPatch<> geom = mp;
+    gsMultiPatch<> geom0;
+
     //! [Read XML file]
 
 //    gsMatrix<> coefs;
@@ -502,12 +507,6 @@ int main(int argc, char *argv[])
             mp.uniformRefine(1, degree-smoothness);
     }
 
-    gsInfo << "Patches: "<< mp.nPatches() <<", degree: "<< dbasis.minCwiseDegree() <<"\n";
-#ifdef _OPENMP
-    gsInfo<< "Available threads: "<< omp_get_max_threads() <<"\n";
-#endif
-
-
     if (geometry == "g1012")
     {
         gsInfo << "ATTENTION: Patch 0 is one time uniform refined \n";
@@ -546,7 +545,7 @@ int main(int argc, char *argv[])
     gsExprEvaluator<real_t> ev(A);
 
     // Set the geometry map
-    auto G = A.getMap(mp);
+    auto G = A.getMap(geom);
 
     // Set the source term
     auto ff = A.getCoeff(f, G); // Laplace example
@@ -583,7 +582,7 @@ int main(int argc, char *argv[])
             meshsize[r] = dbasis.basis(0).getMinCellLength();
 
             // The approx. C1 space
-            gsApproxC1Spline<2,real_t> approxC1(mp,dbasis);
+            gsApproxC1Spline<2,real_t> approxC1(geom,dbasis);
             approxC1.options().setSwitch("info",info);
             approxC1.options().setSwitch("plot",plotApproxC1);
             approxC1.options().setSwitch("interpolation",interpolation);
@@ -602,19 +601,46 @@ int main(int argc, char *argv[])
             mp.uniformRefine(1,degree-smoothness);
             dbasis.uniformRefine(1,degree-smoothness);
 
-            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&dbasis.basis(0)))
-                meshsize[r] = test->tensorLevel(0).getMinCellLength();
-            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&dbasis.basis(0)))
-                meshsize[r] = test->getMinCellLength();
-
+            // Construct the D-Patch on mp
             gsSparseMatrix<real_t> global2local;
             gsDPatch<2,real_t> dpatch(mp);
 	        dpatch.compute();
             dpatch.matrix_into(global2local);
             global2local = global2local.transpose();
-            mp = dpatch.exportToPatches();
+            geom = dpatch.exportToPatches();
             dbasis = dpatch.localBasis();
             bb2.init(dbasis,global2local);
+
+            ///////////////////////////////////////////
+            // Project the original geometry on dbasis
+            // Find the basis size
+            index_t size=0;
+            for (index_t p=0; p!=mp.nPatches(); p++)
+                size += mp.patch(p).coefs().rows();
+            // Do the projection on the coarsest obtained D-patch geometry (geom0)
+            if (r>0)
+            {
+                gsMatrix<> coefs;
+                gsL2Projection<real_t>::projectGeometry(dbasis,bb2,geom0,coefs);
+                gsMatrix<> allCoefs = global2local*coefs.reshape(global2local.cols(),mp.geoDim());
+
+                // Substitute all coefficients of geom with the newly obtained ones.
+                gsMultiBasis<> geombasis(geom);
+                gsDofMapper mapper(geombasis);
+                mapper.finalize();
+                for (index_t p = 0; p != geom.nPatches(); p++)
+                {
+                    for (index_t k=0; k!=mapper.patchSize(p); k++)
+                    {
+                        geom.patch(p).coefs().row(k) = allCoefs.row(mapper.index(k,p));
+                    }
+                }
+            }
+            else
+            {
+                geom = dpatch.exportToPatches();
+                geom0 = geom;
+            }
         }
         else if (method == MethodFlags::ALMOSTC1)
         {
@@ -631,9 +657,41 @@ int main(int argc, char *argv[])
             almostC1.compute();
             almostC1.matrix_into(global2local);
             global2local = global2local.transpose();
-            mp = almostC1.exportToPatches();
+            geom = almostC1.exportToPatches();
             dbasis = almostC1.localBasis();
             bb2.init(dbasis,global2local);
+
+            ///////////////////////////////////////////
+            // Project the original geometry on dbasis
+            // Find the basis size
+            index_t size=0;
+            for (index_t p=0; p!=mp.nPatches(); p++)
+                size += mp.patch(p).coefs().rows();
+            // Do the projection on the coarsest obtained D-patch geometry (geom0)
+            if (r>0)
+            {
+                gsMatrix<> coefs;
+                gsL2Projection<real_t>::projectGeometry(dbasis,bb2,geom0,coefs);
+                gsMatrix<> allCoefs = global2local*coefs.reshape(global2local.cols(),mp.geoDim());
+
+                // Substitute all coefficients of geom with the newly obtained ones.
+                gsMultiBasis<> geombasis(geom);
+                gsDofMapper mapper(geombasis);
+                mapper.finalize();
+                for (index_t p = 0; p != geom.nPatches(); p++)
+                {
+                    for (index_t k=0; k!=mapper.patchSize(p); k++)
+                    {
+                        geom.patch(p).coefs().row(k) = allCoefs.row(mapper.index(k,p));
+                    }
+                }
+            }
+            else
+            {
+                geom = almostC1.exportToPatches();
+                geom0 = geom;
+            }
+            gsWriteParaview<>(geom,"geom",1000,true);
         }
         else if (method == MethodFlags::SURFASG1) // Andrea
         {
@@ -663,7 +721,7 @@ int main(int argc, char *argv[])
 
             // Setup the system
             u.setupMapper(map);
-            gsDirichletNeumannValuesL2Projection(mp, dbasis, bc, bb2, u);
+            gsDirichletNeumannValuesL2Projection(geom, dbasis, bc, bb2, u);
         }
         else if (method == MethodFlags::NITSCHE) // Nitsche
         {
@@ -672,7 +730,7 @@ int main(int argc, char *argv[])
 
             // Setup the system
             u.setupMapper(map);
-            gsDirichletNeumannValuesL2Projection(mp, dbasis, bc, u);
+            gsDirichletNeumannValuesL2Projection(geom, dbasis, bc, u);
         }
 
         // Initialize the system
@@ -695,10 +753,10 @@ int main(int argc, char *argv[])
         {
             if (penalty_init == -1.0)
                 if (r < 3) // From level 3 and more, the previous EW is used and devided by ḿesh-size (save computation time)
-                    computeStabilityParameter(mp, dbasis, mu_interfaces);
+                    computeStabilityParameter(geom, dbasis, mu_interfaces);
 
             index_t i = 0;
-            for ( typename gsMultiPatch<real_t>::const_iiterator it = mp.iBegin(); it != mp.iEnd(); ++it, ++i)
+            for ( typename gsMultiPatch<real_t>::const_iiterator it = geom.iBegin(); it != geom.iEnd(); ++it, ++i)
             {
                 real_t stab     = 4 * ( dbasis.maxCwiseDegree() + dbasis.dim() ) * ( dbasis.maxCwiseDegree() + 1 );
                 real_t m_h      = dbasis.basis(0).getMinCellLength(); //*dbasis.basis(0).getMinCellLength();
@@ -806,16 +864,16 @@ int main(int argc, char *argv[])
 #ifdef GISMO_WITH_SPECTRA
             real_t minev, maxev;
             index_t sz = A.matrix().cols();
-            gsSpectraSymSolver<gsSparseMatrix<real_t>> ev(A.matrix(),1, sz);
-            ev.compute(Spectra::SortRule::SmallestAlge,1000,1e-10,Spectra::SortRule::SmallestAlge);
+            gsSpectraSymSolver<gsSparseMatrix<real_t>> evsolver(A.matrix(),1, sz);
+            evsolver.compute(Spectra::SortRule::SmallestAlge,1000,1e-10,Spectra::SortRule::SmallestAlge);
             gsInfo << "Symmetric solver:\n";
-            gsInfo << "Eigenvalues A*x=lambda*x:\n" << ev.eigenvalues().transpose() <<"\n\n";
-            minev = ev.eigenvalues()(0);
+            gsInfo << "Eigenvalues A*x=lambda*x:\n" << evsolver.eigenvalues().transpose() <<"\n\n";
+            minev = evsolver.eigenvalues()(0);
 
-            ev.compute(Spectra::SortRule::LargestAlge,1000,1e-10,Spectra::SortRule::LargestAlge);
+            evsolver.compute(Spectra::SortRule::LargestAlge,1000,1e-10,Spectra::SortRule::LargestAlge);
             gsInfo << "Symmetric solver:\n";
-            gsInfo << "Eigenvalues A*x=lambda*x:\n" << ev.eigenvalues().transpose() <<"\n\n";
-            maxev = ev.eigenvalues()(0);
+            gsInfo << "Eigenvalues A*x=lambda*x:\n" << evsolver.eigenvalues().transpose() <<"\n\n";
+            maxev = evsolver.eigenvalues()(0);
 
             gsInfo << "Cond Number: " <<maxev/minev<< "\n";
             cond_num[r] = maxev/minev;
@@ -883,6 +941,9 @@ int main(int argc, char *argv[])
 */
 #endif
         }
+        else
+            cond_num[r] = 0;
+
         err_time += timer.stop();
         gsInfo<< ". " <<std::flush; // Error computations done
     } //for loop
@@ -938,7 +999,7 @@ int main(int argc, char *argv[])
     if (plot)
     {
         gsInfo<<"Plotting in Paraview...\n";
-        gsWriteParaview( mp, "geom",1000,true);
+        gsWriteParaview( geom, "geom",1000,true);
         ev.options().setSwitch("plot.elements", mesh);
         ev.options().setInt   ("plot.npts"    , 1000);
         ev.writeParaview( u_sol   , G, "solution");
@@ -985,10 +1046,10 @@ int main(int argc, char *argv[])
     if (!write.empty())
     {
         std::ofstream file(write.c_str());
-        file<<"Meshsize, dofs, l2err, h1err, h2err, iFaceErr"<<"\n";
+        file<<"Meshsize, dofs, l2err, h1err, h2err, iFaceErr, cond"<<"\n";
         for (index_t k=0; k<meshsize.size(); ++k)
         {
-            file<<meshsize[k]<<","<<dofs[k]<<","<<l2err[k]<<","<<h1err[k]<<","<<h2err[k]<<","<<IFaceErr[k]<<"\n";
+            file<<meshsize[k]<<","<<dofs[k]<<","<<l2err[k]<<","<<h1err[k]<<","<<h2err[k]<<","<<IFaceErr[k]<<cond_num[k]<<"\n";
         }
         file.close();
     }
