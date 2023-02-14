@@ -19,7 +19,7 @@
 #include <gsUnstructuredSplines/src/gsDPatch.h>
 #include <gsUnstructuredSplines/src/gsAlmostC1.h>
 #include <gsUnstructuredSplines/src/gsC1SurfSpline.h>
-#ifdef GISMO_WITH_SPECTRA
+#ifdef gsSpectra_ENABLED
 #include <gsSpectra/gsSpectra.h>
 #endif
 #include <gsUtils/gsL2Projection.h>
@@ -604,7 +604,7 @@ int main(int argc, char *argv[])
             // Construct the D-Patch on mp
             gsSparseMatrix<real_t> global2local;
             gsDPatch<2,real_t> dpatch(mp);
-	        dpatch.compute();
+	    dpatch.compute();
             dpatch.matrix_into(global2local);
             global2local = global2local.transpose();
             geom = dpatch.exportToPatches();
@@ -861,7 +861,8 @@ int main(int argc, char *argv[])
         // Compute the condition-number for the matrix (Slow)
         if (cond)
         {
-#ifdef GISMO_WITH_SPECTRA
+#ifdef gsSpectra_ENABLED
+	    gsInfo<<"Computing the condition number using Spectra\n";
             real_t minev, maxev;
             index_t sz = A.matrix().cols();
             gsSpectraSymSolver<gsSparseMatrix<real_t>> evsolver(A.matrix(),1, sz);
