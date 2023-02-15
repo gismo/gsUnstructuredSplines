@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
     index_t degree = 3;
     index_t smoothness = 2;
 
-    std::string fn, output;
+    std::string fn, basisOutput, geoOutput;
 
     gsCmdLine cmd("Tutorial on solving a Biharmonic problem with different spaces.");
     // Flags related to the method (default: Approx C1 method)
@@ -76,7 +76,8 @@ int main(int argc, char *argv[])
     cmd.addSwitch("plot", "Create a ParaView visualization file with the solution", plot);
     cmd.addSwitch("mesh", "Plot the mesh", mesh);
 
-    cmd.addString("o", "output", "Output in xml", output);
+    cmd.addString("S", "basisOutput", "Output in xml", basisOutput);
+    cmd.addString("G", "geoOutput", "Output in xml", geoOutput);
 
     cmd.addSwitch("noTHB", "No THB in export", noTHB);
 
@@ -227,15 +228,22 @@ int main(int argc, char *argv[])
 
         }
 
-        if (!output.empty())
+        if (!basisOutput.empty())
         {
-            gsInfo<<"Writing data to "<<output<<std::flush;
+            gsInfo<<"Writing data to "<<basisOutput<<std::flush;
             out.add(global2local);
             out.add(dbasis);
-            out.add(geom);
-            out.save(output);
+            out.save(basisOutput);
             gsInfo<<"Finished";
         }
+        if (!geoOutput.empty())
+        {
+            gsInfo<<"Writing geometry to "<<geoOutput<<std::flush;
+            gsWrite(geom,geoOutput);
+            gsInfo<<"Finished";
+        }
+
+
     }
 
     return EXIT_SUCCESS;
