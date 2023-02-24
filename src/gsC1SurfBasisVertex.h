@@ -168,7 +168,7 @@ namespace gismo
     {
         // Reserve sparse system
         const index_t nz = gsAssemblerOptions::numColNz(m_basis[0],2,1,0.333333);
-        for (index_t i = 0; i < m_f.size(); i++)
+        for (size_t i = 0; i < m_f.size(); i++)
             m_f.at(i).reserve(nz, 1);
 
 
@@ -183,7 +183,7 @@ namespace gismo
         bhVisitor visitor;
         apply(visitor,0); // patch 0
 
-        for (index_t i = 0; i < m_f.size(); i++)
+        for (size_t i = 0; i < m_f.size(); i++)
             m_f.at(i).matrix().makeCompressed();
 
     } // assemble()

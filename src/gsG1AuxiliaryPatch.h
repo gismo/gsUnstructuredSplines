@@ -80,7 +80,7 @@ namespace gismo
 
         void rotateBasisAntiClock(){
             gsMultiPatch<T> newpatch;
-            for(index_t np = 0; np < G1repBasis.nPatches(); np++)
+            for(size_t np = 0; np < G1repBasis.nPatches(); np++)
             {
                 gsMultiBasis<T> auxBase(G1repBasis.patch(np));
                 gsTensorBSplineBasis<d, T>
@@ -149,7 +149,7 @@ namespace gismo
 
         void rotateBasisClock(){
             gsMultiPatch<T> newpatch;
-            for(index_t np = 0; np < G1repBasis.nPatches(); np++)
+            for(size_t np = 0; np < G1repBasis.nPatches(); np++)
             {
                 gsMultiBasis<T> auxBase(G1repBasis.patch(np));
                 gsTensorBSplineBasis<d, T>
@@ -216,7 +216,7 @@ namespace gismo
 
         void rotateBasisAntiClockTwice(){
             gsMultiPatch<T> newpatch;
-            for(index_t np = 0; np < G1repBasis.nPatches(); np++)
+            for(size_t np = 0; np < G1repBasis.nPatches(); np++)
             {
                 gsMultiBasis<T> auxBase(G1repBasis.patch(np));
                 gsTensorBSplineBasis<d, T>
@@ -278,7 +278,7 @@ namespace gismo
 
         void swapBasisAxis(){
             gsMultiPatch<T> newpatch;
-            for(index_t np = 0; np < G1repBasis.nPatches(); np++)
+            for(size_t np = 0; np < G1repBasis.nPatches(); np++)
             {
                 gsMultiBasis<T> auxBase(G1repBasis.patch(np));
                 gsTensorBSplineBasis<d, T> & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(auxBase.basis(0));

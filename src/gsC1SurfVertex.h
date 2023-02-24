@@ -35,7 +35,7 @@ public:
 
     gsC1SurfVertex(gsMultiPatch<T> & mp, const std::vector<index_t > patchesAroundVertex, const std::vector<index_t > vertexIndices) : m_mp(mp)
     {
-        for(index_t  i = 0; i < patchesAroundVertex.size(); i++)
+        for(size_t  i = 0; i < patchesAroundVertex.size(); i++)
         {
             auxGeom.push_back(gsG1AuxiliaryPatch<d,T>(mp.patch(patchesAroundVertex[i]), patchesAroundVertex[i]));
             auxVertexIndices.push_back(vertexIndices[i]);
@@ -46,7 +46,7 @@ public:
 
     gsMultiPatch<T> computeAuxTopology(){
         gsMultiPatch<T> auxTop;
-        for(index_t  i = 0; i <  auxGeom.size(); i++)
+        for(size_t  i = 0; i <  auxGeom.size(); i++)
         {
             auxTop.addPatch(auxGeom[i].getPatch());
         }
@@ -56,7 +56,7 @@ public:
 
     void reparametrizeG1Vertex()
     {
-        for(index_t  i = 0; i < auxGeom.size(); i++)
+        for(size_t  i = 0; i < auxGeom.size(); i++)
         {
             checkOrientation(i); // Check if the orientation is correct. If not, modifies vertex and edge vectors
 
@@ -84,7 +84,7 @@ public:
 
         gsMultiPatch<T> top(computeAuxTopology());
         index_t  nInt = top.interfaces().size();
-        if(auxGeom.size() == nInt)
+        if((index_t)auxGeom.size() == nInt)
             return 0; // Internal vertex
         else
             return 1; // Interface-Boundary vertex
@@ -110,7 +110,7 @@ public:
     {
         T p = 0;
         T h_geo = 0;
-        for(index_t  i = 0; i < auxGeom.size(); i++)
+        for(size_t  i = 0; i < auxGeom.size(); i++)
         {
             gsTensorBSplineBasis<d, T> & bsp_temp = dynamic_cast<gsTensorBSplineBasis<d, T> & >(auxGeom[i].getPatch().basis());
             T p_temp = bsp_temp.maxDegree();
@@ -668,7 +668,7 @@ public:
             R(2, 1) = rotVec.y() * rotVec.z() * (1 - cos_t) + rotVec.x() * sin_t;
             R(2, 2) = cos_t + rotVec.z() * rotVec.z() * (1 - cos_t);
 
-            for (index_t  np = 0; np < auxGeom.size(); np++)
+            for (size_t  np = 0; np < auxGeom.size(); np++)
             {
                 gsMatrix<T> coeffPatch = auxGeom[np].getPatch().coefs();
 
@@ -692,7 +692,7 @@ public:
             Phi(7, 4) = sigma * sigma;
             Phi(8, 5) = sigma * sigma;
 
-            for (index_t  i = 0; i < auxGeom.size(); i++)
+            for (size_t  i = 0; i < auxGeom.size(); i++)
             {
                 gsMatrix<T> gdCoefs(selectGD(i));
                 gsMultiPatch<T> g1Basis;
@@ -707,7 +707,7 @@ public:
         }
         else
         {
-            for (index_t  i = 0; i < auxGeom.size(); i++)
+            for (size_t  i = 0; i < auxGeom.size(); i++)
             {
                 gsMatrix<T> gdCoefs(selectGD(i));
                 gsMultiPatch<T> g1Basis;
@@ -794,13 +794,13 @@ public:
         if (this->kindOfVertex() != 0)
             computeKernel(g1BasisVector);
 
-        for (index_t  i = 0; i < auxGeom.size(); i++)
+        for (size_t  i = 0; i < auxGeom.size(); i++)
             auxGeom[i].parametrizeBasisBack(g1BasisVector[i]);
         // END
 
-        for (index_t  i = 0; i < auxGeom.size(); i++)
+        for (size_t  i = 0; i < auxGeom.size(); i++)
         {
-            for (index_t  ii = 0; ii < auxGeom[i].getG1Basis().nPatches(); ii++)
+            for (size_t  ii = 0; ii < auxGeom[i].getG1Basis().nPatches(); ii++)
             {
                 gsMatrix<T> coefs_temp;
                 coefs_temp.setZero(auxGeom[i].getG1Basis().patch(ii).coefs().rows(),1);
@@ -847,7 +847,7 @@ public:
     {
 
         gsMultiPatch<T> mp_vertex;
-        for(index_t  i = 0; i < auxGeom.size(); i++)
+        for(size_t  i = 0; i < auxGeom.size(); i++)
             mp_vertex.addPatch(auxGeom[i].getPatch());
 
         mp_vertex.computeTopology();
@@ -928,7 +928,7 @@ public:
         coefs_corner.setZero();
 
         index_t shift_row = 0;
-        for (index_t  bdy_index = 0; bdy_index < patchID.size(); ++bdy_index)
+        for (size_t  bdy_index = 0; bdy_index < patchID.size(); ++bdy_index)
         {
             if (side[bdy_index] < 3) // v
             {
@@ -971,7 +971,7 @@ public:
                 shift_row += dim_u[bdy_index];
             }
         }
-        for (index_t  iFace_index = 0; iFace_index < patchID_iFace.size(); ++iFace_index)
+        for (size_t iFace_index = 0; iFace_index < patchID_iFace.size(); ++iFace_index)
         {
             for (index_t i = 0; i < 2; ++i) // Only the first two
             {
@@ -1025,7 +1025,7 @@ public:
 
         gsInfo << "NumDofs: " << dofsCorner << " with Kernel: \n" << kernel << "\n";
 
-        for(index_t  np = 0; np < auxGeom.size(); np++)
+        for(size_t  np = 0; np < auxGeom.size(); np++)
         {
             gsMultiPatch<T> temp_result_0 = auxGeom[np].getG1Basis();
 

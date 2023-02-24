@@ -453,7 +453,7 @@ namespace gismo
                                   std::vector< gsSparseSystem<T> >     & system)
         {
             gsMatrix<index_t> actives_temp;
-            for (index_t i = 0; i < system.size(); i++) // 6
+            for (size_t i = 0; i < system.size(); i++) // 6
             {
                 // Map patch-local DoFs to global DoFs
                 system.at(i).mapColIndices(actives, patchIndex, actives_temp);
