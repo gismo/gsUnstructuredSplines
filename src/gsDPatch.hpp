@@ -41,6 +41,7 @@ namespace gismo
     {
         Base::defaultOptions();
         m_options.addInt("Pi","Pi matrix to be applied, 0: Non-negative, 1: Idempotent",0);
+        m_options.addInt("RefLevel","Refinement level",0);
     }
 
     /*=====================================================================================
@@ -431,7 +432,7 @@ namespace gismo
         T pi = 4*std::atan(1);
         T phi = 2*pi / valence;
         std::complex<T> I(1,1);
-        T beta = 0.4;
+        T beta = 0.4 * std::pow(0.5,m_options.getInt("RefLevel"));
         T psi = std::arg( (T(1.0)+I*beta*T(math::sin(phi)) ) * std::complex<T>(math::exp( -I*phi / T(2.0) ) ));
 
         if (m_options.getInt("Pi")==0)

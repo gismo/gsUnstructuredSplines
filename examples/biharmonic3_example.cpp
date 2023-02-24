@@ -604,7 +604,8 @@ int main(int argc, char *argv[])
             // Construct the D-Patch on mp
             gsSparseMatrix<real_t> global2local;
             gsDPatch<2,real_t> dpatch(mp);
-	    dpatch.compute();
+            dpatch.options().setInt("RefLevel",r);
+	        dpatch.compute();
             dpatch.matrix_into(global2local);
             global2local = global2local.transpose();
             geom = dpatch.exportToPatches();
