@@ -81,7 +81,7 @@ private:
         m_mapper->optimize(gsWeightMapper<T>::optTargetToSource);
     }
 
-    void _setMappingOfPatch(unsigned const patch) const
+    void _setMappingOfPatch(index_t const patch) const
     {
         m_level=0;
         for(index_t i = 0;i<=_getMaxLevel();i++)
@@ -115,7 +115,7 @@ private:
         if(math::almostEqual<T>(parametricDistance,0.0))
             return 0;
         index_t patch = ps.patch;
-        unsigned deg = m_basis->degree(patch,1-ps.direction());
+        index_t deg = m_basis->degree(patch,1-ps.direction());
         gsTensorBSplineBasis<d,T>* basis = TO_HTENSOR(&(m_basis->getBase(patch)))->getBases()[m_level];
         gsKnotVector<T> knots = basis->knots(1-(ps.direction()));
         gsVector<bool> pars;
@@ -125,8 +125,8 @@ private:
         for(size_t i = deg+1;i<knots.size();i++)
             endpoints.push_back(knots.at(i));
         std::sort(endpoints.begin(),endpoints.end());
-        unsigned nr=0;
-        for(;nr<endpoints.size();nr++)
+        index_t nr=0;
+        for(;nr<(index_t)(endpoints.size());nr++)
             if(math::almostEqual<T>(endpoints[nr],parametricDistance)||endpoints[nr]>=parametricDistance)
                 break;
         return nr+1;
@@ -137,13 +137,13 @@ private:
     // functions calculating the weights for the mapping
     //////////////////////////////////////////////////
 
-    gsKnotVector<T> _getKnotVector(unsigned const patch,unsigned const par) const
+    gsKnotVector<T> _getKnotVector(index_t const patch,index_t const par) const
     {// todo: remove
         gsKnotVector<T> kvComp = TO_HTENSOR(&(m_basis->getBase(patch)))->getBases()[m_level]->knots(par);
         return gsKnotVector<T>(kvComp);
     }
 
-    index_t _getParMax(unsigned patch,bool par) const
+    index_t _getParMax(index_t patch,bool par) const
     {
         return TO_HTENSOR(&(m_basis->getBase(patch)))->getBases()[m_level]->size(par)-1;
     }
@@ -154,7 +154,7 @@ private:
     //////////////////////////////////////////////////
     // localIndex = hierachical index of hierachical splines collected over all patches.
 
-    bool _getLocalIndex_into(unsigned const patch,unsigned const u,unsigned const v,unsigned & localIndex) const
+    bool _getLocalIndex_into(index_t const patch,index_t const u,index_t const v,index_t & localIndex) const
     {
         index_t patchIndex = _getPatchIndex(patch,u,v);
         localIndex=_getLocalIndex(patch,patchIndex);
@@ -164,24 +164,24 @@ private:
             return true;
     }
 
-    index_t _getLocalIndex(unsigned const patch,unsigned u, unsigned v) const
+    index_t _getLocalIndex(index_t const patch,index_t u, index_t v) const
     {
         return _getLocalIndex(patch,_getPatchIndex(patch,u,v));
     }
 
-    index_t _getPatchIndex(unsigned const patch,boxSide const side,bool const flag) const
+    index_t _getPatchIndex(index_t const patch,boxSide const side,bool const flag) const
     {
-        unsigned u,v;
-        unsigned level = 0;
+        index_t u,v;
+        index_t level = 0;
         gsVector<index_t,d> vec;
         index_t index, patchindex;
         do
         {
-            if(level>TO_HTENSOR(&(m_basis->getBase(patch)))->maxLevel())
+            if(level>(index_t)(TO_HTENSOR(&(m_basis->getBase(patch)))->maxLevel()))
                 GISMO_ERROR("did not find the patchindex");
 
-            const unsigned u_amount=TO_HTENSOR(&(m_basis->getBase(patch)))->tensorLevel(level).size(0);
-            const unsigned v_amount=TO_HTENSOR(&(m_basis->getBase(patch)))->tensorLevel(level).size(1);
+            const index_t u_amount=TO_HTENSOR(&(m_basis->getBase(patch)))->tensorLevel(level).size(0);
+            const index_t v_amount=TO_HTENSOR(&(m_basis->getBase(patch)))->tensorLevel(level).size(1);
             if(side.direction())
                 if(side.parameter())
                 {
@@ -212,36 +212,36 @@ private:
         return patchindex;
     }
 
-    index_t _getPatchIndex(unsigned const patch,unsigned const u,unsigned const v) const
+    index_t _getPatchIndex(index_t const patch,index_t const u,index_t const v) const
     {
-        unsigned index=_getTensorIndex(patch,u,v);
+        index_t index=_getTensorIndex(patch,u,v);
         return TO_HTENSOR(&(m_basis->getBase(patch)))->flatTensorIndexToHierachicalIndex(index,m_level);
     }
 
     // tensorIndex = flat tensor index of one level of hierarchical splines
-    index_t _getTensorIndex(unsigned const patch,unsigned const u, unsigned const v) const
+    index_t _getTensorIndex(index_t const patch,index_t const u, index_t const v) const
     {
         gsVector<index_t,d> vec;
         vec(0)=u,vec(1)=v;
         return TO_HTENSOR(&(m_basis->getBase(patch)))->getBases()[m_level]->index(vec);
     }
 
-    index_t _getTensorIndex(unsigned const patch,unsigned const patchIndex) const
+    index_t _getTensorIndex(index_t const patch,index_t const patchIndex) const
     {
-        unsigned combIndex = TO_HTENSOR(&(m_basis->getBase(patch)))->flatTensorIndexOf(patchIndex,m_level);
-//        for(unsigned i = 0;i<m_level;i++)
+        index_t combIndex = TO_HTENSOR(&(m_basis->getBase(patch)))->flatTensorIndexOf(patchIndex,m_level);
+//        for(index_t i = 0;i<m_level;i++)
 //            combIndex-= TO_HTENSOR((*m_bases)[patch])->m_bases[i]->size();
         return combIndex;
     }
 
     index_t _getPar(index_t localIndex,bool par) const
     {
-        unsigned patch = _getPatch(localIndex);
-        unsigned patchIndex = _getPatchIndex(localIndex);
+        index_t patch = _getPatch(localIndex);
+        index_t patchIndex = _getPatchIndex(localIndex);
         return _getPar(patch,_getTensorIndex(patch,patchIndex),par);
     }
 
-    index_t _getPar(unsigned patch,unsigned tensorIndex, bool par) const
+    index_t _getPar(index_t patch,index_t tensorIndex, bool par) const
     {
         gsVector<index_t,d> vec = TO_HTENSOR(&(m_basis->getBase(patch)))->getBases()[m_level]->tensorIndex(tensorIndex);
         GISMO_ASSERT(static_cast<index_t>(vec(par))<TO_HTENSOR(&(m_basis->getBase(patch)))->getBases()[m_level]->size(par),"wrong tensorIndex");
