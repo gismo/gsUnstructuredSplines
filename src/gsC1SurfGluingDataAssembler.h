@@ -47,11 +47,11 @@ public:
 
 
     inline void apply(bhVisitor & visitor,
-                      int patchIndex = 0,
+                      index_t patchIndex = 0,
                       boxSide side = boundary::none);
 
     inline void applyBeta(bhVisitor & visitor,
-                          int patchIndex = 0,
+                          index_t patchIndex = 0,
                           boxSide side = boundary::none);
 
     /// @brief Returns the left-hand global matrix
@@ -130,7 +130,7 @@ protected:
     
     template <class T, class bhVisitor>
     inline void gsC1SurfGluingDataAssembler<T, bhVisitor>::apply(bhVisitor & visitor,
-                                                               int patchIndex,
+                                                               index_t patchIndex,
                                                                boxSide side)
     {
     #pragma omp parallel

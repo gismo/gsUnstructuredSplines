@@ -179,13 +179,13 @@ void gsApproxC1Spline<d,T>::init()
             bool isInterface_1 = m_patches.isInterface(patchSide(allcornerLists[j].patch, containingSides.at(0).side()));
             bool isInterface_2 = m_patches.isInterface(patchSide(allcornerLists[j].patch, containingSides.at(1).side()));
 
-            gsTensorBSplineBasis<d, real_t> basis = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(allcornerLists[j].patch));
+            gsTensorBSplineBasis<d, T> basis = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(allcornerLists[j].patch));
             if (isInterface_1)
             {
                 patchSide result;
                 m_patches.getNeighbour(containingSides.at(0), result);
 
-                gsTensorBSplineBasis<d, real_t> basis2 = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(result.patch));
+                gsTensorBSplineBasis<d, T> basis2 = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(result.patch));
                 index_t dir_1 = containingSides.at(0).side() < 3 ? 1 : 0;
                 index_t dir_2 = result.side().index() < 3 ? 1 : 0;
                 if (basis.component(dir_1).numElements() > basis2.component(dir_2).numElements())
@@ -196,7 +196,7 @@ void gsApproxC1Spline<d,T>::init()
                 patchSide result;
                 m_patches.getNeighbour(containingSides.at(1), result);
 
-                gsTensorBSplineBasis<d, real_t> basis2 = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(result.patch));
+                gsTensorBSplineBasis<d, T> basis2 = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(result.patch));
                 index_t dir_1 = containingSides.at(1).side() < 3 ? 1 : 0;
                 index_t dir_2 = result.side().index() < 3 ? 1 : 0;
                 if (basis.component(dir_1).numElements() > basis2.component(dir_2).numElements())

@@ -22,7 +22,7 @@
 namespace gismo
 {
 
-    template<class T, class Visitor = gsC1SurfGluingDataVisitor<T>>
+template<class T, class Visitor = gsC1SurfGluingDataVisitor<T>>
 class gsC1SurfGluingData : public gsC1SurfGD<T>
 {
 
@@ -47,62 +47,62 @@ public:
         solveBeta();
     }
 
-    gsMatrix<> evalAlpha_R(gsMatrix<> points)
+    gsMatrix<T> evalAlpha_R(gsMatrix<T> points)
     {
-        gsMatrix<> ones(1, points.cols());
+        gsMatrix<T> ones(1, points.cols());
         ones.setOnes();
         return sol.row(0) * ( ones - points ) + sol.row(1) * points;
     }
 
-    gsMatrix<> evalAlpha_L(gsMatrix<> points)
+    gsMatrix<T> evalAlpha_L(gsMatrix<T> points)
     {
-        gsMatrix<> ones(1, points.cols());
+        gsMatrix<T> ones(1, points.cols());
         ones.setOnes();
         return sol.row(2) * ( ones - points ) + sol.row(3) * points;
     }
 
-    gsMatrix<> evalBeta_R(gsMatrix<> points)
+    gsMatrix<T> evalBeta_R(gsMatrix<T> points)
     {
-        gsMatrix<> ones(1, points.cols());
+        gsMatrix<T> ones(1, points.cols());
         ones.setOnes();
         return solBeta.row(0) * ( ones - points ) + solBeta.row(1) * points;
     }
 
-    gsMatrix<> evalBeta_L(gsMatrix<> points)
+    gsMatrix<T> evalBeta_L(gsMatrix<T> points)
     {
-        gsMatrix<> ones(1, points.cols());
+        gsMatrix<T> ones(1, points.cols());
         ones.setOnes();
         return solBeta.row(2) * ( ones - points ) + solBeta.row(3) * points;
     }
 
-    gsMatrix<> evalBeta(gsMatrix<> points)
+    gsMatrix<T> evalBeta(gsMatrix<T> points)
     {
-        gsMatrix<> ones(1, points.cols());
+        gsMatrix<T> ones(1, points.cols());
         ones.setOnes();
         return sol.row(4) * ( ones - points ).cwiseProduct( ones - points)
             + sol.row(5) * ( ones - points ).cwiseProduct(points) + sol.row(6) * points;
     }
 
-    gsMatrix<> getSol(){ return sol; }
+    gsMatrix<T> getSol(){ return sol; }
 
-    gsMatrix<> getSolBeta(){ return solBeta; }
+    gsMatrix<T> getSolBeta(){ return solBeta; }
 
 
 
 protected:
 
-    gsSparseSystem<> mSys;
-    gsSparseSystem<> mSysBeta;
-    gsMatrix<> dirichletDofs;
-    gsMatrix<> dirichletDofsBeta;
+    gsSparseSystem<T> mSys;
+    gsSparseSystem<T> mSysBeta;
+    gsMatrix<T> dirichletDofs;
+    gsMatrix<T> dirichletDofsBeta;
 
-    gsMatrix<> sol; // In order, it contains: alpha_0L, alpha_1L, alpha_0R, alpha_1R, beta_0, beta_1, beta_2
+    gsMatrix<T> sol; // In order, it contains: alpha_0L, alpha_1L, alpha_0R, alpha_1R, beta_0, beta_1, beta_2
                     // to construct the linear combination of the GD:
                     // alpha_L = ( 1 - t ) * alpha_0L + alpha_1L * t
                     // alpha_R = ( 1 - t ) * alpha_0R + alpha_1R * t
                     //beta = ( 1 - t )^2 * beta_0 + 2 * t * ( 1 - t ) * beta_1 + t^2 * beta_2
 
-    gsMatrix<> solBeta;
+    gsMatrix<T> solBeta;
 
     void refresh()
     {
@@ -112,7 +112,7 @@ protected:
         gsDofMapper map(size);
         map.finalize();
 
-        gsSparseSystem<> sys(map);
+        gsSparseSystem<T> sys(map);
         mSys = sys;
     }
 
@@ -124,7 +124,7 @@ protected:
         gsDofMapper mapBeta(size);
         mapBeta.finalize();
 
-        gsSparseSystem<> sysBeta(mapBeta);
+        gsSparseSystem<T> sysBeta(mapBeta);
         mSysBeta = sysBeta;
     }
 
@@ -252,7 +252,7 @@ protected:
 
     void solve()
     {
-        gsSparseSolver<>::SimplicialLDLT solver;
+        typename gsSparseSolver<T>::SimplicialLDLT solver;
 
         solver.compute(mSys.matrix());
         sol = solver.solve(mSys.rhs()); // My solution
@@ -260,7 +260,7 @@ protected:
 
     void solveBeta()
     {
-        gsSparseSolver<>::SimplicialLDLT solver;
+        typename gsSparseSolver<T>::SimplicialLDLT solver;
 
         solver.compute(mSysBeta.matrix());
         solBeta = solver.solve(mSysBeta.rhs()); // My solution
@@ -268,8 +268,8 @@ protected:
 
     void setGDEdge()
     {
-        gsMatrix<> solTMP(7, 1);
-        gsMatrix<> solBetaTMP(4, 1);
+        gsMatrix<T> solTMP(7, 1);
+        gsMatrix<T> solBetaTMP(4, 1);
 
         solTMP(0, 0) = 1;
         solTMP(1, 0) = 1;

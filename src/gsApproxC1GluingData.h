@@ -108,7 +108,7 @@ void gsApproxC1GluingData<d, T>::setGlobalGluingData(index_t patchID, index_t di
     gsTensorBSplineBasis<d, T> basis = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(m_auxPatches[patchID].getBasisRotated().piece(0));;
     if (m_auxPatches.size() == 2) // Interface
     {
-        gsTensorBSplineBasis<d, real_t> basis2 = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(m_auxPatches[1-patchID].getBasisRotated().piece(0));
+        gsTensorBSplineBasis<d, T> basis2 = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(m_auxPatches[1-patchID].getBasisRotated().piece(0));
         if (basis.component(dir).numElements() > basis2.component(1-dir).numElements())
             basis.component(dir) = basis2.component(1-dir);
 
@@ -120,15 +120,15 @@ void gsApproxC1GluingData<d, T>::setGlobalGluingData(index_t patchID, index_t di
 
 
     //! [Problem setup]
-    gsSparseSolver<real_t>::SimplicialLDLT solver;
+    typename gsSparseSolver<T>::SimplicialLDLT solver;
     gsExprAssembler<T> A(1,1);
 
     // Elements used for numerical integration
     gsMultiBasis<T> BsplineSpace(bsp_gD);
     A.setIntegrationElements(BsplineSpace);
-    gsExprEvaluator<> ev(A);
+    gsExprEvaluator<T> ev(A);
 
-    gsAlpha<real_t> alpha(m_auxPatches[patchID].getPatchRotated(), dir);
+    gsAlpha<T> alpha(m_auxPatches[patchID].getPatchRotated(), dir);
     auto aa = A.getCoeff(alpha);
 
     // Set the discretization space
@@ -149,7 +149,7 @@ void gsApproxC1GluingData<d, T>::setGlobalGluingData(index_t patchID, index_t di
     fixedDofs.setZero( u.mapper().boundarySize(), 1 );
 
     // For the boundary
-    gsMatrix<> points_bdy(1,2);
+    gsMatrix<T> points_bdy(1,2);
     points_bdy << 0.0, 1.0;
     if (interpolate_boundary)
         fixedDofs = alpha.eval(points_bdy).transpose();
@@ -158,17 +158,17 @@ void gsApproxC1GluingData<d, T>::setGlobalGluingData(index_t patchID, index_t di
     A.assemble(u * u.tr(), u * aa);
 
     solver.compute( A.matrix() );
-    gsMatrix<> solVector = solver.solve(A.rhs());
+    gsMatrix<T> solVector = solver.solve(A.rhs());
 
     auto u_sol = A.getSolution(u, solVector);
-    gsMatrix<> sol;
+    gsMatrix<T> sol;
     u_sol.extract(sol);
 
-    gsGeometry<>::uPtr tilde_temp;
+    typename gsGeometry<T>::uPtr tilde_temp;
     tilde_temp = bsp_gD.makeGeometry(sol);
     alphaSContainer[dir] = dynamic_cast<gsBSpline<T> &> (*tilde_temp);
 
-    gsBeta<real_t> beta(m_auxPatches[patchID].getPatchRotated(), dir);
+    gsBeta<T> beta(m_auxPatches[patchID].getPatchRotated(), dir);
     auto bb = A.getCoeff(beta);
 
     // For the boundary

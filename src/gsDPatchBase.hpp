@@ -347,7 +347,7 @@ namespace gismo
     {
         gsInfo<<"**D-Patch Side info**\n";
         for(size_t i = 0;i<m_patches.nPatches();++i)
-            for(int j=1;j<=4;++j)
+            for(index_t j=1;j<=4;++j)
                 sideInfo(patchSide(i,j));
     }
 
@@ -356,7 +356,7 @@ namespace gismo
     {
         gsInfo<<"**D-Patch Corner info**\n";
         for(size_t i = 0;i<m_patches.nPatches();++i)
-            for(int j=1;j<=4;++j)
+            for(index_t j=1;j<=4;++j)
                 vertexInfo(patchCorner(i,j));
     }
 
@@ -989,7 +989,7 @@ namespace gismo
 //         index_t cidx;
 //         for(size_t p = 0;p<m_RefPatches.nPatches();++p)
 //         {
-//             for(int c=1;c<=4;++c)
+//             for(index_t c=1;c<=4;++c)
 //             {
 //                 pcorner=patchCorner(p,c);
 //                 cidx = _vertIndex(p,c);
@@ -1072,7 +1072,7 @@ namespace gismo
 //         m_mapOriginal = gsDofMapper(m_bases);
 //         m_mapOriginal.finalize();
 
-//         // gsWriteParaview<>(m_RefPatches,"mp_ref",1000,true);
+//         // gsWriteParaview<T>(m_RefPatches,"mp_ref",1000,true);
 //     }
 
 //     template<short_t d,class T>
@@ -1093,7 +1093,7 @@ namespace gismo
 //         index_t cidx;
 //         for(size_t p = 0;p<m_RefPatches.nPatches();++p)
 //         {
-//             for(int c=1;c<=4;++c)
+//             for(index_t c=1;c<=4;++c)
 //             {
 //                 pcorner=patchCorner(p,c);
 //                 cidx = _vertIndex(p,c);

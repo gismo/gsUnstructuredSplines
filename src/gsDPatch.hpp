@@ -100,7 +100,7 @@ namespace gismo
 
                         if (corner==otherCorners.begin())
                         {
-                            gsBasis <> * basis = &m_Bbases.basis(corner->patch);
+                            gsBasis <T> * basis = &m_Bbases.basis(corner->patch);
                             b00 = m_mapModified.index( basis->functionAtCorner(corner->corner()), corner->patch );
                         }
 
@@ -214,7 +214,7 @@ namespace gismo
             // gsWriteCSV(m_tMatrix.toDense(),"matrixTHB.csv");
             // gsWriteCSV(m_matrix.toDense(),"matrix1.csv");
 
-            gsSparseMatrix<> pi;
+            gsSparseMatrix<T> pi;
             std::vector<patchSide> sides(2);
             std::vector<patchSide> allSides;
             std::vector<std::vector<patchCorner> > cornerLists;

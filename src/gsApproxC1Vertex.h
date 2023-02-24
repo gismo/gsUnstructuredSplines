@@ -64,8 +64,8 @@ public:
         reparametrizeVertexPatches();
 
         // Compute Sigma
-        real_t sigma = computeSigma(m_vertexIndices);
-        gsMatrix<> Phi(6, 6);
+        T sigma = computeSigma(m_vertexIndices);
+        gsMatrix<T> Phi(6, 6);
         Phi.setIdentity();
 
         Phi.col(1) *= sigma;
@@ -74,42 +74,42 @@ public:
         Phi.col(4) *= sigma * sigma;
         Phi.col(5) *= sigma * sigma;
 
-        gsMultiPatch<> rotPatch;
+        gsMultiPatch<T> rotPatch;
         if (m_auxPatches[0].getPatchRotated().parDim() + 1 == m_auxPatches[0].getPatchRotated().targetDim()) // Surface
         {
-            gsMatrix<> zero;
+            gsMatrix<T> zero;
             zero.setZero(2, 1);
-            gsMatrix<> Jk = m_auxPatches[0].getPatchRotated().jacobian(zero);
-            gsMatrix<> G = Jk.transpose() * Jk; // Symmetric
-            gsMatrix<> G_inv = G.cramerInverse(); // Symmetric
+            gsMatrix<T> Jk = m_auxPatches[0].getPatchRotated().jacobian(zero);
+            gsMatrix<T> G = Jk.transpose() * Jk; // Symmetric
+            gsMatrix<T> G_inv = G.cramerInverse(); // Symmetric
 
-            gsMatrix<> geoMapDeriv1 = m_auxPatches[0].getPatchRotated()
+            gsMatrix<T> geoMapDeriv1 = m_auxPatches[0].getPatchRotated()
                     .deriv(zero); // First derivative of the geometric mapping with respect to the parameter coordinates
-            gsMatrix<> geoMapDeriv2 = m_auxPatches[0].getPatchRotated()
+            gsMatrix<T> geoMapDeriv2 = m_auxPatches[0].getPatchRotated()
                     .deriv2(zero); // Second derivative of the geometric mapping with respect to the parameter coordinates
 
             //Computing the normal vector to the tangent plane along the boundary curve
-            gsVector<> n(3);
+            gsVector<T> n(3);
             n.setZero();
             n(0) = Jk(1,0)*Jk(2,1)-Jk(2,0)*Jk(1,1);
             n(1) = Jk(2,0)*Jk(0,1)-Jk(0,0)*Jk(2,1);
             n(2) = Jk(0,0)*Jk(1,1)-Jk(1,0)*Jk(0,1);
 
-            gsVector<> z(3);
+            gsVector<T> z(3);
             z.setZero();
             z(2) = 1.0;
 
-            gsVector<> rotVec(3);
+            gsVector<T> rotVec(3);
             rotVec.setZero(3);
             rotVec(0) = n(1,0)*z(2,0)-n(2,0)*z(1,0);
             rotVec(1) = n(2,0)*z(0,0)-n(0,0)*z(2,0);
             rotVec(2) = n(0,0)*z(1,0)-n(1,0)*z(0,0);
 
-            real_t cos_t = (n.dot(z))/ (n.norm() * z.norm());
-            real_t sin_t = rotVec.norm() / (n.norm() * z.norm());
+            T cos_t = (n.dot(z))/ (n.norm() * z.norm());
+            T sin_t = rotVec.norm() / (n.norm() * z.norm());
 
 //                Rotation matrix
-            gsMatrix<> R(3, 3);
+            gsMatrix<T> R(3, 3);
             R.setZero();
 //                Row 0
             R(0, 0) = cos_t + rotVec.x() * rotVec.x() * (1 - cos_t);
@@ -126,7 +126,7 @@ public:
 
             for (size_t np = 0; np < m_auxPatches.size(); np++)
             {
-                gsMatrix<> coeffPatch = m_auxPatches[np].getPatchRotated().coefs();
+                gsMatrix<T> coeffPatch = m_auxPatches[np].getPatchRotated().coefs();
 
                 for (index_t i = 0; i < coeffPatch.rows(); i++)
                 {
@@ -192,8 +192,8 @@ public:
             alpha.resize(2); beta.resize(2); basis_plus.resize(2); basis_minus.resize(2);
             kindOfEdge.resize(2);
 
-            gsTensorBSplineBasis<d, real_t> basis = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(auxPatchSingle[0].getBasisRotated().piece(0));
-            gsTensorBSplineBasis<d, real_t> basis_pm = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(auxPatchSingle[0].getBasisRotated().piece(0));
+            gsTensorBSplineBasis<d, T> basis = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(auxPatchSingle[0].getBasisRotated().piece(0));
+            gsTensorBSplineBasis<d, T> basis_pm = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(auxPatchSingle[0].getBasisRotated().piece(0));
             for (size_t dir = 0; dir < containingSides.size(); ++dir)
             {
                 //index_t localdir = auxPatchSingle[0].getMapIndex(containingSides[dir].index()) < 3 ? 1 : 0;
@@ -209,7 +209,7 @@ public:
 
                     GISMO_ASSERT(patch2 > -1, "Something went wrong");
 
-                    gsTensorBSplineBasis<d, real_t> basis2 = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(m_auxPatches[patch2].getBasisRotated().piece(
+                    gsTensorBSplineBasis<d, T> basis2 = dynamic_cast<const gsTensorBSplineBasis<d, T> &>(m_auxPatches[patch2].getBasisRotated().piece(
                             0));
                     index_t dir_1 = auxPatchSingle[0].getMapIndex(containingSides[dir].side()) < 3 ? 1 : 0;
                     index_t dir_2 = m_auxPatches[patch2].getMapIndex(result.side().index()) < 3 ? 1 : 0;
@@ -261,8 +261,8 @@ public:
                 basis_minus[localdir] = b_minus;
             }
 
-            gsSparseSolver<real_t>::SimplicialLDLT solver;
-            gsExprAssembler<> A(1, 1);
+            typename gsSparseSolver<T>::SimplicialLDLT solver;
+            gsExprAssembler<T> A(1, 1);
 
             // Elements used for numerical integration
             gsMultiBasis<T> vertexSpace(auxPatchSingle[0].getBasisRotated().piece(m_vertexIndices[i] + 4));
@@ -306,8 +306,8 @@ public:
                 {
                     //gsQuasiInterpolate<T>::Schoenberg(edgeSpace.basis(0), traceBasis, sol);
                     //result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
-                    gsMatrix<> anchors = vertexSpace.basis(0).anchors();
-                    gsMatrix<> values = vertexBasis.eval(anchors);
+                    gsMatrix<T> anchors = vertexSpace.basis(0).anchors();
+                    gsMatrix<T> values = vertexBasis.eval(anchors);
                     result_1.addPatch(vertexSpace.basis(0).interpolateAtAnchors(give(values)));
                 }
                 else
@@ -362,7 +362,7 @@ public:
                     for (size_t i = 0; i < basisVertexResult[np].nPatches(); ++i)
                     {
                         fileName = basename + "_" + util::to_string(np) + "_" + util::to_string(i);
-                        gsField<> temp_field(m_mp.patch(m_patchesAroundVertex[np]), basisVertexResult[np].patch(i));
+                        gsField<T> temp_field(m_mp.patch(m_patchesAroundVertex[np]), basisVertexResult[np].patch(i));
                         gsWriteParaview(temp_field, fileName, 5000);
                         collection.addTimestep(fileName, i, "0.vts");
 
@@ -378,7 +378,7 @@ public:
 
     void checkOrientation(size_t i);
 
-    real_t computeSigma(const std::vector<size_t> & vertexIndices);
+    T computeSigma(const std::vector<size_t> & vertexIndices);
 
     void computeKernel();
 

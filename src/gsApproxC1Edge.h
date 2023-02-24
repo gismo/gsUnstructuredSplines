@@ -74,12 +74,12 @@ public:
             {
                 // First Interface Side
                 fileName = basename + "_0_" + util::to_string(i);
-                gsField<> temp_field(m_mp.patch(item.first().patch), basisEdgeResult[0].patch(i));
+                gsField<T> temp_field(m_mp.patch(item.first().patch), basisEdgeResult[0].patch(i));
                 gsWriteParaview(temp_field, fileName, 5000);
                 collection.addTimestep(fileName, i, "0.vts");
                 // Second Interface Side
                 fileName = basename + "_1_" + util::to_string(i);
-                gsField<> temp_field_1(m_mp.patch(item.second().patch), basisEdgeResult[1].patch(i));
+                gsField<T> temp_field_1(m_mp.patch(item.second().patch), basisEdgeResult[1].patch(i));
                 gsWriteParaview(temp_field_1, fileName, 5000);
                 collection.addTimestep(fileName, i, "0.vts");
             }
@@ -114,7 +114,7 @@ public:
             for (size_t i = 0; i < basisEdgeResult[0].nPatches(); i++) {
                 // First Interface Side
                 fileName = basename + "_0_" + util::to_string(i);
-                gsField<> temp_field(m_mp.patch(item.patch), basisEdgeResult[0].patch(i));
+                gsField<T> temp_field(m_mp.patch(item.patch), basisEdgeResult[0].patch(i));
                 gsWriteParaview(temp_field, fileName, 5000);
                 collection.addTimestep(fileName, i, "0.vts");
             }

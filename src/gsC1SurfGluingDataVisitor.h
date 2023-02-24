@@ -30,7 +30,7 @@ public:
                     gsQuadRule<T>    & rule)
     {
         gsVector<index_t> numQuadNodes( basis.dim() );
-        for (int i = 0; i < basis.dim(); ++i) // to do: improve
+        for (index_t i = 0; i < basis.dim(); ++i) // to do: improve
             numQuadNodes[i] = 2 * basis.degree(i) + 1;
 
         // Setup Quadrature
@@ -49,33 +49,33 @@ public:
         basisData.setZero(numActive * numActive, md.points.cols());
         rhsVals.setZero(numActive, md.points.cols());
 
-        gsGeometry<> & FR = mp.patch(0);
-        gsGeometry<> & FL = mp.patch(1);
+        gsGeometry<T> & FR = mp.patch(0);
+        gsGeometry<T> & FL = mp.patch(1);
 
-        gsMatrix<> pointV(FR.parDim(), md.points.cols());
+        gsMatrix<T> pointV(FR.parDim(), md.points.cols());
         pointV.setZero();
         pointV.row(1) = md.points;
 
-        gsMatrix<> pointU(FL.parDim(), md.points.cols());
+        gsMatrix<T> pointU(FL.parDim(), md.points.cols());
         pointU.setZero();
         pointU.row(0) = md.points;
 
-        gsMatrix<> ones(1, md.points.cols());
+        gsMatrix<T> ones(1, md.points.cols());
         ones.setOnes();
 
-        gsMatrix<> lam = ones / 100000000000;
+        gsMatrix<T> lam = ones / 100000000000;
 
-        gsMatrix<> DuFR(FR.targetDim(), md.points.cols());
-        gsMatrix<> DvFR(FR.targetDim(), md.points.cols());
-        gsMatrix<> DvFL(FR.targetDim(), md.points.cols());
+        gsMatrix<T> DuFR(FR.targetDim(), md.points.cols());
+        gsMatrix<T> DvFR(FR.targetDim(), md.points.cols());
+        gsMatrix<T> DvFL(FR.targetDim(), md.points.cols());
 
-        gsMatrix<> DuFR_DuFR(1, md.points.cols());
-        gsMatrix<> DvFL_DvFL(1, md.points.cols());
-        gsMatrix<> DvFR_DvFR(1, md.points.cols());
+        gsMatrix<T> DuFR_DuFR(1, md.points.cols());
+        gsMatrix<T> DvFL_DvFL(1, md.points.cols());
+        gsMatrix<T> DvFR_DvFR(1, md.points.cols());
 
-        gsMatrix<> DvFL_DuFR(1, md.points.cols());
-        gsMatrix<> DvFR_DuFR(1, md.points.cols());
-        gsMatrix<> DvFL_DvFR(1, md.points.cols());
+        gsMatrix<T> DvFL_DuFR(1, md.points.cols());
+        gsMatrix<T> DvFR_DuFR(1, md.points.cols());
+        gsMatrix<T> DvFL_DvFR(1, md.points.cols());
 
         for(index_t i = 0; i < md.points.cols(); i++)
         {
@@ -193,27 +193,27 @@ public:
     // Evaluate on element.
     inline void evaluateBeta(gsMatrix<T>  & quNodes,
                              gsMultiPatch<T> & mp,
-                             gsMatrix<> sol)
+                             gsMatrix<T> sol)
     {
         md.points = quNodes;
         activesBeta.setZero(4, 1);
         activesBeta << 0, 1, 2, 3;
         numActiveBeta = activesBeta.rows();
 
-        gsMatrix<> ones(1, md.points.cols());
+        gsMatrix<T> ones(1, md.points.cols());
         ones.setOnes();
 
-        gsMatrix<> alpha_R = sol.row(0) * ( ones - md.points ) + sol.row(1) * md.points;
-        gsMatrix<> alpha_L = sol.row(2) * ( ones - md.points ) + sol.row(3) * md.points;
-        gsMatrix<> beta = sol.row(4) * ( md.points.cwiseProduct(md.points) - 2 * md.points + ones ) + 2 * sol.row(5) * md.points.cwiseProduct( ones - md.points ) + sol.row(6) * md.points.cwiseProduct(md.points);
+        gsMatrix<T> alpha_R = sol.row(0) * ( ones - md.points ) + sol.row(1) * md.points;
+        gsMatrix<T> alpha_L = sol.row(2) * ( ones - md.points ) + sol.row(3) * md.points;
+        gsMatrix<T> beta = sol.row(4) * ( md.points.cwiseProduct(md.points) - 2 * md.points + ones ) + 2 * sol.row(5) * md.points.cwiseProduct( ones - md.points ) + sol.row(6) * md.points.cwiseProduct(md.points);
 
 
-        gsMatrix<> alpha_R_Squared = alpha_R.cwiseProduct(alpha_R);
-        gsMatrix<> alpha_L_Squared = alpha_L.cwiseProduct(alpha_L);
+        gsMatrix<T> alpha_R_Squared = alpha_R.cwiseProduct(alpha_R);
+        gsMatrix<T> alpha_L_Squared = alpha_L.cwiseProduct(alpha_L);
 
-        gsMatrix<> alpha_R_L = alpha_R.cwiseProduct(alpha_L);
+        gsMatrix<T> alpha_R_L = alpha_R.cwiseProduct(alpha_L);
 
-        gsMatrix<> lamB = ones / 100000000;
+        gsMatrix<T> lamB = ones / 100000000;
 
         basisDataBeta.setZero(numActiveBeta * numActiveBeta, md.points.cols());
         rhsValsBeta.setZero(numActiveBeta, md.points.cols());

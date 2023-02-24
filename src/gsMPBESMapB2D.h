@@ -38,12 +38,12 @@ namespace gismo
 template<short_t d,class T>
 class gsMPBESMapB2D : public gsMPBESMapTensor<d,T>
 {
-    //static const int d = 2;
+    //static const index_t d = 2;
 private:
     typedef gsBasis<T> BasisType;
     typedef gsMPBESMapTensor<d,T> Base;
 public:
-    gsMPBESMapB2D(int incrSmoothnessDegree, gsBoxTopology * topol, gsMPBESBasis<d,T> * basis) :
+    gsMPBESMapB2D(index_t incrSmoothnessDegree, gsBoxTopology * topol, gsMPBESBasis<d,T> * basis) :
         Base(incrSmoothnessDegree,topol,basis)
     { }
 
@@ -68,10 +68,10 @@ private:
     bool _checkMapping() const
     {
         bool consistent = true;
-//        for(int i=0;i<m_local_to_global.rows();i++)
+//        for(index_t i=0;i<m_local_to_global.rows();i++)
 //        {
 //            IndexContainer globals = _local2global(i);
-//            int size=globals.size();
+//            index_t size=globals.size();
 //            if(size!=1&&size!=2&&(size!=degree(0)&&size!=degree(1))&&size>degree(0)&&size>degree(1))
 //            {
 ////                std::cout << "Error in " << i << ".th row:";
@@ -81,10 +81,10 @@ private:
 ////                GISMO_ERROR("mapping wrong");
 //            }
 //        }
-//        for(int i=0;i<m_local_to_global.cols();i++)
+//        for(index_t i=0;i<m_local_to_global.cols();i++)
 //        {
 //            IndexContainer locals = _global2local(i);
-//            int size=locals.size();
+//            index_t size=locals.size();
 //            if(size!=1&&size!=4)
 //            {
 //                std::cout << "Error in " << i << ".th col:";
@@ -98,7 +98,7 @@ private:
 
     void _finalize() const
     {
-        gsSparseMatrix<real_t> mat=m_mapper->asMatrix();
+        gsSparseMatrix<T> mat=m_mapper->asMatrix();
         mat.conservativeResize(mat.rows(),m_global);
         delete m_mapper;
         m_mapper=new gsWeightMapper<T>(mat);
@@ -114,7 +114,7 @@ private:
     {
         std::vector<T> endpoints;
         T parametricDistance = m_basis->getParametricDistanceOfVertex(pc,ps);
-        int patch = ps.patch;
+        index_t patch = ps.patch;
 
         if(math::almostEqual<T>(parametricDistance,0.0))
             return 0;
