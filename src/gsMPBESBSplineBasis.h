@@ -79,13 +79,13 @@ public:
     { }
 
     gsMPBESBSplineBasis (const BasisContainer & bases, gsBoxTopology const & topol,
-                             int increaseSmoothnessLevel=-1, int minEVDistance=-1);
+                             index_t increaseSmoothnessLevel=-1, index_t minEVDistance=-1);
 
     gsMPBESBSplineBasis (const BasisContainer & bases, gsBoxTopology const & topol,std::vector<gsMatrix<T> * > coefs,
-                             int increaseSmoothnessLevel=-1, int minEVDistance=-1);
+                             index_t increaseSmoothnessLevel=-1, index_t minEVDistance=-1);
 
-    gsMPBESBSplineBasis( gsMultiPatch<T> const & mp, int increaseSmoothnessLevel = -1,
-                             int minEVDistance=-1);
+    gsMPBESBSplineBasis( gsMultiPatch<T> const & mp, index_t increaseSmoothnessLevel = -1,
+                             index_t minEVDistance=-1);
 
     gsMPBESBSplineBasis( const gsMPBESBSplineBasis& other );
 
@@ -103,7 +103,7 @@ private:
     {
 //        T eps=1e-6;
         bool consistent = true;
-//        int nrOfBases = m_bases.size();
+//        index_t nrOfBases = m_bases.size();
 //        consistent = consistent && nrOfBases>0;
 //        GISMO_ASSERT(nrOfBases>0,"empty list of bases");
 //        consistent = consistent && nrOfBases==m_topol.size();
@@ -111,8 +111,8 @@ private:
 //        unsigned i = 0;
 //        for(ConstBasisIter it=m_bases.begin();it!=m_bases.end();++it)
 //        {
-//            int deg_u = basis(i).degree(0);
-//            int deg_v = basis(i).degree(1);
+//            index_t deg_u = basis(i).degree(0);
+//            index_t deg_v = basis(i).degree(1);
 //            unsigned u_dim = basis(i).size(0), v_dim = basis(i).size(1);
 //            consistent = consistent && u_dim >= static_cast<unsigned>(deg_u*2);
 //            consistent = consistent && v_dim >= static_cast<unsigned>(deg_v*2);
@@ -127,13 +127,13 @@ private:
 //        {
 //            patchSide first() = interfaces[i].first();
 //            patchSide second() = interfaces[i].second();
-//            int nrOfBasisFuncs1=basis(first().patch).size(!direction(first().side));
-//            int nrOfBasisFuncs2=basis(second().patch).size(!direction(second().side));
+//            index_t nrOfBasisFuncs1=basis(first().patch).size(!direction(first().side));
+//            index_t nrOfBasisFuncs2=basis(second().patch).size(!direction(second().side));
 //            consistent = consistent && nrOfBasisFuncs1==nrOfBasisFuncs2;
 //            if(!(nrOfBasisFuncs1==nrOfBasisFuncs2))
 //                GISMO_ERROR("number of basisfunctions on interface are different");
-//            int deg_1 = m_bases[first().patch]->degree(!direction(first().side));
-//            int deg_2 = m_bases[first().patch]->degree(!direction(second().side));
+//            index_t deg_1 = m_bases[first().patch]->degree(!direction(first().side));
+//            index_t deg_2 = m_bases[first().patch]->degree(!direction(second().side));
 //            consistent = consistent && deg_1==deg_2;
 //            if(!(deg_1==deg_2))
 //                GISMO_ERROR("degrees of patches on interface are different");
@@ -143,7 +143,7 @@ private:
 //                GISMO_ERROR("different knot vector lengths");
 //            if(!interfaces[i].orient[0])
 //                kv2.reverse();
-//            for(int j = 0;j<kv1.size();j++)
+//            for(index_t j = 0;j<kv1.size();j++)
 //            {
 //                if(std::abs(kv1[j]-kv2[j])>eps)
 //                {
@@ -216,7 +216,7 @@ private:
     // if the start or the end of the knotvector has to be checked for new knots, and a distance indicating the distance
     // from start/end where new knots are looked for. Returns the number of new knots inserted in the knotspan, going
     // distance knots from the beginning or end of the given knotvector.
-    unsigned getNrOfSpecialKnots(const gsKnotVector<T> kv,const std::vector<T>& new_knots,bool par,int distance);
+    unsigned getNrOfSpecialKnots(const gsKnotVector<T> kv,const std::vector<T>& new_knots,bool par,index_t distance);
 
     void repairPatches(std::vector<gsMatrix<T> *> & coefs,
                         index_t startFromPatch = -1);

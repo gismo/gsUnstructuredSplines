@@ -34,14 +34,14 @@ namespace gismo
     void gsC1SurfSpline<d,T>::init()
     {
         // Check requirements
-        for (size_t p=0; p!=m_multiBasis.nBases(); p++)
+        for (index_t p=0; p!=m_multiBasis.nBases(); p++)
         {
             gsTensorBSplineBasis<d, T> * basis_patch = dynamic_cast<gsTensorBSplineBasis<d, T> *>(&m_multiBasis.basis(p));
             index_t degree;
             for (short_t dd = 0; dd!=d; dd++)
             {
                 degree = basis_patch->component(dd).knots().degree();
-                GISMO_ENSURE(basis_patch->component(dd).knots().size()-2*(degree+1)>=(size_t)(5-degree),"For a degree="<<degree<<" basis, the knot vector should at least have "<<5-degree<<" inner knots, but now it has "<<basis_patch->component(dd).knots().size()-2*(degree+1)<<" inner knots.");
+                GISMO_ENSURE(basis_patch->component(dd).knots().size()-2*(degree+1)>=(index_t)(5-degree),"For a degree="<<degree<<" basis, the knot vector should at least have "<<5-degree<<" inner knots, but now it has "<<basis_patch->component(dd).knots().size()-2*(degree+1)<<" inner knots.");
             }
 
             // regularity check (r=p-2)
@@ -53,7 +53,7 @@ namespace gismo
 
         m_bases.clear();
         m_bases.reserve(m_patches.nPatches()); // For each Patch
-        for (size_t np = 0; np < m_patches.nPatches(); np++)
+        for (index_t np = 0; np < m_patches.nPatches(); np++)
         {
             // gsContainerBasisBase
             gsContainerBasis<d,T> containerBasis(1); // for 9 subspaces and 4 helper Basis
@@ -62,7 +62,7 @@ namespace gismo
 
 
         // Create interior spline space
-        for (size_t np = 0; np < m_patches.nPatches(); np++)
+        for (index_t np = 0; np < m_patches.nPatches(); np++)
         {
             gsTensorBSplineBasis<d, T> basis_patch = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(np));
             //gsInfo << "Basis Patch: " << basis_patch.component(0).knots().asMatrix() << "\n";
@@ -71,7 +71,7 @@ namespace gismo
 
         index_t row_dofs = 0;
         // Inner basis
-        for (size_t np = 0; np < m_patches.nPatches(); np++)
+        for (index_t np = 0; np < m_patches.nPatches(); np++)
         {
             index_t dim_u = m_bases[np].piece(0).component(0).size();
             index_t dim_v = m_bases[np].piece(0).component(1).size();
@@ -79,15 +79,15 @@ namespace gismo
         }
 
         // Interfaces
-        for (size_t numInt = 0; numInt < m_patches.interfaces().size(); numInt++)
+        for (index_t numInt = 0; numInt < m_patches.interfaces().size(); numInt++)
         {
             index_t dir = m_patches.interfaces()[numInt].first().m_index < 3 ? 1 : 0;
             gsBSplineBasis<T> basis_edge = dynamic_cast<gsBSplineBasis<T> &>(m_multiBasis.basis(m_patches.interfaces()[numInt].first().patch).component(dir)); // If the interface matches!!!
 
-            gsBSplineBasis<> basis_plus(basis_edge);
+            gsBSplineBasis<T> basis_plus(basis_edge);
             basis_plus.elevateContinuity(1);
 
-            gsBSplineBasis<> basis_minus(basis_edge);
+            gsBSplineBasis<T> basis_minus(basis_edge);
             basis_minus.degreeReduce(1);
 
             index_t numDofs = basis_plus.size() + basis_minus.size() - 10;
@@ -95,7 +95,7 @@ namespace gismo
         }
 
         // Boundary Edges
-        for (size_t numBdy = 0; numBdy < m_patches.boundaries().size(); numBdy++)
+        for (index_t numBdy = 0; numBdy < m_patches.boundaries().size(); numBdy++)
         {
             const patchSide &bit = m_patches.boundaries()[numBdy];
 
@@ -105,10 +105,10 @@ namespace gismo
             index_t dir = side_1 < 3 ? 1 : 0;
             gsBSplineBasis<T> basis_edge = dynamic_cast<gsBSplineBasis<T> &>(m_multiBasis.basis(patch_1).component(dir)); // If the interface matches!!!
 
-            gsBSplineBasis<> basis_plus(basis_edge);
+            gsBSplineBasis<T> basis_plus(basis_edge);
             basis_plus.elevateContinuity(1);
 
-            gsBSplineBasis<> basis_minus(basis_edge);
+            gsBSplineBasis<T> basis_minus(basis_edge);
             basis_minus.degreeReduce(1);
 
             index_t numDofs = basis_plus.size() + basis_minus.size() - 10;
@@ -116,7 +116,7 @@ namespace gismo
         }
 
         // Vertices
-        for (size_t numVer = 0; numVer < m_patches.vertices().size(); numVer++)
+        for (index_t numVer = 0; numVer < m_patches.vertices().size(); numVer++)
         {
             row_dofs += 6;
         }
@@ -124,7 +124,7 @@ namespace gismo
 
         m_matrix.clear();
         index_t dim_col = 0;
-        for (size_t i = 0; i < m_bases.size(); i++)
+        for (index_t i = 0; i < m_bases.size(); i++)
         {
             dim_col += m_bases[i].size();
         }
@@ -134,7 +134,7 @@ namespace gismo
         m_matrix.reserve(nz);
 
 //        gsInfo << m_multiBasis << "\n";
-//        for (size_t np = 0; np < m_patches.nPatches(); np++)
+//        for (index_t np = 0; np < m_patches.nPatches(); np++)
 //            gsInfo << "Basis " << np << " Size: " << m_multiBasis.basis(np).size() << "\n";
 //        gsInfo << "Mat dim: (" << row_dofs  << " : " << dim_col << ")\n";
     }
@@ -145,7 +145,7 @@ namespace gismo
     {
         // Compute Inner Basis functions
         index_t shift_row = 0, shift_col = 0;
-        for(size_t np = 0; np < m_patches.nPatches(); ++np)
+        for(index_t np = 0; np < m_patches.nPatches(); ++np)
         {
             index_t dim_u = m_bases[np].piece(0).component(0).size();
             index_t dim_v = m_bases[np].piece(0).component(1).size();
@@ -162,7 +162,7 @@ namespace gismo
         }
 
         // Interfaces
-        for (size_t numInt = 0; numInt < m_patches.interfaces().size(); numInt++)
+        for (index_t numInt = 0; numInt < m_patches.interfaces().size(); numInt++)
         {
             gsC1SurfEdge<d,T> smoothC1Edge(m_patches,m_patches.interfaces()[numInt]);
             smoothC1Edge.computeG1InterfaceBasis();
@@ -180,7 +180,7 @@ namespace gismo
                 shift_col += m_bases[np].size();
 
             end_col += m_bases[patch_1].piece(0).size();
-            for (size_t ii = 0; ii < basisEdge[0].nPatches(); ++ii)
+            for (index_t ii = 0; ii < basisEdge[0].nPatches(); ++ii)
             {
                 index_t jj = 0;
                 for (index_t j = begin_col; j < end_col; ++j, ++jj) {
@@ -195,7 +195,7 @@ namespace gismo
 
             end_col += m_bases[patch_2].piece(0).size();
 
-            for (size_t ii = 0; ii < basisEdge[1].nPatches(); ++ii)
+            for (index_t ii = 0; ii < basisEdge[1].nPatches(); ++ii)
             {
                 index_t jj = 0;
                 for (index_t j = begin_col; j < end_col; ++j, ++jj) {
@@ -208,7 +208,7 @@ namespace gismo
 
         }
         // Compute Edge Basis functions
-        for (size_t numBdy = 0; numBdy < m_patches.boundaries().size(); numBdy++)
+        for (index_t numBdy = 0; numBdy < m_patches.boundaries().size(); numBdy++)
         {
 
             const patchSide & bit = m_patches.boundaries()[numBdy];
@@ -225,7 +225,7 @@ namespace gismo
                 shift_col += m_bases[np].size();
 
             end_col += m_bases[patch_1].piece(0).size();
-            for (size_t ii = 0; ii < basisEdge[0].nPatches(); ++ii)
+            for (index_t ii = 0; ii < basisEdge[0].nPatches(); ++ii)
             {
                 index_t jj = 0;
                 for (index_t j = begin_col; j < end_col; ++j, ++jj) {
@@ -237,12 +237,12 @@ namespace gismo
             shift_row += basisEdge[0].nPatches();
         }
         // Compute Vertex Basis functions
-        for (size_t numVer = 0; numVer < m_patches.vertices().size(); numVer++)
+        for (index_t numVer = 0; numVer < m_patches.vertices().size(); numVer++)
         {
             std::vector<patchCorner> allcornerLists = m_patches.vertices()[numVer];
-            std::vector<size_t> patchIndex;
-            std::vector<size_t> vertIndex;
-            for (size_t j = 0; j < allcornerLists.size(); j++)
+            std::vector<index_t> patchIndex;
+            std::vector<index_t> vertIndex;
+            for (index_t j = 0; j < allcornerLists.size(); j++)
             {
                 patchIndex.push_back(allcornerLists[j].patch);
                 vertIndex.push_back(allcornerLists[j].m_index);
@@ -252,14 +252,14 @@ namespace gismo
             smoothC1Vertex.computeG1InternalVertexBasis();
             std::vector<gsMultiPatch<T>> basisVertex = smoothC1Vertex.getBasis();
 
-            for(size_t pInd=0; pInd < patchIndex.size(); pInd++)
+            for(index_t pInd=0; pInd < patchIndex.size(); pInd++)
             {
                 index_t begin_col = 0, end_col = 0, shift_col = 0;
-                for (size_t np = 0; np < patchIndex[pInd]; ++np)
+                for (index_t np = 0; np < patchIndex[pInd]; ++np)
                     shift_col += m_bases[np].size();
 
                 end_col += m_bases[patchIndex[pInd]].piece(0).size();
-                for (size_t ii = 0; ii < basisVertex[pInd].nPatches(); ++ii)
+                for (index_t ii = 0; ii < basisVertex[pInd].nPatches(); ++ii)
                 {
                     index_t jj = 0;
                     for (index_t j = begin_col; j < end_col; ++j, ++jj) {

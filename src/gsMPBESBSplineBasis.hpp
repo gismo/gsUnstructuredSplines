@@ -21,7 +21,7 @@ namespace gismo
 
 template<short_t d, class T>
 gsMPBESBSplineBasis<d,T>::gsMPBESBSplineBasis (const BasisContainer & bases, gsBoxTopology const & topol,
-                                                       int increaseSmoothnessLevel, int minEVDistance)
+                                                       index_t increaseSmoothnessLevel, index_t minEVDistance)
 {
     m_topol = topol;
     for(typename BasisContainer::const_iterator it = bases.begin();it!=bases.end();++it)
@@ -30,7 +30,7 @@ gsMPBESBSplineBasis<d,T>::gsMPBESBSplineBasis (const BasisContainer & bases, gsB
         m_incrSmoothnessDegree=this->maxDegree()-1;
     else
         m_incrSmoothnessDegree=increaseSmoothnessLevel;
-    m_minDist=static_cast<unsigned>(std::max<int>(std::min<int>(m_incrSmoothnessDegree+1,maxDegree()),minEVDistance));
+    m_minDist=static_cast<unsigned>(std::max<index_t>(std::min<index_t>(m_incrSmoothnessDegree+1,maxDegree()),minEVDistance));
     _initVertices();
     _setDistanceOfAllVertices();
 
@@ -43,7 +43,7 @@ gsMPBESBSplineBasis<d,T>::gsMPBESBSplineBasis (const BasisContainer & bases, gsB
 
 template<short_t d, class T>
 gsMPBESBSplineBasis<d,T>::gsMPBESBSplineBasis (const BasisContainer & bases, gsBoxTopology const & topol,std::vector<gsMatrix<T> * > coefs,
-                                                       int increaseSmoothnessLevel, int minEVDistance)
+                                                       index_t increaseSmoothnessLevel, index_t minEVDistance)
 {
     m_topol = topol;
     for(typename BasisContainer::const_iterator it = bases.begin();it!=bases.end();++it)
@@ -52,7 +52,7 @@ gsMPBESBSplineBasis<d,T>::gsMPBESBSplineBasis (const BasisContainer & bases, gsB
         m_incrSmoothnessDegree=this->maxDegree()-1;
     else
         m_incrSmoothnessDegree=increaseSmoothnessLevel;
-    m_minDist=static_cast<unsigned>(std::max<int>(std::min<int>(m_incrSmoothnessDegree+1,maxDegree()),minEVDistance));
+    m_minDist=static_cast<unsigned>(std::max<index_t>(std::min<index_t>(m_incrSmoothnessDegree+1,maxDegree()),minEVDistance));
     _initVertices();
     _setDistanceOfAllVertices();
 
@@ -64,8 +64,8 @@ gsMPBESBSplineBasis<d,T>::gsMPBESBSplineBasis (const BasisContainer & bases, gsB
 }
 
 template<short_t d, class T>
-gsMPBESBSplineBasis<d,T>::gsMPBESBSplineBasis( gsMultiPatch<T> const & mp, int increaseSmoothnessLevel,
-                                                       int minEVDistance)
+gsMPBESBSplineBasis<d,T>::gsMPBESBSplineBasis( gsMultiPatch<T> const & mp, index_t increaseSmoothnessLevel,
+                                                       index_t minEVDistance)
 {
     //topol.computeAllVertices();
     for (size_t i = 0; i < mp.nPatches(); i++)
@@ -78,7 +78,7 @@ gsMPBESBSplineBasis<d,T>::gsMPBESBSplineBasis( gsMultiPatch<T> const & mp, int i
         m_incrSmoothnessDegree=this->maxDegree()-1;
     else
         m_incrSmoothnessDegree=increaseSmoothnessLevel;
-    m_minDist=static_cast<unsigned>(std::max<int>(std::min<int>(m_incrSmoothnessDegree+1,maxDegree()),minEVDistance));
+    m_minDist=static_cast<unsigned>(std::max<index_t>(std::min<index_t>(m_incrSmoothnessDegree+1,maxDegree()),minEVDistance));
     _initVertices();
     _setDistanceOfAllVertices();
 
@@ -159,7 +159,7 @@ bool gsMPBESBSplineBasis<d,T>::isLocallyConnected(indexType i,indexType j) const
     unsigned distance = 0;
     for( unsigned i2=0; i2< d;++i2 )
     {
-        unsigned dist = std::abs(static_cast<int>(vec_i[i2])-static_cast<int>(vec_j[i2]));
+        unsigned dist = std::abs(static_cast<index_t>(vec_i[i2])-static_cast<index_t>(vec_j[i2]));
         if( dist != 0 )
             distance+=dist;
     }
@@ -170,7 +170,7 @@ template<short_t d, class T>
 void gsMPBESBSplineBasis<d,T>::numActive_into(const index_t patch,const gsMatrix<T> & u, gsVector<index_t>& result) const
 {
     result.resize(u.cols());
-    for(int i = 0; i<u.cols();++i)
+    for(index_t i = 0; i<u.cols();++i)
     {
         result(i)=static_cast<unsigned>((degree(patch,0)+1)*(degree(patch,1)+1));
     }
@@ -215,7 +215,7 @@ void gsMPBESBSplineBasis<d,T>::refine_withCoefs(gsMatrix<T>& localCoef, const in
     refineKnots[1]=knots_v;
     std::vector<gsMatrix<T> *> coefs;
     unsigned geoDim = localCoef.cols();
-    int start, end = -1;
+    index_t start, end = -1;
     for (size_t i = 0; i<nPatches(); ++i)
     {
         start=end+1;
@@ -268,7 +268,7 @@ void gsMPBESBSplineBasis<d,T>::_boxesVectorToMatrix(const std::vector<index_t> &
 {
     GISMO_ASSERT( boxes.size() % (2 * d + 1 ) == 0, "The points did not define boxes properly. The boxes were not added to the basis.");
     mat_boxes.resize(2,2*(boxes.size()/(2*d + 1)));
-    for( unsigned int i = 0; i < (boxes.size())/(2*d+1); i++)
+    for( unsigned index_t i = 0; i < (boxes.size())/(2*d+1); i++)
     {
         mat_boxes(0,2*i)=boxes[(i*(2*d+1))+1];
         mat_boxes(1,2*i)=boxes[(i*(2*d+1))+2];
@@ -315,14 +315,14 @@ void gsMPBESBSplineBasis<d,T>::_boxToRefineKnots(const index_t patch,gsMatrix<T>
 }
 
 template<short_t d, class T>
-unsigned gsMPBESBSplineBasis<d,T>::getNrOfSpecialKnots(const gsKnotVector<T> kv,const std::vector<T>& new_knots,bool par,int distance)
+unsigned gsMPBESBSplineBasis<d,T>::getNrOfSpecialKnots(const gsKnotVector<T> kv,const std::vector<T>& new_knots,bool par,index_t distance)
 {
-    int specialKnots=0, index = 0, kv_index, nk_index;
-    for(int i=0;i<=distance+kv.degree();++i)
+    index_t specialKnots=0, index = 0, kv_index, nk_index;
+    for(index_t i=0;i<=distance+kv.degree();++i)
     {
         kv_index = par ? kv.size()-i-1 : i;
         nk_index = par ? new_knots.size()-index-1 : index;
-        if(nk_index>=static_cast<int>(new_knots.size())||nk_index<0)
+        if(nk_index>=static_cast<index_t>(new_knots.size())||nk_index<0)
             break;
         if((!par&&new_knots[nk_index]<=kv.at(kv_index))||
                 (par&&new_knots[nk_index]>=kv.at(kv_index)))
@@ -379,7 +379,7 @@ bool gsMPBESBSplineBasis<d,T>::_knotsMatchNeighbours(index_t patch,std::vector<s
     checkPatches.clear();
     checkPatches.reserve(nPatches());
     std::vector<bool> sideToCheck(4,false);
-    std::vector<int> neighbours(4,-1);
+    std::vector<index_t> neighbours(4,-1);
     gsKnotVector<T> knots_neigh;
     knotIter kv,kv_end,kvN,kvN_end;
     for(boxSide side=boxSide::getFirst(2);side<boxSide::getEnd(2);++side)

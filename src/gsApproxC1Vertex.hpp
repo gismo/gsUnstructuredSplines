@@ -68,31 +68,35 @@ void gsApproxC1Vertex<d, T>::reparametrizeVertexPatches()
 }
 
 template<short_t d,class T>
-real_t gsApproxC1Vertex<d, T>::computeSigma(const std::vector<size_t> &vertexIndices)
+T gsApproxC1Vertex<d, T>::computeSigma(const std::vector<size_t> &vertexIndices)
 {
-    real_t sigma = 0;
+    T sigma = 0;
 
-    real_t p = 0;
-    real_t h_geo = 1;
+    T p = 0;
+    T h_geo = 1;
     for(size_t i = 0; i < m_auxPatches.size(); i++)
     {
-        const gsTensorBSplineBasis<2, real_t> bsp_temp = dynamic_cast<const gsTensorBSplineBasis<d, T>&>(m_auxPatches[0].getBasisRotated().piece(vertexIndices[i]+4));
+        const gsTensorBSplineBasis<2, T> bsp_temp = dynamic_cast<const gsTensorBSplineBasis<d, T>&>(m_auxPatches[0].getBasisRotated().piece(vertexIndices[i]+4));
 
-        real_t p_temp = math::max(bsp_temp.degree(0), bsp_temp.degree(1));
+        T p_temp = math::max(bsp_temp.degree(0), bsp_temp.degree(1));
 
         p = (p < p_temp ? p_temp : p);
 
         for(index_t j = 0; j < m_auxPatches[i].getPatchRotated().parDim(); j++)
         {
-            real_t h_geo_temp = bsp_temp.knot(j,p + 1);
+            T h_geo_temp = bsp_temp.knot(j,p + 1);
             h_geo = (h_geo > h_geo_temp ? h_geo_temp : h_geo);
         }
     }
 
-    gsMatrix<> zero;
+    gsMatrix<T> zero;
+    gsMatrix<T> deriv;
     zero.setZero(2,1);
     for (size_t i = 0; i < m_auxPatches.size(); i++)
-        sigma += gsMatrix<> (m_auxPatches[i].getPatchRotated().deriv(zero)).lpNorm<Eigen::Infinity>();
+    {
+        deriv = m_auxPatches[i].getPatchRotated().deriv(zero);
+        sigma += deriv.template lpNorm<Eigen::Infinity>();
+    }
     sigma *= h_geo/(m_auxPatches.size()*p);
 
     return (1.0 / sigma);
@@ -120,7 +124,7 @@ void gsApproxC1Vertex<d, T>::computeKernel()
     index_t dim_mat = 0;
     std::vector<index_t> dim_u, dim_v, side, patchID;
     std::vector<index_t> dim_u_iFace, patchID_iFace;
-    gsMatrix<> matrix_det(m_mp.targetDim(), m_mp.targetDim()), points(m_mp.parDim(),1);
+    gsMatrix<T> matrix_det(m_mp.targetDim(), m_mp.targetDim()), points(m_mp.parDim(),1);
     points.setZero();
     for(size_t np = 0; np < mp_vertex.nPatches(); np++)
     {
@@ -138,7 +142,7 @@ void gsApproxC1Vertex<d, T>::computeKernel()
                 matrix_det.col(0) = m_auxPatches[np].getPatchRotated().jacobian(points).col(0); // u
             else if(m_mp.parDim() + 1 == m_mp.targetDim()) // Surface
             {
-                gsMatrix<> N, ev;
+                gsMatrix<T> N, ev;
                 m_auxPatches[np].getPatchRotated().jacobian_into(points, ev);
                 N.setZero(3,1);
                 N(0,0) = ev(1,0)*ev(2,1)-ev(2,0)*ev(1,1);
@@ -162,7 +166,7 @@ void gsApproxC1Vertex<d, T>::computeKernel()
                 matrix_det.col(1) = m_auxPatches[np].getPatchRotated().jacobian(points).col(1); // u
             else if(m_mp.parDim() + 1 == m_mp.targetDim()) // Surface
             {
-                gsMatrix<> N, ev;
+                gsMatrix<T> N, ev;
                 m_auxPatches[np].getPatchRotated().jacobian_into(points, ev);
                 N.setZero(3,1);
                 N(0,0) = ev(1,0)*ev(2,1)-ev(2,0)*ev(1,1);
@@ -258,10 +262,10 @@ void gsApproxC1Vertex<d, T>::computeKernel()
             for (index_t i = 0; i < 2; ++i) // Only the first two
             {
                 for (index_t j = 0; j < 6; ++j) {
-                    T coef_temp = basisVertexResult[patchID[iFace_index]].patch(j).coef(i, 0); // v = 0
+                    T coef_temp = basisVertexResult[patchID_iFace[iFace_index]].patch(j).coef(i, 0); // v = 0
                     if (coef_temp * coef_temp > 1e-25)
                         coefs_corner(shift_row + i, j) = coef_temp;
-                    coef_temp = basisVertexResult[patchID[iFace_index]].patch(j).coef(i + dim_u[iFace_index],
+                    coef_temp = basisVertexResult[patchID_iFace[iFace_index]].patch(j).coef(i + dim_u_iFace[iFace_index],
                                                                                       0); // v = 0
                     if (coef_temp * coef_temp > 1e-25)
                         coefs_corner(shift_row + 2 + i, j) = coef_temp; //  +2 bcs of the previous adding
@@ -284,8 +288,8 @@ void gsApproxC1Vertex<d, T>::computeKernel()
     gsMatrix<T> kernel;
     if (dofsCorner > 0)
     {
-        real_t threshold = 1e-10;
-        Eigen::FullPivLU<gsMatrix<>> KernelCorner(coefs_corner);
+        T threshold = 1e-10;
+        Eigen::FullPivLU<gsMatrix<T>> KernelCorner(coefs_corner);
         KernelCorner.setThreshold(threshold);
         //gsInfo << "Coefs: " << coefs_corner << "\n";
         while (KernelCorner.dimensionOfKernel() < dofsCorner) {
@@ -295,7 +299,7 @@ void gsApproxC1Vertex<d, T>::computeKernel()
         if (m_optionList.getSwitch("info"))
             gsInfo << "Dimension of Kernel: " << KernelCorner.dimensionOfKernel() << " With " << threshold << "\n";
 
-        gsMatrix<> vertBas;
+        gsMatrix<T> vertBas;
         vertBas.setIdentity(6, 6);
 
         kernel = KernelCorner.kernel();
@@ -305,7 +309,7 @@ void gsApproxC1Vertex<d, T>::computeKernel()
             kernel.conservativeResize(kernel.rows(), kernel.cols() + 1);
             kernel.col(kernel.cols() - 1) = vertBas.col(count);
 
-            Eigen::FullPivLU<gsMatrix<>> ker_temp(kernel);
+            Eigen::FullPivLU<gsMatrix<T>> ker_temp(kernel);
             ker_temp.setThreshold(1e-6);
             if (ker_temp.dimensionOfKernel() != 0) {
                 kernel = kernel.block(0, 0, kernel.rows(), kernel.cols() - 1);
@@ -321,12 +325,12 @@ void gsApproxC1Vertex<d, T>::computeKernel()
 
     for(size_t np = 0; np < m_patchesAroundVertex.size(); np++)
     {
-        gsMultiPatch<> temp_result_0 = basisVertexResult[np];
+        gsMultiPatch<T> temp_result_0 = basisVertexResult[np];
 
         for (size_t j = 0; j < 6; ++j)
         {
             index_t dim_uv = temp_result_0.basis(j).size();
-            gsMatrix<> coef_bf;
+            gsMatrix<T> coef_bf;
             coef_bf.setZero(dim_uv, 1);
             for (index_t i = 0; i < 6; ++i)
                 if (kernel(i, j) * kernel(i, j) > 1e-25)

@@ -28,11 +28,11 @@ namespace gismo
         typedef gsAssembler<T> Base;
 
     public:
-        gsC1SurfBasisVertex(gsMultiPatch<> mp, // Single Patch
-                          gsMultiBasis<> basis, // Single Basis
+        gsC1SurfBasisVertex(gsMultiPatch<T> mp, // Single Patch
+                          gsMultiBasis<T> basis, // Single Basis
                           std::vector<bool> isBoundary,
                           gsMatrix<T> &Phi,
-                          gsMatrix<> gluingD)
+                          gsMatrix<T> gluingD)
                 : m_mp(mp), m_basis(basis), m_isBoundary(isBoundary), m_Phi(Phi), m_gD(gluingD)
         {
 
@@ -40,13 +40,13 @@ namespace gismo
             {
                 // Computing the G1 - basis function at the edge
                 // Spaces for computing the g1 basis
-                gsBSplineBasis<> basis_edge = dynamic_cast<gsBSplineBasis<> &>(m_basis.basis(0).component(dir)); // 0 -> u, 1 -> v
+                gsBSplineBasis<T> basis_edge = dynamic_cast<gsBSplineBasis<T> &>(m_basis.basis(0).component(dir)); // 0 -> u, 1 -> v
 
-                gsBSplineBasis<> basis_plus(basis_edge);
+                gsBSplineBasis<T> basis_plus(basis_edge);
                 basis_plus.elevateContinuity(1);
                 m_basis_plus.push_back(basis_plus);
 
-                gsBSplineBasis<> basis_minus(basis_edge);
+                gsBSplineBasis<T> basis_minus(basis_edge);
                 basis_minus.degreeReduce(1);
                 m_basis_minus.push_back(basis_minus);
             }
@@ -60,7 +60,7 @@ namespace gismo
 
         void refresh();
         void assemble();
-        inline void apply(bhVisitor & visitor, int patchIndex);
+        inline void apply(bhVisitor & visitor, index_t patchIndex);
         void solve();
 
         void constructSolution(gsMultiPatch<T> & result);
@@ -86,11 +86,11 @@ namespace gismo
         gsMatrix<T> m_Phi;
 
         // Gluing data
-        gsMatrix<> m_gD;
+        gsMatrix<T> m_gD;
 
         // Basis for getting the G1 Basis
-        std::vector<gsBSplineBasis<>> m_basis_plus;
-        std::vector<gsBSplineBasis<>> m_basis_minus;
+        std::vector<gsBSplineBasis<T>> m_basis_plus;
+        std::vector<gsBSplineBasis<T>> m_basis_minus;
 
         // Basis for the G1 Basis
         gsMultiBasis<T> m_basis_g1;
@@ -104,7 +104,7 @@ namespace gismo
         // For Dirichlet boundary
         using Base::m_ddof;
 
-        std::vector<gsMatrix<>> solVec;
+        std::vector<gsMatrix<T>> solVec;
 
     }; // class gsG1BasisEdge
 
@@ -168,7 +168,7 @@ namespace gismo
     {
         // Reserve sparse system
         const index_t nz = gsAssemblerOptions::numColNz(m_basis[0],2,1,0.333333);
-        for (unsigned i = 0; i < m_f.size(); i++)
+        for (index_t i = 0; i < m_f.size(); i++)
             m_f.at(i).reserve(nz, 1);
 
 
@@ -183,13 +183,13 @@ namespace gismo
         bhVisitor visitor;
         apply(visitor,0); // patch 0
 
-        for (unsigned i = 0; i < m_f.size(); i++)
+        for (index_t i = 0; i < m_f.size(); i++)
             m_f.at(i).matrix().makeCompressed();
 
     } // assemble()
 
     template <class T, class bhVisitor>
-    void gsC1SurfBasisVertex<T,bhVisitor>::apply(bhVisitor & visitor, int patchIndex)
+    void gsC1SurfBasisVertex<T,bhVisitor>::apply(bhVisitor & visitor, index_t patchIndex)
     {
 #pragma omp parallel
         {
@@ -246,8 +246,8 @@ namespace gismo
     template <class T, class bhVisitor>
     void gsC1SurfBasisVertex<T,bhVisitor>::solve()
     {
-        gsSparseSolver<real_t>::SimplicialLDLT solver;
-//    gsSparseSolver<real_t>::LU solver;
+        typename gsSparseSolver<T>::SimplicialLDLT solver;
+//    typename gsSparseSolver<T>::LU solver;
 
 
 //    gsInfo << "rhs: " << m_f.at(4).rhs() << "\n";

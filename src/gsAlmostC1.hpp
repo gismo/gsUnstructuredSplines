@@ -476,7 +476,7 @@ namespace gismo
         m_mapOriginal = gsDofMapper(m_bases);
         m_mapOriginal.finalize();
 
-        // gsWriteParaview<>(m_RefPatches,"mp_ref",100,true);
+        // gsWriteParaview<T>(m_RefPatches,"mp_ref",100,true);
     }
 
     template<short_t d, class T>
@@ -489,7 +489,7 @@ namespace gismo
         index_t cidx;
         for(size_t p = 0;p<patches.nPatches();++p)
         {
-            for(int c=1;c<5;++c)
+            for(index_t c=1;c<5;++c)
             {
                 pcorner=patchCorner(p,c);
                 cidx = _vertIndex(p,c);

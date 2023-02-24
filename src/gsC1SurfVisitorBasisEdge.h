@@ -30,7 +30,7 @@ namespace gismo
                         gsQuadRule<T>    & rule)
         {
             gsVector<index_t> numQuadNodes( basis.dim() );
-            for (int i = 0; i < basis.dim(); ++i) // to do: improve
+            for (index_t i = 0; i < basis.dim(); ++i) // to do: improve
                 numQuadNodes[i] = basis.degree(i) + 1;
 
             // Setup Quadrature
@@ -68,10 +68,10 @@ namespace gismo
             numActive = actives.rows();
 
             // tau/p
-            gsBSplineBasis<T> bsp_temp = dynamic_cast<gsBSplineBasis<> & >(basis_geo);
+            gsBSplineBasis<T> bsp_temp = dynamic_cast<gsBSplineBasis<T> & >(basis_geo);
 
-            real_t p = basis_geo.maxDegree();
-            real_t tau_1 = bsp_temp.knots().at(p + 2);
+            T p = basis_geo.maxDegree();
+            T tau_1 = bsp_temp.knots().at(p + 2);
 
             gsMatrix<T> alpha, beta,
                     N_0, N_1,
@@ -135,7 +135,7 @@ namespace gismo
 
                     beta = isBoundary ? beta.setZero() : beta; // For the boundary, only on Patch 0
 
-                    gsMatrix<> temp = beta.cwiseProduct(N_1);
+                    gsMatrix<T> temp = beta.cwiseProduct(N_1);
                     rhsVals = N_i_plus.cwiseProduct(N_0 + N_1) - temp.cwiseProduct(der_N_i_plus) * tau_1 / p;
 
                     localMat.setZero(numActive, numActive);
@@ -177,7 +177,7 @@ namespace gismo
 
         }
 
-        inline void localToGlobal(const int patchIndex,
+        inline void localToGlobal(const index_t patchIndex,
                                   const std::vector<gsMatrix<T> >    & eliminatedDofs,
                                   gsSparseSystem<T>      & system)
         {

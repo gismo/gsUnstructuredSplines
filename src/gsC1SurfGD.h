@@ -50,7 +50,7 @@ namespace gismo {
         index_t m_uv;
         bool m_isBoundary;
 
-        real_t m_gamma;
+        T m_gamma;
 
 
     };

@@ -35,7 +35,7 @@ private:
 
     typedef T weightType;
     typedef index_t indexType; //indizes of gsMatrix
-    typedef std::vector<std::pair<int,int> >::iterator step_iter;
+    typedef std::vector<std::pair<index_t,index_t> >::iterator step_iter;
     typedef gsBasis<T> BasisType;
     typedef typename std::vector<BasisType *>::const_iterator ConstBasisIter;
     typedef typename std::vector<BasisType *>::iterator BasisIter;
@@ -43,10 +43,10 @@ private:
     typedef typename gsSparseMatrix<weightType,0,indexType>::InnerIterator InIterMat;
     typedef std::vector<indexType> IndexContainer;
     typedef std::vector<indexType>::const_iterator ConstIndexIter;
-    //int m_dim = 2;
+    //index_t m_dim = 2;
 
 public:
-    gsMPBESMapTensor(int incrSmoothnessDegree, gsBoxTopology * topol, gsMPBESBasis<d,T> * basis) :
+    gsMPBESMapTensor(index_t incrSmoothnessDegree, gsBoxTopology * topol, gsMPBESBasis<d,T> * basis) :
         m_incrSmoothnessDegree(incrSmoothnessDegree), m_topol(topol), m_basis(basis), m_global(0)
     {
         m_mapper=NULL;
@@ -85,9 +85,9 @@ protected:
 
     virtual void _setMappingOfPatch(unsigned const patch) const = 0;
 
-    int _getNrOfLocalBasisFunktions() const
+    index_t _getNrOfLocalBasisFunktions() const
     {
-        int size = 0;
+        index_t size = 0;
         for (size_t i = 0; i < m_basis->nPatches(); ++i)
             size += m_basis->getBase(i).size();
         return size;
@@ -472,7 +472,7 @@ private:
 
     void _flipOverCorner(patchSide & ps,bool & flag) const
     {
-        int patch = ps.patch;
+        index_t patch = ps.patch;
         switch(ps.side())
         {
         case boundary::north : ps = patchSide(patch,flag ? boundary::east : boundary::west);
@@ -543,7 +543,7 @@ private:
         _addToMap(locals,weights);
     }
 
-    void _addCombinedLineToMap(patchSide & ps,unsigned localStartIndex,unsigned length,int distToPs) const
+    void _addCombinedLineToMap(patchSide & ps,unsigned localStartIndex,unsigned length,index_t distToPs) const
     {
         std::vector<patchSide> sides;
         std::vector<index_t> lengths;
@@ -554,7 +554,7 @@ private:
         _addBlockToMap(localStartIndex,sides,lengths,dists);
     }
 
-    void _addCombinedBlockToMap(patchSide & ps_u,patchSide & ps_v,unsigned localStartIndex,unsigned length_u,unsigned length_v,int distToPs_u, int distToPs_v) const
+    void _addCombinedBlockToMap(patchSide & ps_u,patchSide & ps_v,unsigned localStartIndex,unsigned length_u,unsigned length_v,index_t distToPs_u, index_t distToPs_v) const
     {
         std::vector<patchSide> sides;
         std::vector<index_t> lengths;
@@ -572,7 +572,7 @@ private:
     {
         patchSide ps,ps_neighbour;
         bool par,par_neigh;
-        int dir,dir_neigh;
+        index_t dir,dir_neigh;
         gsKnotVector<T> kv_neigh,kv_this;
         std::vector<std::vector<T> > weights1D;
         std::vector<bool> minus_dir;
@@ -600,7 +600,7 @@ private:
         }
         std::vector<indexType> locals;
         std::vector<weightType> weights;
-        std::vector<std::pair<int,int> >steps;
+        std::vector<std::pair<index_t,index_t> >steps;
         gsVector<index_t> distances(sides.size());
         distances.setZero();
         do
@@ -665,11 +665,11 @@ private:
         return localIndex;
     }
 
-    unsigned _transformIndexToNeighbour(unsigned localIndex,patchSide const & ps_neighbour,bool orient, int non_fixed) const
+    unsigned _transformIndexToNeighbour(unsigned localIndex,patchSide const & ps_neighbour,bool orient, index_t non_fixed) const
     {
         unsigned patch = ps_neighbour.patch;
-        int u_max = _getParMax(patch,0);
-        int v_max = _getParMax(patch,1);
+        index_t u_max = _getParMax(patch,0);
+        index_t v_max = _getParMax(patch,1);
         if((ps_neighbour.direction()))
             localIndex = _getLocalIndex(patch,orient ? non_fixed : u_max-non_fixed,ps_neighbour.parameter() ? v_max : 0);
         else
@@ -711,9 +711,9 @@ private:
     unsigned _travelInsidePatch(unsigned localIndex,bool dir,step_iter current) const
     {
         unsigned patch = _getPatch(localIndex);
-        int par = _getPar(localIndex,dir);
-        int par_max = _getParMax(patch,dir);
-        int fixed_par = _getPar(localIndex,!dir);
+        index_t par = _getPar(localIndex,dir);
+        index_t par_max = _getParMax(patch,dir);
+        index_t fixed_par = _getPar(localIndex,!dir);
         if(0<=par+current->first&&par+current->first<=par_max)
         {
             par+=current->first;
@@ -733,7 +733,7 @@ private:
         return localIndex;
     }
 
-    unsigned _travelUVSteps(unsigned localIndex,std::vector<std::pair<int, int> > steps) const
+    unsigned _travelUVSteps(unsigned localIndex,std::vector<std::pair<index_t, index_t> > steps) const
     {
         step_iter current = steps.begin();
         step_iter end = steps.end();

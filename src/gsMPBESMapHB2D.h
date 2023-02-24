@@ -39,12 +39,12 @@ namespace gismo
 template<short_t d,class T>
 class gsMPBESMapHB2D : public gsMPBESMapTensor<d,T>
 {
-    //static const int d = 2;
+    //static const index_t d = 2;
 private:
     typedef gsBasis<T> BasisType;
     typedef gsMPBESMapTensor<d,T> Base;
 public:
-    gsMPBESMapHB2D(int incrSmoothnessDegree, gsBoxTopology * topol, gsMPBESBasis<d,T> * basis) :
+    gsMPBESMapHB2D(index_t incrSmoothnessDegree, gsBoxTopology * topol, gsMPBESBasis<d,T> * basis) :
         Base(incrSmoothnessDegree,topol,basis)
     { }
 
@@ -74,7 +74,7 @@ private:
     void _finalize() const
     {
         m_level = _getMaxLevel();
-        gsSparseMatrix<real_t> mat=m_mapper->asMatrix();
+        gsSparseMatrix<T> mat=m_mapper->asMatrix();
         mat.conservativeResize(mat.rows(),m_global);
         delete m_mapper;
         m_mapper=new gsWeightMapper<T>(mat);
@@ -102,7 +102,7 @@ private:
         return level;
     }
 
-    index_t _getMaxLevel(int patch) const
+    index_t _getMaxLevel(index_t patch) const
     {
         return TO_HTENSOR(&(m_basis->getBase(patch)))->maxLevel();
     }
@@ -114,7 +114,7 @@ private:
         T parametricDistance = m_basis->getParametricDistanceOfVertex(pc,ps);
         if(math::almostEqual<T>(parametricDistance,0.0))
             return 0;
-        int patch = ps.patch;
+        index_t patch = ps.patch;
         unsigned deg = m_basis->degree(patch,1-ps.direction());
         gsTensorBSplineBasis<d,T>* basis = TO_HTENSOR(&(m_basis->getBase(patch)))->getBases()[m_level];
         gsKnotVector<T> knots = basis->knots(1-(ps.direction()));
@@ -156,7 +156,7 @@ private:
 
     bool _getLocalIndex_into(unsigned const patch,unsigned const u,unsigned const v,unsigned & localIndex) const
     {
-        int patchIndex = _getPatchIndex(patch,u,v);
+        index_t patchIndex = _getPatchIndex(patch,u,v);
         localIndex=_getLocalIndex(patch,patchIndex);
         if(patchIndex==-1)
             return false;
@@ -174,7 +174,7 @@ private:
         unsigned u,v;
         unsigned level = 0;
         gsVector<index_t,d> vec;
-        int index, patchindex;
+        index_t index, patchindex;
         do
         {
             if(level>TO_HTENSOR(&(m_basis->getBase(patch)))->maxLevel())
@@ -244,8 +244,8 @@ private:
     index_t _getPar(unsigned patch,unsigned tensorIndex, bool par) const
     {
         gsVector<index_t,d> vec = TO_HTENSOR(&(m_basis->getBase(patch)))->getBases()[m_level]->tensorIndex(tensorIndex);
-        GISMO_ASSERT(static_cast<int>(vec(par))<TO_HTENSOR(&(m_basis->getBase(patch)))->getBases()[m_level]->size(par),"wrong tensorIndex");
-        GISMO_ASSERT(static_cast<int>(vec(!par))<TO_HTENSOR(&(m_basis->getBase(patch)))->getBases()[m_level]->size(!par),"wrong tensorIndex");
+        GISMO_ASSERT(static_cast<index_t>(vec(par))<TO_HTENSOR(&(m_basis->getBase(patch)))->getBases()[m_level]->size(par),"wrong tensorIndex");
+        GISMO_ASSERT(static_cast<index_t>(vec(!par))<TO_HTENSOR(&(m_basis->getBase(patch)))->getBases()[m_level]->size(!par),"wrong tensorIndex");
         return vec(par);
     }
 

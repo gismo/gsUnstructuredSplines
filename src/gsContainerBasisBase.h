@@ -65,10 +65,10 @@ namespace gismo
             std::vector<gsBasis<T> *> basis_temp = std::vector<gsBasis<T> *>(m_patches.nPatches());
             for (size_t np = 0; np < m_patches.nPatches(); np++) {
                 gsContainerBasis<2, real_t>::uPtr basis = gsContainerBasis<d, T>::make(m_bases[np]);
-                basis_temp[np] = static_cast<gsBasis<> *>(basis.release());
+                basis_temp[np] = static_cast<gsBasis<T> *>(basis.release());
             }
 
-            multiBasis_result = gsMultiBasis<>(basis_temp, m_patches.topology());
+            multiBasis_result = gsMultiBasis<T>(basis_temp, m_patches.topology());
         };
 
         gsSparseMatrix<T> & getSystem() { return m_matrix; };

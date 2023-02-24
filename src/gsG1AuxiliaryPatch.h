@@ -19,7 +19,7 @@
 namespace gismo
 {
 
-
+    template<short_t d, class T>
     class gsG1AuxiliaryPatch
     {
     public:
@@ -27,7 +27,7 @@ namespace gismo
         gsG1AuxiliaryPatch()
         {}
 
-        gsG1AuxiliaryPatch(const gsGeometry<> & singlePatch, const size_t globalPatchIndex):
+        gsG1AuxiliaryPatch(const gsGeometry<T> & singlePatch, const index_t globalPatchIndex):
                 auxPatch(singlePatch), patchIndex(globalPatchIndex){
             rotationNum = 0;
             axisOrientation = 0;
@@ -40,19 +40,19 @@ namespace gismo
             m_minus = minus;
         }
 
-        size_t get_n_plus() { return m_plus; }
-        size_t get_n_minus() { return m_minus; }
+        index_t get_n_plus() { return m_plus; }
+        index_t get_n_minus() { return m_minus; }
 
         void rotateParamAntiClock(){
-            gsMultiBasis<> auxBase(auxPatch);
-            gsTensorBSplineBasis<2, real_t> & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(auxBase.basis(0));
-            gsBSplineBasis<> temp_basisLU = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(0));
-            gsBSplineBasis<> temp_basisLV = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(1));
+            gsMultiBasis<T> auxBase(auxPatch);
+            gsTensorBSplineBasis<d, T> & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(auxBase.basis(0));
+            gsBSplineBasis<T> temp_basisLU = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(0));
+            gsBSplineBasis<T> temp_basisLV = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(1));
             index_t dimU = temp_L.size(0);
             index_t dimV = temp_L.size(1);
 
             // The number of cols has to match the dimension of the space
-            gsMatrix<> mpar(dimU * dimV, auxPatch.targetDim());
+            gsMatrix<T> mpar(dimU * dimV, auxPatch.targetDim());
 
             // Loop over the cols
             for (index_t j = 0; j < dimU; j++)
@@ -64,10 +64,10 @@ namespace gismo
             }
 
             // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-            gsTensorBSpline<2, real_t> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
+            gsTensorBSpline<d, T> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
 
             // Create a new single-patch object
-            gsMultiPatch<> newpatch;
+            gsMultiPatch<T> newpatch;
 
             newpatch.addPatch(newgeom1);
 
@@ -79,19 +79,19 @@ namespace gismo
         }
 
         void rotateBasisAntiClock(){
-            gsMultiPatch<> newpatch;
-            for(size_t np = 0; np < G1repBasis.nPatches(); np++)
+            gsMultiPatch<T> newpatch;
+            for(index_t np = 0; np < G1repBasis.nPatches(); np++)
             {
-                gsMultiBasis<> auxBase(G1repBasis.patch(np));
-                gsTensorBSplineBasis<2, real_t>
-                        & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(auxBase.basis(0));
-                gsBSplineBasis<> temp_basisLU = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(0));
-                gsBSplineBasis<> temp_basisLV = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(1));
+                gsMultiBasis<T> auxBase(G1repBasis.patch(np));
+                gsTensorBSplineBasis<d, T>
+                        & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(auxBase.basis(0));
+                gsBSplineBasis<T> temp_basisLU = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(0));
+                gsBSplineBasis<T> temp_basisLV = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(1));
                 index_t dimU = temp_L.size(0);
                 index_t dimV = temp_L.size(1);
 
                 // The number of cols has to match the dimension of the space
-                gsMatrix<> mpar(dimU * dimV, G1repBasis.patch(np).targetDim());
+                gsMatrix<T> mpar(dimU * dimV, G1repBasis.patch(np).targetDim());
 
                 // Loop over the cols
                 for (index_t j = 0; j < dimU; j++)
@@ -103,7 +103,7 @@ namespace gismo
                 }
 
                 // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-                gsTensorBSpline<2, real_t> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
+                gsTensorBSpline<d, T> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
 
                 newpatch.addPatch(newgeom1);
             }
@@ -112,15 +112,15 @@ namespace gismo
 
 
         void rotateParamClock(){
-            gsMultiBasis<> auxBase(auxPatch);
-            gsTensorBSplineBasis<2, real_t> & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(auxBase.basis(0));
-            gsBSplineBasis<> temp_basisLU = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(0));
-            gsBSplineBasis<> temp_basisLV = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(1));
+            gsMultiBasis<T> auxBase(auxPatch);
+            gsTensorBSplineBasis<d, T> & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(auxBase.basis(0));
+            gsBSplineBasis<T> temp_basisLU = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(0));
+            gsBSplineBasis<T> temp_basisLV = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(1));
             index_t dimU = temp_L.size(0);
             index_t dimV = temp_L.size(1);
 
             // The number of cols has to match the dimension of the space
-            gsMatrix<> mpar(dimU * dimV, auxPatch.targetDim());
+            gsMatrix<T> mpar(dimU * dimV, auxPatch.targetDim());
 
             for (index_t j = (dimU - 1 ) ; j >= 0; j--)
             {   // Loop over the rows
@@ -131,10 +131,10 @@ namespace gismo
             }
 
             // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-            gsTensorBSpline<2, real_t> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
+            gsTensorBSpline<d, T> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
 
             // Create a new single-patch object
-            gsMultiPatch<> newpatch;
+            gsMultiPatch<T> newpatch;
 
             newpatch.addPatch(newgeom1);
 
@@ -148,21 +148,21 @@ namespace gismo
 
 
         void rotateBasisClock(){
-            gsMultiPatch<> newpatch;
-            for(size_t np = 0; np < G1repBasis.nPatches(); np++)
+            gsMultiPatch<T> newpatch;
+            for(index_t np = 0; np < G1repBasis.nPatches(); np++)
             {
-                gsMultiBasis<> auxBase(G1repBasis.patch(np));
-                gsTensorBSplineBasis<2, real_t>
-                        & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(auxBase.basis(0));
-                gsBSplineBasis<> temp_basisLU = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(0));
-                gsBSplineBasis<> temp_basisLV = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(1));
+                gsMultiBasis<T> auxBase(G1repBasis.patch(np));
+                gsTensorBSplineBasis<d, T>
+                        & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(auxBase.basis(0));
+                gsBSplineBasis<T> temp_basisLU = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(0));
+                gsBSplineBasis<T> temp_basisLV = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(1));
                 index_t dimU = temp_L.size(0);
                 index_t dimV = temp_L.size(1);
 
                 //gsInfo << " dimU: " << dimU << "\t dimV: " << dimV << "\n";
 
                 // The number of cols has to match the dimension of the space
-                gsMatrix<> mpar(dimU * dimV, G1repBasis.patch(np).targetDim());
+                gsMatrix<T> mpar(dimU * dimV, G1repBasis.patch(np).targetDim());
 
                 for (index_t j = (dimU - 1); j >= 0; j--)
                 {   // Loop over the rows
@@ -174,7 +174,7 @@ namespace gismo
                 }
 
                 // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-                gsTensorBSpline<2, real_t> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
+                gsTensorBSpline<d, T> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
 
                 newpatch.addPatch(newgeom1);
             }
@@ -183,25 +183,25 @@ namespace gismo
 
 
         void rotateParamAntiClockTwice(){
-            gsMultiBasis<> auxBase(auxPatch);
-            gsTensorBSplineBasis<2, real_t> & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(auxBase.basis(0));
-            gsBSplineBasis<> temp_basisLU = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(0));
-            gsBSplineBasis<> temp_basisLV = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(1));
+            gsMultiBasis<T> auxBase(auxPatch);
+            gsTensorBSplineBasis<d, T> & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(auxBase.basis(0));
+            gsBSplineBasis<T> temp_basisLU = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(0));
+            gsBSplineBasis<T> temp_basisLV = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(1));
             index_t dimU = temp_L.size(0);
             index_t dimV = temp_L.size(1);
 
             // The number of cols has to match the dimension of the space
-            gsMatrix<> mpar(dimU * dimV, auxPatch.targetDim());
+            gsMatrix<T> mpar(dimU * dimV, auxPatch.targetDim());
 
             for (index_t i = 0; i < ( dimU * dimV ); i++)
             {
                 mpar.row(i) = auxPatch.patch(0).coefs().row((dimU * dimV - 1) - i);
             }
             // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-            gsTensorBSpline<2, real_t> newgeom1(temp_basisLU.knots(), temp_basisLV.knots(), mpar);
+            gsTensorBSpline<d, T> newgeom1(temp_basisLU.knots(), temp_basisLV.knots(), mpar);
 
             // Create a new single-patch object
-            gsMultiPatch<> newpatch;
+            gsMultiPatch<T> newpatch;
 
             newpatch.addPatch(newgeom1);
 
@@ -215,26 +215,26 @@ namespace gismo
 
 
         void rotateBasisAntiClockTwice(){
-            gsMultiPatch<> newpatch;
-            for(size_t np = 0; np < G1repBasis.nPatches(); np++)
+            gsMultiPatch<T> newpatch;
+            for(index_t np = 0; np < G1repBasis.nPatches(); np++)
             {
-                gsMultiBasis<> auxBase(G1repBasis.patch(np));
-                gsTensorBSplineBasis<2, real_t>
-                        & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(auxBase.basis(0));
-                gsBSplineBasis<> temp_basisLU = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(0));
-                gsBSplineBasis<> temp_basisLV = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(1));
+                gsMultiBasis<T> auxBase(G1repBasis.patch(np));
+                gsTensorBSplineBasis<d, T>
+                        & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(auxBase.basis(0));
+                gsBSplineBasis<T> temp_basisLU = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(0));
+                gsBSplineBasis<T> temp_basisLV = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(1));
                 index_t dimU = temp_L.size(0);
                 index_t dimV = temp_L.size(1);
 
                 // The number of cols has to match the dimension of the space
-                gsMatrix<> mpar(dimU * dimV, G1repBasis.patch(np).targetDim());
+                gsMatrix<T> mpar(dimU * dimV, G1repBasis.patch(np).targetDim());
 
                 for (index_t i = 0; i < (dimU * dimV); i++)
                 {
                     mpar.row(i) = G1repBasis.patch(np).coefs().row((dimU * dimV - 1) - i);
                 }
                 // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-                gsTensorBSpline<2, real_t> newgeom1(temp_basisLU.knots(), temp_basisLV.knots(), mpar);
+                gsTensorBSpline<d, T> newgeom1(temp_basisLU.knots(), temp_basisLV.knots(), mpar);
 
                 newpatch.addPatch(newgeom1);
             }
@@ -243,15 +243,15 @@ namespace gismo
 
 
         void swapAxis(){
-            gsMultiBasis<> auxBase(auxPatch);
-            gsTensorBSplineBasis<2, real_t> & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(auxBase.basis(0));
-            gsBSplineBasis<> temp_basisLU = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(0));
-            gsBSplineBasis<> temp_basisLV = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(1));
+            gsMultiBasis<T> auxBase(auxPatch);
+            gsTensorBSplineBasis<d, T> & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(auxBase.basis(0));
+            gsBSplineBasis<T> temp_basisLU = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(0));
+            gsBSplineBasis<T> temp_basisLV = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(1));
             index_t dimU = temp_L.size(0);
             index_t dimV = temp_L.size(1);
 
             // The number of cols has to match the dimension of the space
-            gsMatrix<> mpar(dimU * dimV, auxPatch.targetDim());
+            gsMatrix<T> mpar(dimU * dimV, auxPatch.targetDim());
 
             for (index_t j = 0; j < dimU; j++)
             {   // Loop over the rows
@@ -262,10 +262,10 @@ namespace gismo
             }
 
             // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-            gsTensorBSpline<2, real_t> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
+            gsTensorBSpline<d, T> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
 
             // Create a new single-patch object
-            gsMultiPatch<> newpatch;
+            gsMultiPatch<T> newpatch;
 
             newpatch.addPatch(newgeom1);
 
@@ -277,18 +277,18 @@ namespace gismo
 
 
         void swapBasisAxis(){
-            gsMultiPatch<> newpatch;
-            for(size_t np = 0; np < G1repBasis.nPatches(); np++)
+            gsMultiPatch<T> newpatch;
+            for(index_t np = 0; np < G1repBasis.nPatches(); np++)
             {
-                gsMultiBasis<> auxBase(G1repBasis.patch(np));
-                gsTensorBSplineBasis<2, real_t> & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(auxBase.basis(0));
-                gsBSplineBasis<> temp_basisLU = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(0));
-                gsBSplineBasis<> temp_basisLV = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(1));
+                gsMultiBasis<T> auxBase(G1repBasis.patch(np));
+                gsTensorBSplineBasis<d, T> & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(auxBase.basis(0));
+                gsBSplineBasis<T> temp_basisLU = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(0));
+                gsBSplineBasis<T> temp_basisLV = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(1));
                 index_t dimU = temp_L.size(0);
                 index_t dimV = temp_L.size(1);
 
                 // The number of cols has to match the dimension of the space
-                gsMatrix<> mpar(dimU * dimV, G1repBasis.patch(np).targetDim());
+                gsMatrix<T> mpar(dimU * dimV, G1repBasis.patch(np).targetDim());
 
                 for (index_t j = 0; j < dimU; j++)
                 {   // Loop over the rows
@@ -299,7 +299,7 @@ namespace gismo
                 }
 
                 // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-                gsTensorBSpline<2, real_t> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
+                gsTensorBSpline<d, T> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
 
                 newpatch.addPatch(newgeom1);
             }
@@ -308,7 +308,7 @@ namespace gismo
         }
 
 
-        void parametrizeBasisBack( gsMultiPatch<>  g1Basis){
+        void parametrizeBasisBack( gsMultiPatch<T>  g1Basis){
             G1repBasis = g1Basis;
 
             //gsInfo << "Patch " << patchIndex << " old: " << G1repBasis.patch(0).coefs()<< "\n";
@@ -336,7 +336,7 @@ namespace gismo
             //gsInfo << "Patch " << patchIndex << " new: " << G1repBasis.patch(0).coefs() << "\n";
         }
 
-        void setG1Basis(gsMultiPatch<>  g1Ba)
+        void setG1Basis(gsMultiPatch<T>  g1Ba)
         {
             G1repBasis = g1Ba;
         }
@@ -345,7 +345,7 @@ namespace gismo
             this->auxPatch.computeTopology();
         }
 
-        gsGeometry<>& getPatch(){
+        gsGeometry<T>& getPatch(){
             return auxPatch.patch(0);
         }
 
@@ -361,11 +361,13 @@ namespace gismo
             return axisOrientation;
         }
 
-        gsMatrix<> getG1BasisCoefs(index_t i){
+        const gsMatrix<T> getG1BasisCoefs(index_t i) const
+        {
             return G1repBasis.patch(i).coefs();
         }
 
-        gsMultiPatch<> & getG1Basis(){
+        const gsMultiPatch<T> & getG1Basis() const
+        {
             return G1repBasis;
         }
 
@@ -382,8 +384,8 @@ namespace gismo
 
     protected:
 
-        gsMultiPatch<> auxPatch;
-        gsMultiPatch<> G1repBasis;
+        gsMultiPatch<T> auxPatch;
+        gsMultiPatch<T> G1repBasis;
 
         // Global patch index in the initial geometry
         index_t patchIndex;

@@ -26,7 +26,7 @@ public:
     gsPatchReparameterized()
     {}
 
-    gsPatchReparameterized(const gsGeometry<> & patch, gsBasis<T> & singlePatch)
+    gsPatchReparameterized(const gsGeometry<T> & patch, gsBasis<T> & singlePatch)
     : m_patchRotated(patch), m_basisRotated(singlePatch)
     {
         rotationNum = 0;
@@ -42,14 +42,14 @@ public:
     void swapAxis()
     {
 /*
-        gsTensorBSplineBasis<2, real_t> & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(m_patchRotated.basis(0));
-        gsBSplineBasis<> temp_basisLU = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(0));
-        gsBSplineBasis<> temp_basisLV = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(1));
+        gsTensorBSplineBasis<d, T> & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_patchRotated.basis(0));
+        gsBSplineBasis<T> temp_basisLU = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(0));
+        gsBSplineBasis<T> temp_basisLV = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(1));
         index_t dimU = temp_L.size(0);
         index_t dimV = temp_L.size(1);
 
         // The number of cols has to match the dimension of the space
-        gsMatrix<> mpar(dimU * dimV, m_patchRotated.targetDim());
+        gsMatrix<T> mpar(dimU * dimV, m_patchRotated.targetDim());
         for (index_t j = 0; j < dimU; j++)
         {   // Loop over the rows
             for (index_t i = 0; i < dimV; i++)
@@ -58,40 +58,40 @@ public:
             }
         }
         // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-        gsTensorBSpline<2, real_t> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
+        gsTensorBSpline<d, T> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
 
         // Create a new single-patch object
-        gsMultiPatch<> newpatch;
+        gsMultiPatch<T> newpatch;
         newpatch.addPatch(newgeom1);
         m_patchRotated.swap(newpatch);
 */
-        gsBasis<real_t> & temp_L_basis = m_patchRotated.basis(0);
+        gsBasis<T> & temp_L_basis = m_patchRotated.basis(0);
         index_t dimU = temp_L_basis.component(0).size();
         index_t dimV = temp_L_basis.component(1).size();
 
         // The number of cols has to match the dimension of the space
-        gsMatrix<> mpar(dimU * dimV, m_patchRotated.targetDim());
-        if (gsTensorBSplineBasis<2, real_t> * mb =
-                dynamic_cast<gsTensorBSplineBasis<2, real_t> *>(&m_patchRotated.basis(0)) )
+        gsMatrix<T> mpar(dimU * dimV, m_patchRotated.targetDim());
+        if (gsTensorBSplineBasis<d, T> * mb =
+                dynamic_cast<gsTensorBSplineBasis<d, T> *>(&m_patchRotated.basis(0)) )
         {
             for (index_t j = 0; j < dimU; j++)
                for (index_t i = 0; i < dimV; i++)
                     mpar.row(i + j * dimV) = m_patchRotated.patch(0).coefs().row(j + dimU * i);
 
 
-            gsTensorBSplineBasis<2, real_t> & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(m_patchRotated.basis(0));
+            gsTensorBSplineBasis<d, T> & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_patchRotated.basis(0));
 
             // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-            gsTensorBSpline<2, real_t> newgeom1(temp_L.knots(1), temp_L.knots(0), mpar);
+            gsTensorBSpline<d, T> newgeom1(temp_L.knots(1), temp_L.knots(0), mpar);
 
             // Create a new single-patch object
-            gsMultiPatch<> newpatch(newgeom1);
+            gsMultiPatch<T> newpatch(newgeom1);
             m_patchRotated.swap(newpatch);
         }
-        else if (gsTensorNurbsBasis<2, real_t> * mb =
-                dynamic_cast<gsTensorNurbsBasis<2, real_t> *>(&m_patchRotated.basis(0)) )
+        else if (gsTensorNurbsBasis<d, T> * mb =
+                dynamic_cast<gsTensorNurbsBasis<d, T> *>(&m_patchRotated.basis(0)) )
         {
-            gsMatrix<> weight_rep(dimU * dimV, 1);
+            gsMatrix<T> weight_rep(dimU * dimV, 1);
             for (index_t j = 0; j < dimU; j++)
             {   // Loop over the rows
                 for (index_t i = 0; i < dimV; i++)
@@ -101,17 +101,17 @@ public:
                 }
             }
 
-            gsTensorNurbsBasis<2, real_t> & temp_L = dynamic_cast<gsTensorNurbsBasis<2, real_t> &>(m_patchRotated.basis(0));
+            gsTensorNurbsBasis<d, T> & temp_L = dynamic_cast<gsTensorNurbsBasis<d, T> &>(m_patchRotated.basis(0));
 
             // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-            gsTensorNurbs<2, real_t> newgeom1(temp_L.knots(1), temp_L.knots(0), mpar, weight_rep);
+            gsTensorNurbs<d, T> newgeom1(temp_L.knots(1), temp_L.knots(0), mpar, weight_rep);
 
             // Create a new single-patch object
-            gsMultiPatch<> newpatch(newgeom1);
+            gsMultiPatch<T> newpatch(newgeom1);
             m_patchRotated.swap(newpatch);
         }
         else
-            gsInfo << "Only gsTensorBSplineBasis<2, real_t> and gsTensorNurbsBasis<2, real_t> are implemented \n";
+            gsInfo << "Only gsTensorBSplineBasis<d, T> and gsTensorNurbsBasis<d, T> are implemented \n";
 
 
         // BASES
@@ -130,14 +130,14 @@ public:
 
     void rotateParamAntiClock(){
 /*
-        gsTensorBSplineBasis<2, real_t> & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(m_patchRotated.basis(0));
-        gsBSplineBasis<> temp_basisLU = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(0));
-        gsBSplineBasis<> temp_basisLV = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(1));
+        gsTensorBSplineBasis<d, T> & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_patchRotated.basis(0));
+        gsBSplineBasis<T> temp_basisLU = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(0));
+        gsBSplineBasis<T> temp_basisLV = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(1));
         index_t dimU = temp_L.size(0);
         index_t dimV = temp_L.size(1);
 
         // The number of cols has to match the dimension of the space
-        gsMatrix<> mpar(dimU * dimV, m_patchRotated.targetDim());
+        gsMatrix<T> mpar(dimU * dimV, m_patchRotated.targetDim());
 
         // Loop over the cols
         for (index_t j = 0; j < dimU; j++)
@@ -149,39 +149,39 @@ public:
         }
         temp_basisLU.knots().reverse(); // For different regularity
         // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-        gsTensorBSpline<2, real_t> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
+        gsTensorBSpline<d, T> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
 
         // Create a new single-patch object
-        gsMultiPatch<> newpatch(newgeom1);
+        gsMultiPatch<T> newpatch(newgeom1);
         m_patchRotated.swap(newpatch);
 */
-        gsBasis<real_t> & temp_L_basis = m_patchRotated.basis(0);
+        gsBasis<T> & temp_L_basis = m_patchRotated.basis(0);
         index_t dimU = temp_L_basis.component(0).size();
         index_t dimV = temp_L_basis.component(1).size();
 
         // The number of cols has to match the dimension of the space
-        gsMatrix<> mpar(dimU * dimV, m_patchRotated.targetDim());
-        if (gsTensorBSplineBasis<2, real_t> * mb =
-                dynamic_cast<gsTensorBSplineBasis<2, real_t> *>(&m_patchRotated.basis(0)) )
+        gsMatrix<T> mpar(dimU * dimV, m_patchRotated.targetDim());
+        if (gsTensorBSplineBasis<d, T> * mb =
+                dynamic_cast<gsTensorBSplineBasis<d, T> *>(&m_patchRotated.basis(0)) )
         {
             for (index_t j = 0; j < dimU; j++)
                 for (index_t i = 0; i < dimV; i++)
                     mpar.row(i + j * dimV) = m_patchRotated.patch(0).coefs().row((dimU - 1 - j) + dimU * i);
 
-            gsTensorBSplineBasis<2, real_t> & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(m_patchRotated.basis(0));
+            gsTensorBSplineBasis<d, T> & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_patchRotated.basis(0));
             temp_L.knots(0).reverse(); // For different regularity
 
             // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-            gsTensorBSpline<2, real_t> newgeom1(temp_L.knots(1), temp_L.knots(0), mpar);
+            gsTensorBSpline<d, T> newgeom1(temp_L.knots(1), temp_L.knots(0), mpar);
 
             // Create a new single-patch object
-            gsMultiPatch<> newpatch(newgeom1);
+            gsMultiPatch<T> newpatch(newgeom1);
             m_patchRotated.swap(newpatch);
         }
-        else if (gsTensorNurbsBasis<2, real_t> * mb =
-                dynamic_cast<gsTensorNurbsBasis<2, real_t> *>(&m_patchRotated.basis(0)) )
+        else if (gsTensorNurbsBasis<d, T> * mb =
+                dynamic_cast<gsTensorNurbsBasis<d, T> *>(&m_patchRotated.basis(0)) )
         {
-            gsMatrix<> weight_rep(dimU * dimV, 1);
+            gsMatrix<T> weight_rep(dimU * dimV, 1);
             for (index_t j = (dimU - 1 ) ; j >= 0; j--)
             {   // Loop over the rows
                 for (index_t i = 0; i < dimV; i++)
@@ -191,18 +191,18 @@ public:
                 }
             }
 
-            gsTensorNurbsBasis<2, real_t> & temp_L = dynamic_cast<gsTensorNurbsBasis<2, real_t> &>(m_patchRotated.basis(0));
+            gsTensorNurbsBasis<d, T> & temp_L = dynamic_cast<gsTensorNurbsBasis<d, T> &>(m_patchRotated.basis(0));
             temp_L.knots(0).reverse(); // For different regularity
 
             // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-            gsTensorNurbs<2, real_t> newgeom1(temp_L.knots(1), temp_L.knots(0), mpar, weight_rep);
+            gsTensorNurbs<d, T> newgeom1(temp_L.knots(1), temp_L.knots(0), mpar, weight_rep);
 
             // Create a new single-patch object
-            gsMultiPatch<> newpatch(newgeom1);
+            gsMultiPatch<T> newpatch(newgeom1);
             m_patchRotated.swap(newpatch);
         }
         else
-            gsInfo << "Only gsTensorBSplineBasis<2, real_t> and gsTensorNurbsBasis<2, real_t> are implemented \n";
+            gsInfo << "Only gsTensorBSplineBasis<d, T> and gsTensorNurbsBasis<d, T> are implemented \n";
 
 
 
@@ -234,41 +234,41 @@ public:
     void rotateParamClock()
     {
 /*
-        gsTensorBSplineBasis<2, real_t> & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(m_patchRotated.basis(0));
-        gsBSplineBasis<> temp_basisLU = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(0));
-        gsBSplineBasis<> temp_basisLV = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(1));
+        gsTensorBSplineBasis<d, T> & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_patchRotated.basis(0));
+        gsBSplineBasis<T> temp_basisLU = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(0));
+        gsBSplineBasis<T> temp_basisLV = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(1));
         index_t dimU = temp_L.size(0);
         index_t dimV = temp_L.size(1);
 */
 
-        gsBasis<real_t> & temp_L_basis = m_patchRotated.basis(0);
+        gsBasis<T> & temp_L_basis = m_patchRotated.basis(0);
         index_t dimU = temp_L_basis.component(0).size();
         index_t dimV = temp_L_basis.component(1).size();
 
         // The number of cols has to match the dimension of the space
-        gsMatrix<> mpar(dimU * dimV, m_patchRotated.targetDim());
-        if (gsTensorBSplineBasis<2, real_t> * mb =
-                dynamic_cast<gsTensorBSplineBasis<2, real_t> *>(&m_patchRotated.basis(0)) )
+        gsMatrix<T> mpar(dimU * dimV, m_patchRotated.targetDim());
+        if (gsTensorBSplineBasis<d, T> * mb =
+                dynamic_cast<gsTensorBSplineBasis<d, T> *>(&m_patchRotated.basis(0)) )
         {
             for (index_t j = (dimU - 1 ) ; j >= 0; j--)
                 for (index_t i = 0; i < dimV; i++)
                     mpar.row(i + (dimU - j - 1) * dimV) = m_patchRotated.patch(0).coefs().row((dimV * dimU  -1 - j) - dimU * i);
 
 
-            gsTensorBSplineBasis<2, real_t> & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(m_patchRotated.basis(0));
+            gsTensorBSplineBasis<d, T> & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_patchRotated.basis(0));
             temp_L.knots(1).reverse(); // For different regularity
 
             // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-            gsTensorBSpline<2, real_t> newgeom1(temp_L.knots(1), temp_L.knots(0), mpar);
+            gsTensorBSpline<d, T> newgeom1(temp_L.knots(1), temp_L.knots(0), mpar);
 
             // Create a new single-patch object
-            gsMultiPatch<> newpatch(newgeom1);
+            gsMultiPatch<T> newpatch(newgeom1);
             m_patchRotated.swap(newpatch);
         }
-        else if (gsTensorNurbsBasis<2, real_t> * mb =
-                dynamic_cast<gsTensorNurbsBasis<2, real_t> *>(&m_patchRotated.basis(0)) )
+        else if (gsTensorNurbsBasis<d, T> * mb =
+                dynamic_cast<gsTensorNurbsBasis<d, T> *>(&m_patchRotated.basis(0)) )
         {
-            gsMatrix<> weight_rep(dimU * dimV, 1);
+            gsMatrix<T> weight_rep(dimU * dimV, 1);
             for (index_t j = (dimU - 1 ) ; j >= 0; j--)
             {   // Loop over the rows
                 for (index_t i = 0; i < dimV; i++)
@@ -278,18 +278,18 @@ public:
                 }
             }
 
-            gsTensorNurbsBasis<2, real_t> & temp_L = dynamic_cast<gsTensorNurbsBasis<2, real_t> &>(m_patchRotated.basis(0));
+            gsTensorNurbsBasis<d, T> & temp_L = dynamic_cast<gsTensorNurbsBasis<d, T> &>(m_patchRotated.basis(0));
             temp_L.knots(1).reverse(); // For different regularity
 
             // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-            gsTensorNurbs<2, real_t> newgeom1(temp_L.knots(1), temp_L.knots(0), mpar, weight_rep);
+            gsTensorNurbs<d, T> newgeom1(temp_L.knots(1), temp_L.knots(0), mpar, weight_rep);
 
             // Create a new single-patch object
-            gsMultiPatch<> newpatch(newgeom1);
+            gsMultiPatch<T> newpatch(newgeom1);
             m_patchRotated.swap(newpatch);
         }
         else
-            gsInfo << "Only gsTensorBSplineBasis<2, real_t> and gsTensorNurbsBasis<2, real_t> are implemented \n";
+            gsInfo << "Only gsTensorBSplineBasis<d, T> and gsTensorNurbsBasis<d, T> are implemented \n";
 
 
         // BASES
@@ -320,14 +320,14 @@ public:
     void rotateParamAntiClockTwice()
     {
 /*
-        gsTensorBSplineBasis<2, real_t> & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(m_patchRotated.basis(0));
-        gsBSplineBasis<> temp_basisLU = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(0));
-        gsBSplineBasis<> temp_basisLV = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(1));
+        gsTensorBSplineBasis<d, T> & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_patchRotated.basis(0));
+        gsBSplineBasis<T> temp_basisLU = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(0));
+        gsBSplineBasis<T> temp_basisLV = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(1));
         index_t dimU = temp_L.size(0);
         index_t dimV = temp_L.size(1);
 
         // The number of cols has to match the dimension of the space
-        gsMatrix<> mpar(dimU * dimV, m_patchRotated.targetDim());
+        gsMatrix<T> mpar(dimU * dimV, m_patchRotated.targetDim());
 
         for (index_t i = 0; i < ( dimU * dimV ); i++)
         {
@@ -337,58 +337,58 @@ public:
         temp_basisLV.knots().reverse(); // For different regularity
 
         // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-        gsTensorBSpline<2, real_t> newgeom1(temp_basisLU.knots(), temp_basisLV.knots(), mpar);
+        gsTensorBSpline<d, T> newgeom1(temp_basisLU.knots(), temp_basisLV.knots(), mpar);
 
         // Create a new single-patch object
-        gsMultiPatch<> newpatch(newgeom1);
+        gsMultiPatch<T> newpatch(newgeom1);
         m_patchRotated.swap(newpatch);
 */
-        gsBasis<real_t> & temp_L_basis = m_patchRotated.basis(0);
+        gsBasis<T> & temp_L_basis = m_patchRotated.basis(0);
         index_t dimU = temp_L_basis.component(0).size();
         index_t dimV = temp_L_basis.component(1).size();
 
         // The number of cols has to match the dimension of the space
-        gsMatrix<> mpar(dimU * dimV, m_patchRotated.targetDim());
-        if (gsTensorBSplineBasis<2, real_t> * mb =
-                dynamic_cast<gsTensorBSplineBasis<2, real_t> *>(&m_patchRotated.basis(0)) )
+        gsMatrix<T> mpar(dimU * dimV, m_patchRotated.targetDim());
+        if (gsTensorBSplineBasis<d, T> * mb =
+                dynamic_cast<gsTensorBSplineBasis<d, T> *>(&m_patchRotated.basis(0)) )
         {
             for (index_t i = 0; i < ( dimU * dimV ); i++)
                 mpar.row(i) = m_patchRotated.patch(0).coefs().row((dimU * dimV - 1) - i);
 
-            gsTensorBSplineBasis<2, real_t> & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(m_patchRotated.basis(0));
+            gsTensorBSplineBasis<d, T> & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_patchRotated.basis(0));
             temp_L.knots(0).reverse(); // For different regularity
             temp_L.knots(1).reverse(); // For different regularity
 
             // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-            gsTensorBSpline<2, real_t> newgeom1(temp_L.knots(0), temp_L.knots(1), mpar);
+            gsTensorBSpline<d, T> newgeom1(temp_L.knots(0), temp_L.knots(1), mpar);
 
             // Create a new single-patch object
-            gsMultiPatch<> newpatch(newgeom1);
+            gsMultiPatch<T> newpatch(newgeom1);
             m_patchRotated.swap(newpatch);
         }
-        else if (gsTensorNurbsBasis<2, real_t> * mb =
-                dynamic_cast<gsTensorNurbsBasis<2, real_t> *>(&m_patchRotated.basis(0)) )
+        else if (gsTensorNurbsBasis<d, T> * mb =
+                dynamic_cast<gsTensorNurbsBasis<d, T> *>(&m_patchRotated.basis(0)) )
         {
-            gsMatrix<> weight_rep(dimU * dimV, 1);
+            gsMatrix<T> weight_rep(dimU * dimV, 1);
             for (index_t i = 0; i < ( dimU * dimV ); i++)
             {
                 mpar.row(i) = m_patchRotated.patch(0).coefs().row((dimU * dimV - 1) - i);
                 weight_rep.row(i) = mb->weights().row((dimU * dimV - 1) - i);
             }
 
-            gsTensorNurbsBasis<2, real_t> & temp_L = dynamic_cast<gsTensorNurbsBasis<2, real_t> &>(m_patchRotated.basis(0));
+            gsTensorNurbsBasis<d, T> & temp_L = dynamic_cast<gsTensorNurbsBasis<d, T> &>(m_patchRotated.basis(0));
             temp_L.knots(0).reverse(); // For different regularity
             temp_L.knots(1).reverse(); // For different regularity
 
             // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-            gsTensorNurbs<2, real_t> newgeom1(temp_L.knots(0), temp_L.knots(1), mpar, weight_rep);
+            gsTensorNurbs<d, T> newgeom1(temp_L.knots(0), temp_L.knots(1), mpar, weight_rep);
 
             // Create a new single-patch object
-            gsMultiPatch<> newpatch(newgeom1);
+            gsMultiPatch<T> newpatch(newgeom1);
             m_patchRotated.swap(newpatch);
         }
         else
-            gsInfo << "Only gsTensorBSplineBasis<2, real_t> and gsTensorNurbsBasis<2, real_t> are implemented \n";
+            gsInfo << "Only gsTensorBSplineBasis<d, T> and gsTensorNurbsBasis<d, T> are implemented \n";
 
 
         // Map Index
@@ -412,7 +412,7 @@ public:
         checkRotation();
     }
 
-    void parametrizeBasisBack(gsMultiPatch<> & g1Basis)
+    void parametrizeBasisBack(gsMultiPatch<T> & g1Basis)
     {
         switch (rotationNum)
         {
@@ -440,49 +440,49 @@ public:
 
     }
 
-    void rotateBasisAntiClockTwice(gsMultiPatch<> & g1Basis)
+    void rotateBasisAntiClockTwice(gsMultiPatch<T> & g1Basis)
     {
-        gsMultiPatch<> newpatch;
+        gsMultiPatch<T> newpatch;
         for(size_t np = 0; np < g1Basis.nPatches(); np++)
         {
-            gsMultiBasis<> auxBase(g1Basis.patch(np));
-            gsTensorBSplineBasis<2, real_t>
-                & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(auxBase.basis(0));
-            gsBSplineBasis<> temp_basisLU = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(0));
-            gsBSplineBasis<> temp_basisLV = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(1));
+            gsMultiBasis<T> auxBase(g1Basis.patch(np));
+            gsTensorBSplineBasis<d, T>
+                & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(auxBase.basis(0));
+            gsBSplineBasis<T> temp_basisLU = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(0));
+            gsBSplineBasis<T> temp_basisLV = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(1));
             index_t dimU = temp_L.size(0);
             index_t dimV = temp_L.size(1);
 
             // The number of cols has to match the dimension of the space
-            gsMatrix<> mpar(dimU * dimV, g1Basis.patch(np).targetDim());
+            gsMatrix<T> mpar(dimU * dimV, g1Basis.patch(np).targetDim());
 
             for (index_t i = 0; i < (dimU * dimV); i++)
             {
                 mpar.row(i) = g1Basis.patch(np).coefs().row((dimU * dimV - 1) - i);
             }
             // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-            gsTensorBSpline<2, real_t> newgeom1(temp_basisLU.knots(), temp_basisLV.knots(), mpar);
+            gsTensorBSpline<d, T> newgeom1(temp_basisLU.knots(), temp_basisLV.knots(), mpar);
 
             newpatch.addPatch(newgeom1);
         }
         g1Basis.swap(newpatch);
     }
 
-    void rotateBasisAntiClock(gsMultiPatch<> & g1Basis)
+    void rotateBasisAntiClock(gsMultiPatch<T> & g1Basis)
     {
-        gsMultiPatch<> newpatch;
+        gsMultiPatch<T> newpatch;
         for(size_t np = 0; np < g1Basis.nPatches(); np++)
         {
-            gsMultiBasis<> auxBase(g1Basis.patch(np));
-            gsTensorBSplineBasis<2, real_t>
-                & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(auxBase.basis(0));
-            gsBSplineBasis<> temp_basisLU = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(0));
-            gsBSplineBasis<> temp_basisLV = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(1));
+            gsMultiBasis<T> auxBase(g1Basis.patch(np));
+            gsTensorBSplineBasis<d, T>
+                & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(auxBase.basis(0));
+            gsBSplineBasis<T> temp_basisLU = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(0));
+            gsBSplineBasis<T> temp_basisLV = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(1));
             index_t dimU = temp_L.size(0);
             index_t dimV = temp_L.size(1);
 
             // The number of cols has to match the dimension of the space
-            gsMatrix<> mpar(dimU * dimV, g1Basis.patch(np).targetDim());
+            gsMatrix<T> mpar(dimU * dimV, g1Basis.patch(np).targetDim());
 
             // Loop over the cols
             for (index_t j = 0; j < dimU; j++)
@@ -494,28 +494,28 @@ public:
             }
 
             // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-            gsTensorBSpline<2, real_t> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
+            gsTensorBSpline<d, T> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
 
             newpatch.addPatch(newgeom1);
         }
         g1Basis.swap(newpatch);
     }
 
-    void rotateBasisClock(gsMultiPatch<> & g1Basis)
+    void rotateBasisClock(gsMultiPatch<T> & g1Basis)
     {
-        gsMultiPatch<> newpatch;
+        gsMultiPatch<T> newpatch;
         for(size_t np = 0; np < g1Basis.nPatches(); np++)
         {
-            gsMultiBasis<> auxBase(g1Basis.patch(np));
-            gsTensorBSplineBasis<2, real_t>
-                & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(auxBase.basis(0));
-            gsBSplineBasis<> temp_basisLU = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(0));
-            gsBSplineBasis<> temp_basisLV = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(1));
+            gsMultiBasis<T> auxBase(g1Basis.patch(np));
+            gsTensorBSplineBasis<d, T>
+                & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(auxBase.basis(0));
+            gsBSplineBasis<T> temp_basisLU = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(0));
+            gsBSplineBasis<T> temp_basisLV = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(1));
             index_t dimU = temp_L.size(0);
             index_t dimV = temp_L.size(1);
 
             // The number of cols has to match the dimension of the space
-            gsMatrix<> mpar(dimU * dimV, g1Basis.patch(np).targetDim());
+            gsMatrix<T> mpar(dimU * dimV, g1Basis.patch(np).targetDim());
 
             for (index_t j = (dimU - 1); j >= 0; j--)
             {   // Loop over the rows
@@ -527,27 +527,27 @@ public:
             }
 
             // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-            gsTensorBSpline<2, real_t> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
+            gsTensorBSpline<d, T> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
 
             newpatch.addPatch(newgeom1);
         }
         g1Basis.swap(newpatch);
     }
 
-    void swapBasisAxis(gsMultiPatch<> & g1Basis)
+    void swapBasisAxis(gsMultiPatch<T> & g1Basis)
     {
-        gsMultiPatch<> newpatch;
+        gsMultiPatch<T> newpatch;
         for(size_t np = 0; np < g1Basis.nPatches(); np++)
         {
-            gsMultiBasis<> auxBase(g1Basis.patch(np));
-            gsTensorBSplineBasis<2, real_t> & temp_L = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(auxBase.basis(0));
-            gsBSplineBasis<> temp_basisLU = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(0));
-            gsBSplineBasis<> temp_basisLV = dynamic_cast<gsBSplineBasis<> &>(temp_L.component(1));
+            gsMultiBasis<T> auxBase(g1Basis.patch(np));
+            gsTensorBSplineBasis<d, T> & temp_L = dynamic_cast<gsTensorBSplineBasis<d, T> &>(auxBase.basis(0));
+            gsBSplineBasis<T> temp_basisLU = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(0));
+            gsBSplineBasis<T> temp_basisLV = dynamic_cast<gsBSplineBasis<T> &>(temp_L.component(1));
             index_t dimU = temp_L.size(0);
             index_t dimV = temp_L.size(1);
 
             // The number of cols has to match the dimension of the space
-            gsMatrix<> mpar(dimU * dimV, g1Basis.patch(np).targetDim());
+            gsMatrix<T> mpar(dimU * dimV, g1Basis.patch(np).targetDim());
 
             for (index_t j = 0; j < dimU; j++)
             {   // Loop over the rows
@@ -558,7 +558,7 @@ public:
             }
 
             // Create a new geometry starting from kntot vectors and the matrix of the coefficients reparametrized
-            gsTensorBSpline<2, real_t> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
+            gsTensorBSpline<d, T> newgeom1(temp_basisLV.knots(), temp_basisLU.knots(), mpar);
 
             newpatch.addPatch(newgeom1);
         }
