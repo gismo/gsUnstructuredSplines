@@ -186,7 +186,7 @@ namespace gismo
     template<short_t d,class T>
     void gsApproxC1Edge<d,T>::computeAuxTopology()
     {
-        for(index_t i = 0; i <  m_auxPatches.size(); i++)
+        for(size_t i = 0; i <  m_auxPatches.size(); i++)
         {
             if(m_auxPatches[i].getPatchRotated().orientation() == -1)
                 m_auxPatches[i].swapAxis();
