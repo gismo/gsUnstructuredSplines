@@ -63,7 +63,7 @@ public:
         gsMatrix<T> ones(1, md.points.cols());
         ones.setOnes();
 
-        gsMatrix<T> lam = ones / 100000000000;
+        gsMatrix<T> lam = ones / math::pow(10,math::ceil(REAL_DIG/2)); // penalty to enforce that alphaL and alphaR will be close to 1. THe penalty depends on the numerical precision
 
         gsMatrix<T> DuFR(FR.targetDim(), md.points.cols());
         gsMatrix<T> DvFR(FR.targetDim(), md.points.cols());
@@ -213,7 +213,7 @@ public:
 
         gsMatrix<T> alpha_R_L = alpha_R.cwiseProduct(alpha_L);
 
-        gsMatrix<T> lamB = ones / 100000000;
+        gsMatrix<T> lamB = ones / math::pow(10,math::ceil(REAL_DIG/2)); // penalty to enforce that alphaL and alphaR will be close to 1. THe penalty depends on the numerical precision
 
         basisDataBeta.setZero(numActiveBeta * numActiveBeta, md.points.cols());
         rhsValsBeta.setZero(numActiveBeta, md.points.cols());

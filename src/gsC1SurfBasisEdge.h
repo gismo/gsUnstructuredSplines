@@ -25,8 +25,8 @@ namespace gismo
         typedef gsAssembler<T> Base;
 
     public:
-        gsC1SurfBasisEdge(gsMultiPatch<T> mp, // single patch
-                        gsMultiBasis<T> basis, // single basis
+        gsC1SurfBasisEdge(const gsMultiPatch<T> & mp, // single patch
+                          const gsMultiBasis<T> & basis, // single basis
                         index_t uv, // !!! 0 == u; 1 == v !!!
                         bool isBoundary,
                         gsC1SurfGluingData<T> gluingD)

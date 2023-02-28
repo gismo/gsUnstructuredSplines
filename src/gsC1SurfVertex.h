@@ -775,7 +775,7 @@ public:
 //                gsMultiPatch<T> temp_mp_g1 = g1BasisVector[i];
 //                for (index_t  bf = 0; bf < temp_mp_g1.nPatches(); bf++)
 //                {
-////                    gsInfo << "coeffbf: " << temp_mp_g1.patch(bf).coefs().transpose() << "\n";
+////                    gsDebug << "coeffbf: " << temp_mp_g1.patch(bf).coefs().transpose() << "\n";
 //                    gsMatrix<T> coef_bf;
 //                    coef_bf.setZero(temp_mp_g1.patch(bf).coefs().dim().first,1);
 //                    for (index_t  lambda = 0; lambda < temp_mp_g1.nPatches(); lambda++)
@@ -806,7 +806,7 @@ public:
                 coefs_temp.setZero(auxGeom[i].getG1Basis().patch(ii).coefs().rows(),1);
                 for (index_t j = 0; j < auxGeom[i].getG1Basis().patch(ii).coefs().rows(); j++)
                 {
-                    if (auxGeom[i].getG1Basis().patch(ii).coefs().at(j)*auxGeom[i].getG1Basis().patch(ii).coefs().at(j) > 1e-25)
+                    if (!math::almostEqual(auxGeom[i].getG1Basis().patch(ii).coefs().at(j)*auxGeom[i].getG1Basis().patch(ii).coefs().at(j),T(0)))
                         coefs_temp(j,0) = auxGeom[i].getG1Basis().patch(ii).coefs()(j,0);
                 }
                 auxGeom[i].getG1Basis().patch(ii).setCoefs(coefs_temp);
@@ -922,7 +922,7 @@ public:
             dofsCorner = 0;  // With Neumann
         }
 
-        gsInfo << "Det: " << matrix_det.determinant() << "\n";
+        gsDebug << "Det: " << matrix_det.determinant() << "\n";
 
         gsMatrix<T> coefs_corner(dim_mat, 6);
         coefs_corner.setZero();
@@ -938,11 +938,11 @@ public:
                     for (index_t j = 0; j < 6; ++j)
                     {
                         T coef_temp = auxGeom[patchID[bdy_index]].getG1Basis().patch(j).coef(i*dim_u[bdy_index], 0); // v = 0
-                        if (coef_temp * coef_temp > 1e-25)
+                        if (!math::almostEqual(coef_temp * coef_temp,T(0)))
                             coefs_corner(shift_row+i, j) = coef_temp;
 
                         coef_temp = auxGeom[patchID[bdy_index]].getG1Basis().patch(j).coef(i*dim_u[bdy_index] +1, 0); // v = 0
-                        if (coef_temp * coef_temp > 1e-25)
+                        if (!math::almostEqual(coef_temp * coef_temp,T(0)))
                             coefs_corner(shift_row_neumann + shift_row+i, j) = coef_temp;
 
                     }
@@ -958,11 +958,11 @@ public:
                     for (index_t j = 0; j < 6; ++j)
                     {
                         T coef_temp = auxGeom[patchID[bdy_index]].getG1Basis().patch(j).coef(i, 0); // v = 0
-                        if (coef_temp * coef_temp > 1e-25)
+                        if (!math::almostEqual(coef_temp * coef_temp,T(0)))
                             coefs_corner(shift_row+i, j) = coef_temp;
 
                         coef_temp = auxGeom[patchID[bdy_index]].getG1Basis().patch(j).coef(i+dim_u[bdy_index], 0); // v = 0
-                        if (coef_temp * coef_temp > 1e-25)
+                        if (!math::almostEqual(coef_temp * coef_temp,T(0)))
                             coefs_corner(shift_row_neumann + shift_row+i, j) = coef_temp;
 
                     }
@@ -978,11 +978,11 @@ public:
                 for (index_t j = 0; j < 6; ++j)
                 {
                     T coef_temp = auxGeom[patchID_iFace[iFace_index]].getG1Basis().patch(j).coef(i, 0); // v = 0
-                    if (coef_temp * coef_temp > 1e-25)
+                    if (!math::almostEqual(coef_temp * coef_temp,T(0)))
                         coefs_corner(shift_row + i, j) = coef_temp;
                     coef_temp = auxGeom[patchID_iFace[iFace_index]].getG1Basis().patch(j).coef(i + dim_u_iFace[iFace_index],
                                                                                       0); // v = 0
-                    if (coef_temp * coef_temp > 1e-25)
+                    if (!math::almostEqual(coef_temp * coef_temp,T(0)))
                         coefs_corner(shift_row + 2 + i, j) = coef_temp; //  +2 bcs of the previous adding
                 }
             }
@@ -995,12 +995,12 @@ public:
             T threshold = 1e-10;
             Eigen::FullPivLU<gsMatrix<T>> KernelCorner(coefs_corner);
             KernelCorner.setThreshold(threshold);
-            //gsInfo << "Coefs: " << coefs_corner << "\n";
+            //gsDebug << "Coefs: " << coefs_corner << "\n";
             while (KernelCorner.dimensionOfKernel() < dofsCorner) {
                 threshold += 1e-8;
                 KernelCorner.setThreshold(threshold);
             }
-            gsInfo << "Dimension of Kernel: " << KernelCorner.dimensionOfKernel() << " With " << threshold << "\n";
+            gsDebug << "Dimension of Kernel: " << KernelCorner.dimensionOfKernel() << " With " << threshold << "\n";
 
             gsMatrix<T> vertBas;
             vertBas.setIdentity(6, 6);
@@ -1023,7 +1023,7 @@ public:
         else
             kernel.setIdentity(6, 6);
 
-        gsInfo << "NumDofs: " << dofsCorner << " with Kernel: \n" << kernel << "\n";
+        gsDebug << "NumDofs: " << dofsCorner << " with Kernel: \n" << kernel << "\n";
 
         for(size_t  np = 0; np < auxGeom.size(); np++)
         {
@@ -1035,7 +1035,7 @@ public:
                 gsMatrix<T> coef_bf;
                 coef_bf.setZero(dim_uv, 1);
                 for (index_t i = 0; i < 6; ++i)
-                    if (kernel(i, j) * kernel(i, j) > 1e-25)
+                    if (!math::almostEqual(kernel(i, j) * kernel(i, j),T(0)))
                         coef_bf += temp_result_0.patch(i).coefs() * kernel(i, j);
 
 

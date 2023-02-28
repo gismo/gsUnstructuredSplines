@@ -36,7 +36,7 @@ namespace gismo
         // Check requirements
         for (size_t p=0; p!=m_multiBasis.nBases(); p++)
         {
-            gsTensorBSplineBasis<d, T> * basis_patch = dynamic_cast<gsTensorBSplineBasis<d, T> *>(&m_multiBasis.basis(p));
+            gsTensorBSplineBasis<d, T> * basis_patch = dynamic_cast<gsTensorBSplineBasis<d, T> *>(&m_patches.basis(p));
             index_t degree;
             for (short_t dd = 0; dd!=d; dd++)
             {
@@ -264,10 +264,7 @@ namespace gismo
                     index_t jj = 0;
                     for (index_t j = begin_col; j < end_col; ++j, ++jj) {
                         if (basisVertex[pInd].patch(ii).coef(jj, 0) * basisVertex[pInd].patch(ii).coef(jj, 0) > 1e-25)
-                        {
                             m_matrix.insert(shift_row + ii, shift_col + j) = basisVertex[pInd].patch(ii).coef(jj, 0);
-                        }
-
                     }
                 }
             }
