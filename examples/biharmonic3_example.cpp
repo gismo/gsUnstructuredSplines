@@ -255,7 +255,7 @@ void computeStabilityParameter(gsMultiPatch<> mp, gsMultiBasis<> dbasis, gsMatri
         Eigen::MatrixXd BB = B2.matrix().toDense().cast<double>();
         Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXd> ges(AA, BB);
 
-        real_t m_h      = dbasis_temp.basis(0).getMinCellLength(); //*dbasis.basis(0).getMinCellLength();
+        real_t m_h      = dbasis_temp.basis(0).getMinCellLength(); // dbasis.basis(0).getMinCellLength();
         mu_interfaces(i,0) = 16.0 * m_h * ges.eigenvalues().array().maxCoeff();
 /*
         gsSparseSolver<>::SimplicialLDLT sol;
@@ -759,7 +759,7 @@ int main(int argc, char *argv[])
             for ( typename gsMultiPatch<real_t>::const_iiterator it = geom.iBegin(); it != geom.iEnd(); ++it, ++i)
             {
                 real_t stab     = 4 * ( dbasis.maxCwiseDegree() + dbasis.dim() ) * ( dbasis.maxCwiseDegree() + 1 );
-                real_t m_h      = dbasis.basis(0).getMinCellLength(); //*dbasis.basis(0).getMinCellLength();
+                real_t m_h      = dbasis.basis(0).getMinCellLength(); // dbasis.basis(0).getMinCellLength();
                 real_t mu       = 2 * stab / m_h;
                 real_t alpha = 1;
 
@@ -831,7 +831,7 @@ int main(int argc, char *argv[])
 
         h2err[r]= h1err[r] +
                  math::sqrt(ev.integral( ( ihess(u_ex) - ihess(u_sol,G) ).sqNorm() * meas(G) )); // /ev.integral( ihess(f).sqNorm()*meas(G) )
-
+/*
         if (method != MethodFlags::NITSCHE)
         {
             gsMatrix<real_t> solFull;
@@ -883,7 +883,7 @@ int main(int argc, char *argv[])
             //Eigen::SparseMatrix<double> mat = A.matrix().cast<double>();
 
             //Eigen::EigenSolver<Eigen::MatrixXd> es;
-            //es.compute(mat, /* computeEigenvectors = */ false);
+            //es.compute(mat,  computeEigenvectors =  false);
             //cond_num[r] = es.eigenvalues().real().maxCoeff() / es.eigenvalues().real().minCoeff();
 
             //Eigen::JacobiSVD<Eigen::SparseMatrix<double>> svd(mat);
@@ -910,7 +910,7 @@ int main(int argc, char *argv[])
             gsInfo << "Cond Number: " << eigenvalues.bottomRows(1)(0,0)/ eigenvalues(0,0) << "\n";
             cond_num[r] = eigenvalues.bottomRows(1)(0,0)/ eigenvalues(0,0);
             //cond_num[r] = cg.getConditionNumber();
-/*
+
             gsMatrix<> x, x2;
             x.setRandom( A.matrix().rows(), 1 );
 
@@ -939,12 +939,14 @@ int main(int argc, char *argv[])
             gsInfo << "min_ev: " << min_ev << "\n";
             gsInfo << "Cond: " << max_ev/min_ev << "\n";
             cond_num[r] = max_ev/min_ev;
-*/
+
 #endif
         }
         else
             cond_num[r] = 0;
 
+       }
+*/
         err_time += timer.stop();
         gsInfo<< ". " <<std::flush; // Error computations done
     } //for loop

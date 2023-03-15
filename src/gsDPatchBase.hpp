@@ -1600,17 +1600,17 @@ namespace gismo
 #pragma omp parallel
 {
         #pragma omp parallel for collapse(2)
-        for (size_t p=0; p!=m_patches.nPatches(); p++)
+        for (size_t p=0; p<m_patches.nPatches(); p++)
             for (index_t c=1; c<5; c++)
                 _handleVertex(patchCorner(p,c));
 
         #pragma omp parallel for
-        for(gsBoxTopology::const_iiterator iit = m_patches.iBegin(); iit!= m_patches.iEnd(); iit++)
+        for(gsBoxTopology::const_iiterator iit = m_patches.iBegin(); iit< m_patches.iEnd(); iit++)
             _handleInterface(*iit);
 
         // boundaries
         #pragma omp parallel for
-        for(gsBoxTopology::const_biterator bit = m_patches.bBegin(); bit!= m_patches.bEnd(); bit++)
+        for(gsBoxTopology::const_biterator bit = m_patches.bBegin(); bit< m_patches.bEnd(); bit++)
             _handleBoundary(*bit);
 
         _handleInterior();
