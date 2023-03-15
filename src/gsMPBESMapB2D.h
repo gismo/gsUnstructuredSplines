@@ -38,12 +38,12 @@ namespace gismo
 template<short_t d,class T>
 class gsMPBESMapB2D : public gsMPBESMapTensor<d,T>
 {
-    //static const int d = 2;
+    //static const index_t d = 2;
 private:
     typedef gsBasis<T> BasisType;
     typedef gsMPBESMapTensor<d,T> Base;
 public:
-    gsMPBESMapB2D(int incrSmoothnessDegree, gsBoxTopology * topol, gsMPBESBasis<d,T> * basis) :
+    gsMPBESMapB2D(index_t incrSmoothnessDegree, gsBoxTopology * topol, gsMPBESBasis<d,T> * basis) :
         Base(incrSmoothnessDegree,topol,basis)
     { }
 
@@ -68,10 +68,10 @@ private:
     bool _checkMapping() const
     {
         bool consistent = true;
-//        for(int i=0;i<m_local_to_global.rows();i++)
+//        for(index_t i=0;i<m_local_to_global.rows();i++)
 //        {
 //            IndexContainer globals = _local2global(i);
-//            int size=globals.size();
+//            index_t size=globals.size();
 //            if(size!=1&&size!=2&&(size!=degree(0)&&size!=degree(1))&&size>degree(0)&&size>degree(1))
 //            {
 ////                std::cout << "Error in " << i << ".th row:";
@@ -81,10 +81,10 @@ private:
 ////                GISMO_ERROR("mapping wrong");
 //            }
 //        }
-//        for(int i=0;i<m_local_to_global.cols();i++)
+//        for(index_t i=0;i<m_local_to_global.cols();i++)
 //        {
 //            IndexContainer locals = _global2local(i);
-//            int size=locals.size();
+//            index_t size=locals.size();
 //            if(size!=1&&size!=4)
 //            {
 //                std::cout << "Error in " << i << ".th col:";
@@ -98,14 +98,14 @@ private:
 
     void _finalize() const
     {
-        gsSparseMatrix<real_t> mat=m_mapper->asMatrix();
+        gsSparseMatrix<T> mat=m_mapper->asMatrix();
         mat.conservativeResize(mat.rows(),m_global);
         delete m_mapper;
         m_mapper=new gsWeightMapper<T>(mat);
         m_mapper->optimize(gsWeightMapper<T>::optTargetToSource);
     }
 
-    void _setMappingOfPatch(unsigned const patch) const
+    void _setMappingOfPatch(index_t const patch) const
     {
         _setTensorMappingOfPatch(patch);
     }
@@ -114,12 +114,12 @@ private:
     {
         std::vector<T> endpoints;
         T parametricDistance = m_basis->getParametricDistanceOfVertex(pc,ps);
-        int patch = ps.patch;
+        index_t patch = ps.patch;
 
         if(math::almostEqual<T>(parametricDistance,0.0))
             return 0;
 
-        unsigned deg = m_basis->degree(patch,1-(ps.direction()));
+        index_t deg = m_basis->degree(patch,1-(ps.direction()));
         gsKnotVector<T> knots = TO_BSPLINE(&(m_basis->getBase(patch)))->knots(1-(ps.direction()));
         gsVector<bool> pars;
         pc.parameters_into(d,pars);
@@ -128,8 +128,8 @@ private:
         for(size_t i = deg+1;i<knots.size();i++)
             endpoints.push_back(knots.at(i));
         std::sort(endpoints.begin(),endpoints.end());
-        unsigned nr=0;
-        for(;nr<endpoints.size();nr++)
+        index_t nr=0;
+        for(;nr<(index_t)(endpoints.size());nr++)
             if(math::almostEqual<T>(endpoints[nr],parametricDistance)||endpoints[nr]>=parametricDistance)
                 break;
         return nr+1;
@@ -141,12 +141,12 @@ private:
     // functions calculating the weights for the mapping
     //////////////////////////////////////////////////
 
-    gsKnotVector<T> _getKnotVector(unsigned const patch,unsigned const par) const
+    gsKnotVector<T> _getKnotVector(index_t const patch,index_t const par) const
     {
         return TO_BSPLINE(&(m_basis->getBase(patch)))->knots(par);
     }
 
-    index_t _getParMax(unsigned patch,bool par) const
+    index_t _getParMax(index_t patch,bool par) const
     {
         return TO_BSPLINE(&(m_basis->getBase(patch)))->size(par)-1;
     }
@@ -156,21 +156,21 @@ private:
     // functions for working with Indexes
     //////////////////////////////////////////////////
 
-    bool _getLocalIndex_into(unsigned const patch,unsigned const u,unsigned const v,unsigned & localIndex) const
+    bool _getLocalIndex_into(index_t const patch,index_t const u,index_t const v,index_t & localIndex) const
     {
         localIndex=_getLocalIndex(patch,u,v);
         return true;
     }
 
-    index_t _getLocalIndex(unsigned const patch,unsigned u, unsigned v) const
+    index_t _getLocalIndex(index_t const patch,index_t u, index_t v) const
     {
         return _getLocalIndex(patch,_getPatchIndex(patch,u,v));
     }
 
-    index_t _getPatchIndex(unsigned const patch,boxSide const side,bool const flag) const
+    index_t _getPatchIndex(index_t const patch,boxSide const side,bool const flag) const
     {
-        unsigned u_amount=_getParMax(patch,0);
-        unsigned v_amount=_getParMax(patch,1);
+        index_t u_amount=_getParMax(patch,0);
+        index_t v_amount=_getParMax(patch,1);
         if(side.direction())
             if(side.parameter())
                 return _getPatchIndex(patch,flag?u_amount:0,v_amount);
@@ -183,7 +183,7 @@ private:
                 return _getPatchIndex(patch,0,flag?v_amount:0);
     }
 
-    index_t _getPatchIndex(unsigned const patch,unsigned const u,unsigned const v) const
+    index_t _getPatchIndex(index_t const patch,index_t const u,index_t const v) const
     {
         gsVector<index_t,d> vec;
         vec(0)=u,vec(1)=v;
@@ -195,7 +195,7 @@ private:
         return _getPar(_getPatch(localIndex),_getPatchIndex(localIndex),par);
     }
 
-    index_t _getPar(unsigned patch,unsigned patchIndex, bool par) const
+    index_t _getPar(index_t patch,index_t patchIndex, bool par) const
     {
         gsVector<index_t,d> vec = TO_BSPLINE(&(m_basis->getBase(patch)))->tensorIndex(patchIndex);
         return vec(par);

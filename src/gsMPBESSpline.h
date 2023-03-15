@@ -35,9 +35,9 @@ public:
     /// Construct B-Spline by basis and coefficient matrix
     gsMPBESSpline( const gsMPBESBasis<d,T> & basis, const gsMatrix<T> & coefs );
 
-    gsMPBESSpline( gsMultiPatch<T> const & mp,int incrSmoothness = -1,int minEVDistance = -1 );
+    gsMPBESSpline( gsMultiPatch<T> const & mp,index_t incrSmoothness = -1,index_t minEVDistance = -1 );
 
-    gsMPBESSpline( gsMultiPatch<T> const & mp,std::vector<patchCorner> C0List,int incrSmoothness = -1,int minEVDistance = -1 );
+    gsMPBESSpline( gsMultiPatch<T> const & mp,std::vector<patchCorner> C0List,index_t incrSmoothness = -1,index_t minEVDistance = -1 );
 
     ~gsMPBESSpline() {   } //destructor
 
@@ -50,7 +50,7 @@ public:
 
     void smoothEverything();
 
-    virtual void uniformRefine(int numKnots=1, int mul=1);
+    virtual void uniformRefine(index_t numKnots=1, index_t mul=1);
 
     void refine(const index_t patch, const gsMatrix<T> &boxes);
 
@@ -58,7 +58,7 @@ public:
 
     void refineElements(std::vector<std::vector<index_t> > const & boxes);
 
-    void uniformRefineAndSmooth(int numKnots=1);
+    void uniformRefineAndSmooth(index_t numKnots=1);
 
     void refineAndSmooth(const index_t patch, const gsMatrix<T> &boxes);
 

@@ -461,7 +461,7 @@ int main(int argc, char *argv[])
     }
 
     gsMultiPatch<> geom = mp;
-    gsMultiPatch<> geom0;
+    gsMultiPatch<> geom0 = mp;
 
     //! [Read XML file]
 
@@ -599,12 +599,14 @@ int main(int argc, char *argv[])
         else if (method == MethodFlags::DPATCH)
         {
             mp.uniformRefine(1,degree-smoothness);
-            dbasis.uniformRefine(1,degree-smoothness);
 
             // Construct the D-Patch on mp
             gsSparseMatrix<real_t> global2local;
             gsDPatch<2,real_t> dpatch(mp);
-	    dpatch.compute();
+            dpatch.options().setInt("RefLevel",r);
+            dpatch.options().setInt("Pi",0);
+            dpatch.options().setSwitch("SharpCorners",false);
+            dpatch.compute();
             dpatch.matrix_into(global2local);
             global2local = global2local.transpose();
             geom = dpatch.exportToPatches();
@@ -612,35 +614,20 @@ int main(int argc, char *argv[])
             bb2.init(dbasis,global2local);
 
             ///////////////////////////////////////////
-            // Project the original geometry on dbasis
-            // Find the basis size
-            index_t size=0;
-            for (index_t p=0; p!=mp.nPatches(); p++)
-                size += mp.patch(p).coefs().rows();
-            // Do the projection on the coarsest obtained D-patch geometry (geom0)
             if (r>0)
             {
-                gsMatrix<> coefs;
-                gsL2Projection<real_t>::projectGeometry(dbasis,bb2,geom0,coefs);
-                gsMatrix<> allCoefs = global2local*coefs.reshape(global2local.cols(),mp.geoDim());
-
-                // Substitute all coefficients of geom with the newly obtained ones.
-                gsMultiBasis<> geombasis(geom);
-                gsDofMapper mapper(geombasis);
+                gsDofMapper mapper(dbasis);
                 mapper.finalize();
+                gsMatrix<> coefs;
+                gsL2Projection<real_t>::projectGeometry(dbasis,geom0,coefs);
+                coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
+
                 for (index_t p = 0; p != geom.nPatches(); p++)
-                {
                     for (index_t k=0; k!=mapper.patchSize(p); k++)
-                    {
-                        geom.patch(p).coefs().row(k) = allCoefs.row(mapper.index(k,p));
-                    }
-                }
+                        geom.patch(p).coefs().row(k) = coefs.row(mapper.index(k,p));
+
             }
-            else
-            {
-                geom = dpatch.exportToPatches();
-                geom0 = geom;
-            }
+            geom0 = geom;
         }
         else if (method == MethodFlags::ALMOSTC1)
         {
@@ -661,37 +648,20 @@ int main(int argc, char *argv[])
             dbasis = almostC1.localBasis();
             bb2.init(dbasis,global2local);
 
-            ///////////////////////////////////////////
-            // Project the original geometry on dbasis
-            // Find the basis size
-            index_t size=0;
-            for (index_t p=0; p!=mp.nPatches(); p++)
-                size += mp.patch(p).coefs().rows();
-            // Do the projection on the coarsest obtained D-patch geometry (geom0)
             if (r>0)
             {
-                gsMatrix<> coefs;
-                gsL2Projection<real_t>::projectGeometry(dbasis,bb2,geom0,coefs);
-                gsMatrix<> allCoefs = global2local*coefs.reshape(global2local.cols(),mp.geoDim());
-
-                // Substitute all coefficients of geom with the newly obtained ones.
-                gsMultiBasis<> geombasis(geom);
-                gsDofMapper mapper(geombasis);
+                gsDofMapper mapper(dbasis);
                 mapper.finalize();
+                gsMatrix<> coefs;
+                gsL2Projection<real_t>::projectGeometry(dbasis,geom0,coefs);
+                coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
+
                 for (index_t p = 0; p != geom.nPatches(); p++)
-                {
                     for (index_t k=0; k!=mapper.patchSize(p); k++)
-                    {
-                        geom.patch(p).coefs().row(k) = allCoefs.row(mapper.index(k,p));
-                    }
-                }
+                        geom.patch(p).coefs().row(k) = coefs.row(mapper.index(k,p));
+
             }
-            else
-            {
-                geom = almostC1.exportToPatches();
-                geom0 = geom;
-            }
-            gsWriteParaview<>(geom,"geom",1000,true);
+            geom0 = geom;
         }
         else if (method == MethodFlags::SURFASG1) // Andrea
         {
@@ -827,11 +797,11 @@ int main(int argc, char *argv[])
 
         l2err[r]= math::sqrt( ev.integral( (u_ex - u_sol).sqNorm() * meas(G) ) ); // / ev.integral(f.sqNorm()*meas(G)) );
         h1err[r]= l2err[r] +
-            math::sqrt(ev.integral( ( igrad(u_ex) - igrad(u_sol,G) ).sqNorm() * meas(G) )); // /ev.integral( igrad(f).sqNorm()*meas(G) ) );
+                math::sqrt(ev.integral( ( igrad(u_ex) - igrad(u_sol,G) ).sqNorm() * meas(G) ));
 
         h2err[r]= h1err[r] +
-                 math::sqrt(ev.integral( ( ihess(u_ex) - ihess(u_sol,G) ).sqNorm() * meas(G) )); // /ev.integral( ihess(f).sqNorm()*meas(G) )
-/*
+                math::sqrt(ev.integral( ( ihess(u_ex) - ihess(u_sol,G) ).sqNorm() * meas(G) )); // /ev.integral( ihess(f).sqNorm()*meas(G) )
+
         if (method != MethodFlags::NITSCHE)
         {
             gsMatrix<real_t> solFull;

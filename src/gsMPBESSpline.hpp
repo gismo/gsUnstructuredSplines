@@ -29,7 +29,7 @@ Base(basis,coefs)
 }
 
 template<short_t d,class T>
-gsMPBESSpline<d,T>::gsMPBESSpline( gsMultiPatch<T> const & mp,int incrSmoothness,int minEVDistance ) : Base()
+gsMPBESSpline<d,T>::gsMPBESSpline( gsMultiPatch<T> const & mp,index_t incrSmoothness,index_t minEVDistance ) : Base()
 {
     short_t geoDim = mp.geoDim();
     std::vector<gsMatrix<T> * > coefs;
@@ -38,7 +38,7 @@ gsMPBESSpline<d,T>::gsMPBESSpline( gsMultiPatch<T> const & mp,int incrSmoothness
     m_mbases=getCompBasisFromMultiPatch_withCoefs<d>(mp,coefs,incrSmoothness,minEVDistance);
     if(m_mbases==NULL)
         GISMO_ERROR("no known basis for gsMappedGeom");
-    int start = 0, end = -1;
+    index_t start = 0, end = -1;
     gsMatrix<T> localCoefs;
     localCoefs.resize(m_mbases->localSize(),geoDim);
     for(size_t i = 0;i<mp.nPatches();i++)
@@ -54,8 +54,8 @@ gsMPBESSpline<d,T>::gsMPBESSpline( gsMultiPatch<T> const & mp,int incrSmoothness
 template<short_t d,class T>
 gsMPBESSpline<d,T>::gsMPBESSpline(gsMultiPatch<T> const  & mp,
                                                                   std::vector<patchCorner> C0List,
-                                                                  int                      /*incrSmoothness*/,
-                                                                  int                      /*minEVDistance*/)
+                                                                  index_t                      /*incrSmoothness*/,
+                                                                  index_t                      /*minEVDistance*/)
                                                                   : Base()
 {
     short_t geoDim = mp.geoDim();
@@ -70,7 +70,7 @@ gsMPBESSpline<d,T>::gsMPBESSpline(gsMultiPatch<T> const  & mp,
         TO_INCRSMOOTHNESS(m_mbases)->setC0(C0List[i]);
     }
     TO_INCRSMOOTHNESS(m_mbases)->updateTopol();
-    int start = 0, end = -1;
+    index_t start = 0, end = -1;
     gsMatrix<T> localCoefs;
     localCoefs.resize(m_mbases->localSize(),geoDim);
     for(size_t i = 0;i<mp.nPatches();i++)
@@ -110,7 +110,7 @@ void gsMPBESSpline<d,T>::smoothEverything()
 }
 
 template<short_t d,class T>
-void gsMPBESSpline<d,T>::uniformRefine(int numKnots, int mul)
+void gsMPBESSpline<d,T>::uniformRefine(index_t numKnots, index_t mul)
 {
     gsMatrix<T> localCoefs;
     m_mbases->global_coef_to_local_coef(m_global,localCoefs);
@@ -155,7 +155,7 @@ void gsMPBESSpline<d,T>::refineElements(std::vector<std::vector<index_t> > const
 }
 
 template<short_t d,class T>
-void gsMPBESSpline<d,T>::uniformRefineAndSmooth(int numKnots)
+void gsMPBESSpline<d,T>::uniformRefineAndSmooth(index_t numKnots)
 {
     gsMatrix<T> localCoefs;
     m_mbases->global_coef_to_local_coef(m_global,localCoefs);

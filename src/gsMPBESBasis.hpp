@@ -134,9 +134,9 @@ bool gsMPBESBasis<d,T>::isConnected(indexType i,indexType j) const
 }
 
 template<short_t d, class T>
-void gsMPBESBasis<d,T>::uniformRefine(int numKnots, int mul,bool updateBasis)
+void gsMPBESBasis<d,T>::uniformRefine(index_t numKnots, index_t mul,bool updateBasis)
 {
-    int start, end = -1;
+    index_t start, end = -1;
     for (BasisIter it=m_bases.begin();it!=m_bases.end();++it)
     {
         start=end+1;
@@ -148,9 +148,9 @@ void gsMPBESBasis<d,T>::uniformRefine(int numKnots, int mul,bool updateBasis)
 }
 
 template<short_t d, class T>
-void gsMPBESBasis<d,T>::uniformRefine_withCoefs(gsMatrix<T>& coefs, int numKnots, int mul, bool updateBasis)
+void gsMPBESBasis<d,T>::uniformRefine_withCoefs(gsMatrix<T>& coefs, index_t numKnots, index_t mul, bool updateBasis)
 {
-    int start, end = -1, geoDim=coefs.cols(), totalLength = 0;
+    index_t start, end = -1, geoDim=coefs.cols(), totalLength = 0;
     std::vector<gsMatrix<T> *> newCoefs;
     for (BasisIter it=m_bases.begin();it!=m_bases.end();++it)
     {
@@ -240,7 +240,7 @@ void gsMPBESBasis<d,T>::repairPatches(gsMatrix<T> & localCoef, index_t startFrom
 {
     std::vector<gsMatrix<T> *> patchCoefs;
     unsigned geoDim = localCoef.cols();
-    int start, end = -1;
+    index_t start, end = -1;
     for (size_t i = 0; i < nPatches(); ++i)
     {
         start=end+1;
@@ -318,7 +318,7 @@ void gsMPBESBasis<d,T>::_setDistanceOfAllVertices()
     {
         const patchSide & ps = (*iter).first();
         gsVector<bool>pars(2);
-        int dir = ps.direction();
+        index_t dir = ps.direction();
         pars(dir  ) = ps.parameter();
         pars(1-dir)=0;
         patchCorner pc1 = patchCorner(ps.patch,pars);
@@ -384,8 +384,8 @@ T gsMPBESBasis<d,T>::getParametricDistanceOfVertex(const patchCorner& pc,const p
        param = findParameter(ps,pc,m_minDist);
     else
     {
-       const int deg=degree(pc.patch,1-ps.side().direction());
-       const unsigned degree = std::min<int>(deg,m_incrSmoothnessDegree+1);
+       const index_t deg=degree(pc.patch,1-ps.side().direction());
+       const unsigned degree = std::min<index_t>(deg,m_incrSmoothnessDegree+1);
        for(unsigned i=0;i<m_vertices.size();++i)
            if(pc==m_vertices[i].first)
                param = findParameter(ps,pc,degree);
@@ -401,8 +401,8 @@ gsMPBESBasis<d,T>::distances::distances(const boundaryInterface&  iface, const p
     const patchSide& ps = interface.first();
     const unsigned patch = ps.patch;
     const boxSide& side = ps.side();
-    const int deg=basis.degree(patch,1-side.direction());
-    const int max=basis.basisFunctionsOnSide(ps);
+    const index_t deg=basis.degree(patch,1-side.direction());
+    const index_t max=basis.basisFunctionsOnSide(ps);
 
     GISMO_ASSERT(d==2,"only works for dimension 2");
     std::vector<patchSide> psides;
@@ -413,8 +413,8 @@ gsMPBESBasis<d,T>::distances::distances(const boundaryInterface&  iface, const p
     psides.erase(std::remove(psides.begin(), psides.end(), ps), psides.end());
     const patchSide ps2 = psides[0];
 
-    const unsigned degree = std::min<int>(deg,basis.getIncrSmoothnessDegree()+1);
-    const int dist=std::max<int>(degree,basis.getMinDist());
+    const unsigned degree = std::min<index_t>(deg,basis.getIncrSmoothnessDegree()+1);
+    const index_t dist=std::max<index_t>(degree,basis.getMinDist());
     unsigned val1,val2;
 
     _determineValues(ps,ps1,ps2,dist,degree,max,val1,val2,basis);
@@ -469,12 +469,12 @@ T gsMPBESBasis<d,T>::distances::getParamDist(const patchCorner& pc,const gsMPBES
 }
 
 template<short_t d, class T>
-void gsMPBESBasis<d,T>::distances::_determineValues(patchSide side,patchSide ls,patchSide rs,int dist,unsigned degree,unsigned max,
+void gsMPBESBasis<d,T>::distances::_determineValues(patchSide side,patchSide ls,patchSide rs,index_t dist,unsigned degree,unsigned max,
                       unsigned& left,unsigned& right,const gsMPBESBasis<d,T>& basis) const
 {
     gsVector<bool>pars(2);
-    int dir = side.direction();
-    int par = side.parameter();
+    index_t dir = side.direction();
+    index_t par = side.parameter();
     pars(dir) = par==0 ? false : true;
     pars(1-dir)=ls.parameter();
     patchCorner pc1 = patchCorner(side.patch,pars);

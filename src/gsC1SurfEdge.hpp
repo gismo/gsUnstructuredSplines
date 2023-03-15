@@ -20,8 +20,8 @@ namespace gismo
 
     template<short_t d,class T>
     void gsC1SurfEdge<d,T>::computeAuxTopology(){
-        //gsMultiPatch<> auxTop;
-        for(unsigned i = 0; i <  auxGeom.size(); i++){
+        //gsMultiPatch<T> auxTop;
+        for(size_t i = 0; i <  auxGeom.size(); i++){
             if(auxGeom[i].getPatch().orientation() == -1)
             {
                 auxGeom[i].swapAxis();

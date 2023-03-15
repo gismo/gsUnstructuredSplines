@@ -25,24 +25,24 @@ namespace gismo
         typedef gsAssembler<T> Base;
 
     public:
-        gsC1SurfBasisEdge(gsMultiPatch<> mp, // single patch
-                        gsMultiBasis<> basis, // single basis
+        gsC1SurfBasisEdge(const gsMultiPatch<T> & mp, // single patch
+                          const gsMultiBasis<T> & basis, // single basis
                         index_t uv, // !!! 0 == u; 1 == v !!!
                         bool isBoundary,
-                        gsC1SurfGluingData<real_t> gluingD)
+                        gsC1SurfGluingData<T> gluingD)
                 : m_mp(mp), m_basis(basis), m_uv(uv), m_isBoundary(isBoundary), m_gD(gluingD)
         {
 
             // Computing the G1 - basis function at the edge
-            gsBSplineBasis<> basis_edge = dynamic_cast<gsBSplineBasis<> &>(m_basis.basis(0).component(m_uv)); // 0 -> v, 1 -> u
+            gsBSplineBasis<T> basis_edge = dynamic_cast<gsBSplineBasis<T> &>(m_basis.basis(0).component(m_uv)); // 0 -> v, 1 -> u
 
-            gsBSplineBasis<> basis_plus(basis_edge);
+            gsBSplineBasis<T> basis_plus(basis_edge);
             basis_plus.elevateContinuity(1);
             m_basis_plus = basis_plus;
             //gsDebugVar(basis_plus.knots().asMatrix());
 
 
-            gsBSplineBasis<> basis_minus(basis_edge);
+            gsBSplineBasis<T> basis_minus(basis_edge);
             basis_minus.degreeReduce(1);
             m_basis_minus = basis_minus;
             //gsDebugVar(basis_minus.knots().asMatrix());
@@ -50,7 +50,7 @@ namespace gismo
             // Basis for the G1 basis
             m_basis_g1 = m_basis.basis(0);
 
-//        gsTensorBSplineBasis<2, T> basis_edge_ab = dynamic_cast<gsTensorBSplineBasis<2, real_t> &>(m_basis_g1.basis(0));
+//        gsTensorBSplineBasis<2, T> basis_edge_ab = dynamic_cast<gsTensorBSplineBasis<2, T> &>(m_basis_g1.basis(0));
 //        gsInfo << "Basis edge 0: " << basis_edge_ab.component(0).knots().asMatrix() << "\n";
 //        gsInfo << "Basis edge 1: " << basis_edge_ab.component(1).knots().asMatrix() << "\n";
         }
@@ -63,7 +63,7 @@ namespace gismo
         inline void apply(bhVisitor & visitor, index_t i, std::string typeBf); // i == number of bf
         void solve();
 
-        void constructSolution(const gsMatrix<> & solVector, gsMultiPatch<T> & result);
+        void constructSolution(const gsMatrix<T> & solVector, gsMultiPatch<T> & result);
 
     protected:
 
@@ -77,8 +77,8 @@ namespace gismo
         gsC1SurfGluingData<T> m_gD;
 
         // Basis for getting the G1 Basis
-        gsBSplineBasis<> m_basis_plus;
-        gsBSplineBasis<> m_basis_minus;
+        gsBSplineBasis<T> m_basis_plus;
+        gsBSplineBasis<T> m_basis_minus;
 
         // Basis for the G1 Basis
         gsMultiBasis<T> m_basis_g1;
@@ -101,7 +101,7 @@ namespace gismo
         index_t n_plus = m_basis_plus.size();
         index_t n_minus = m_basis_minus.size();
 
-        gsMultiPatch<> g1EdgeBasis;
+        gsMultiPatch<T> g1EdgeBasis;
         index_t bfID_init = 3;
 
         for (index_t bfID = bfID_init; bfID < n_plus - bfID_init; bfID++) // first 3 and last 3 bf are eliminated
@@ -112,9 +112,9 @@ namespace gismo
 
             assemble(bfID,"plus"); // i == number of bf
 
-            gsSparseSolver<real_t>::SimplicialLDLT solver;
-//        gsSparseSolver<real_t>::LU solver;
-            gsMatrix<> sol;
+            typename gsSparseSolver<T>::SimplicialLDLT solver;
+//        typename gsSparseSolver<T>::LU solver;
+            gsMatrix<T> sol;
             solver.compute(m_system.matrix());
             sol = solver.solve(m_system.rhs());
 
@@ -131,9 +131,9 @@ namespace gismo
 
             assemble(bfID,"minus"); // i == number of bf
 
-            gsSparseSolver<real_t>::SimplicialLDLT solver;
-//        gsSparseSolver<real_t>::LU solver;
-            gsMatrix<> sol;
+            typename gsSparseSolver<T>::SimplicialLDLT solver;
+//        typename gsSparseSolver<T>::LU solver;
+            gsMatrix<T> sol;
             solver.compute(m_system.matrix());
             sol = solver.solve(m_system.rhs());
 
@@ -144,7 +144,7 @@ namespace gismo
     } // setG1BasisEdge
 
     template <class T, class bhVisitor>
-    void gsC1SurfBasisEdge<T,bhVisitor>::constructSolution(const gsMatrix<> & solVector, gsMultiPatch<T> & result)
+    void gsC1SurfBasisEdge<T,bhVisitor>::constructSolution(const gsMatrix<T> & solVector, gsMultiPatch<T> & result)
     {
         // Dim is the same for all basis functions
         const index_t dim = ( 0!=solVector.cols() ? solVector.cols() :  m_ddof[0].cols() );

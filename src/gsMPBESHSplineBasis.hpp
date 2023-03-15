@@ -19,7 +19,7 @@ namespace gismo
 
 template<short_t d, class T>
 gsMPBESHSplineBasis<d,T>::gsMPBESHSplineBasis (std::vector<BasisType *> const & bases, gsBoxTopology const & topol,
-                   int increaseSmoothnessLevel, int minEVDistance)
+                   index_t increaseSmoothnessLevel, index_t minEVDistance)
 {
     typedef typename std::vector<BasisType *>::const_iterator tempBasisIter;
     m_topol = topol;
@@ -29,7 +29,7 @@ gsMPBESHSplineBasis<d,T>::gsMPBESHSplineBasis (std::vector<BasisType *> const & 
         m_incrSmoothnessDegree=this->maxDegree()-1;
     else
         m_incrSmoothnessDegree=increaseSmoothnessLevel;
-    m_minDist=static_cast<unsigned>(std::max<int>(std::min<int>(m_incrSmoothnessDegree+1,maxDegree()),minEVDistance));
+    m_minDist=static_cast<unsigned>(std::max<index_t>(std::min<index_t>(m_incrSmoothnessDegree+1,maxDegree()),minEVDistance));
     _initVertices();
     _setDistanceOfAllVertices();
 
@@ -42,7 +42,7 @@ gsMPBESHSplineBasis<d,T>::gsMPBESHSplineBasis (std::vector<BasisType *> const & 
 
 template<short_t d, class T>
 gsMPBESHSplineBasis<d,T>::gsMPBESHSplineBasis (std::vector<BasisType *> const & bases, gsBoxTopology const & topol,
-                   std::vector<gsMatrix<T> * > & coefs,int increaseSmoothnessLevel, int minEVDistance)
+                   std::vector<gsMatrix<T> * > & coefs,index_t increaseSmoothnessLevel, index_t minEVDistance)
 {
     m_topol = topol;
     for(typename BasisContainer::const_iterator it = bases.begin();it!=bases.end();++it)
@@ -51,7 +51,7 @@ gsMPBESHSplineBasis<d,T>::gsMPBESHSplineBasis (std::vector<BasisType *> const & 
         m_incrSmoothnessDegree=this->maxDegree()-1;
     else
         m_incrSmoothnessDegree=increaseSmoothnessLevel;
-    m_minDist=static_cast<unsigned>(std::max<int>(std::min<int>(m_incrSmoothnessDegree+1,maxDegree()),minEVDistance));
+    m_minDist=static_cast<unsigned>(std::max<index_t>(std::min<index_t>(m_incrSmoothnessDegree+1,maxDegree()),minEVDistance));
     _initVertices();
     _setDistanceOfAllVertices();
 
@@ -68,7 +68,7 @@ gsMPBESHSplineBasis<d,T>::gsMPBESHSplineBasis (BasisType const & base, gsBoxTopo
     m_topol = topol;
     m_bases.push_back((BasisType *)base.clone().release());
     m_incrSmoothnessDegree=this->maxDegree()-1;
-    m_minDist=static_cast<unsigned>(std::min<int>(m_incrSmoothnessDegree+1,maxDegree()));
+    m_minDist=static_cast<unsigned>(std::min<index_t>(m_incrSmoothnessDegree+1,maxDegree()));
     _initVertices();
     _setDistanceOfAllVertices();
 
@@ -79,8 +79,8 @@ gsMPBESHSplineBasis<d,T>::gsMPBESHSplineBasis (BasisType const & base, gsBoxTopo
 }
 
 template<short_t d, class T>
-gsMPBESHSplineBasis<d,T>::gsMPBESHSplineBasis( gsMultiPatch<T> const & mp, int increaseSmoothnessLevel,
-                   int minEVDistance)
+gsMPBESHSplineBasis<d,T>::gsMPBESHSplineBasis( gsMultiPatch<T> const & mp, index_t increaseSmoothnessLevel,
+                   index_t minEVDistance)
 {
     //topol.computeAllVertices();
     for (size_t i = 0; i < mp.nPatches(); i++)
@@ -93,7 +93,7 @@ gsMPBESHSplineBasis<d,T>::gsMPBESHSplineBasis( gsMultiPatch<T> const & mp, int i
         m_incrSmoothnessDegree=this->maxDegree()-1;
     else
         m_incrSmoothnessDegree=increaseSmoothnessLevel;
-    m_minDist=static_cast<unsigned>(std::max<int>(std::min<int>(m_incrSmoothnessDegree+1,maxDegree()),minEVDistance));
+    m_minDist=static_cast<unsigned>(std::max<index_t>(std::min<index_t>(m_incrSmoothnessDegree+1,maxDegree()),minEVDistance));
     _initVertices();
     _setDistanceOfAllVertices(); // this is wrong, every vertex has distance according to degree_u or degree_V
 
@@ -104,8 +104,8 @@ gsMPBESHSplineBasis<d,T>::gsMPBESHSplineBasis( gsMultiPatch<T> const & mp, int i
 }
 
 template<short_t d, class T>
-gsMPBESHSplineBasis<d,T>::gsMPBESHSplineBasis( gsMultiBasis<T> const & mb,gsBoxTopology const & topol, int increaseSmoothnessLevel,
-                   int minEVDistance)
+gsMPBESHSplineBasis<d,T>::gsMPBESHSplineBasis( gsMultiBasis<T> const & mb,gsBoxTopology const & topol, index_t increaseSmoothnessLevel,
+                   index_t minEVDistance)
 {
     //topol.computeAllVertices();
     for (size_t i = 0; i < mb.nBases(); i++)
@@ -118,7 +118,7 @@ gsMPBESHSplineBasis<d,T>::gsMPBESHSplineBasis( gsMultiBasis<T> const & mb,gsBoxT
         m_incrSmoothnessDegree=this->maxDegree()-1;
     else
         m_incrSmoothnessDegree=increaseSmoothnessLevel;
-    m_minDist=static_cast<unsigned>(std::max<int>(std::min<int>(m_incrSmoothnessDegree+1,maxDegree()),minEVDistance));
+    m_minDist=static_cast<unsigned>(std::max<index_t>(std::min<index_t>(m_incrSmoothnessDegree+1,maxDegree()),minEVDistance));
     _initVertices();
     _setDistanceOfAllVertices(); // this is wrong, every vertex has distance according to degree_u or degree_V
 
@@ -247,7 +247,7 @@ void gsMPBESHSplineBasis<d,T>::refine_withCoefs(gsMatrix<T>& localCoef, const in
     //std::cout << localCoef << std::endl << std::endl;
     std::vector<gsMatrix<T> *> coefs;
     unsigned geoDim = localCoef.cols();
-    int start, end = -1;
+    index_t start, end = -1;
     for (size_t i = 0; i < nPatches(); ++i)
     {
         start=end+1;
@@ -283,7 +283,7 @@ void gsMPBESHSplineBasis<d,T>::refineElements_withCoefs(gsMatrix<T>& localCoef, 
 {
     std::vector<gsMatrix<T> *> coefs;
     unsigned geoDim = localCoef.cols();
-    int start, end = -1;
+    index_t start, end = -1;
     for (size_t i = 0; i < nPatches(); ++i)
     {
         start=end+1;
@@ -314,7 +314,7 @@ void gsMPBESHSplineBasis<d,T>::refineElements_withCoefs(gsMatrix<T>& localCoef, 
 }
 
 template<short_t d, class T>
-void gsMPBESHSplineBasis<d,T>::refineWithExtension(const index_t patch,gsMatrix<T> const & boxes, int refExt,bool updateBasis)
+void gsMPBESHSplineBasis<d,T>::refineWithExtension(const index_t patch,gsMatrix<T> const & boxes, index_t refExt,bool updateBasis)
 {
     m_bases[patch]->refine( boxes, refExt);
     std::vector<gsMatrix<T> *> coefs;
@@ -423,7 +423,7 @@ bool gsMPBESHSplineBasis<d,T>::_boxesMatchNeighbours(const index_t patch,
     //check if neighbour has the same refined boxes.
     patchSide ps, ps_neigh;
     std::vector<bool> sideToCheck(4,false);
-    std::vector<int> neighbours(4,-1);
+    std::vector<index_t> neighbours(4,-1);
     gsVector<bool> orient;
     index_t patch_max_level = basis(patch).maxLevel();
     for(unsigned side=1;side<=4;++side)
@@ -479,7 +479,7 @@ bool gsMPBESHSplineBasis<d,T>::_boxesMatchNeighbours(const index_t patch,
 }
 
 template<short_t d, class T>
-void gsMPBESHSplineBasis<d,T>::_addBoundaryBox(const index_t patch,const boxSide s,const int start, const int end,const unsigned level, std::vector<index_t> & boxes, std::vector<bool> & sideToCheck)
+void gsMPBESHSplineBasis<d,T>::_addBoundaryBox(const index_t patch,const boxSide s,const index_t start, const index_t end,const unsigned level, std::vector<index_t> & boxes, std::vector<bool> & sideToCheck)
 {
     short_t u_max = basis(patch).getBases()[level]->size(0)-1;
     short_t v_max = basis(patch).getBases()[level]->size(1)-1;
@@ -514,14 +514,14 @@ void gsMPBESHSplineBasis<d,T>::_addBoundaryBox(const index_t patch,const boxSide
     {
         if(start<=0)
             sideToCheck[3-1]=true;
-        if(end>=static_cast<int>(v_max)-1)
+        if(end>=static_cast<index_t>(v_max)-1)
             sideToCheck[4-1]=true;
     }
     else
     {
         if(start<=0)
             sideToCheck[1-1]=true;
-        if(end>=static_cast<int>(u_max)-1)
+        if(end>=static_cast<index_t>(u_max)-1)
             sideToCheck[2-1]=true;
     }
 }
@@ -550,7 +550,7 @@ void gsMPBESHSplineBasis<d,T>::_addBox(const index_t patch,const unsigned uMin,c
     gsVector<index_t,d> upperRight;
     upperRight(0)=uMax;
     upperRight(1)=vMax;
-    if( uMin<uMax && vMin<vMax && static_cast<int>(level)>basis(patch).tree().query3(lowerLeft,upperRight,level))
+    if( uMin<uMax && vMin<vMax && static_cast<index_t>(level)>basis(patch).tree().query3(lowerLeft,upperRight,level))
     {
         boxes.push_back(level);
         boxes.push_back(uMin);
@@ -563,7 +563,7 @@ void gsMPBESHSplineBasis<d,T>::_addBox(const index_t patch,const unsigned uMin,c
 template<short_t d, class T>
 void gsMPBESHSplineBasis<d,T>::_endpointsOfActiveBoundaryFunctions(patchSide const & ps,bool orient,std::vector<T>& endpoints) const
 {
-    int patch = ps.patch;
+    index_t patch = ps.patch;
     unsigned deg = degree(patch,1-(ps.direction()));
     std::vector<bool> actives;
     for(unsigned level = 0;level<=basis(patch).maxLevel();++level)

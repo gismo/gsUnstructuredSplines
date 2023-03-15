@@ -73,7 +73,7 @@ namespace gismo
             }
 
             // [!The same setup for each bf!]
-            gsSparseSolver<real_t>::SimplicialLDLT solver;
+            typename gsSparseSolver<T>::SimplicialLDLT solver;
             gsExprAssembler<T> A(1, 1);
 
             // Elements used for numerical integration
@@ -116,14 +116,14 @@ namespace gismo
             index_t bfID_init = 3;
             for (index_t bfID = bfID_init; bfID < n_plus - bfID_init; bfID++) // first 3 and last 3 bf are eliminated
             {
-                gsTraceBasis<real_t> traceBasis(geo, beta, basis_plus, initSpace.basis(0), bdy, bfID, dir);
+                gsTraceBasis<T> traceBasis(geo, beta, basis_plus, initSpace.basis(0), bdy, bfID, dir);
 
                 if (m_optionList.getSwitch("interpolation"))
                 {
                     //gsQuasiInterpolate<T>::Schoenberg(edgeSpace.basis(0), traceBasis, sol);
                     //result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
-                    gsMatrix<> anchors = edgeSpace.basis(0).anchors();
-                    gsMatrix<> values = traceBasis.eval(anchors);
+                    gsMatrix<T> anchors = edgeSpace.basis(0).anchors();
+                    gsMatrix<T> values = traceBasis.eval(anchors);
                     result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
                 }
                 else
@@ -147,14 +147,14 @@ namespace gismo
             bfID_init = 2;
             for (index_t bfID = bfID_init; bfID < n_minus - bfID_init; bfID++)  // first 2 and last 2 bf are eliminated
             {
-                gsNormalDerivBasis<real_t> normalDerivBasis(geo, alpha, basis_minus, initSpace.basis(0), bdy, bfID,
+                gsNormalDerivBasis<T> normalDerivBasis(geo, alpha, basis_minus, initSpace.basis(0), bdy, bfID,
                                                             dir);
                 if (m_optionList.getSwitch("interpolation"))
                 {
                     //gsQuasiInterpolate<T>::Schoenberg(edgeSpace.basis(0), traceBasis, sol);
                     //result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
-                    gsMatrix<> anchors = edgeSpace.basis(0).anchors();
-                    gsMatrix<> values = normalDerivBasis.eval(anchors);
+                    gsMatrix<T> anchors = edgeSpace.basis(0).anchors();
+                    gsMatrix<T> values = normalDerivBasis.eval(anchors);
                     result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
                 }
                 else
@@ -186,7 +186,7 @@ namespace gismo
     template<short_t d,class T>
     void gsApproxC1Edge<d,T>::computeAuxTopology()
     {
-        for(unsigned i = 0; i <  m_auxPatches.size(); i++)
+        for(size_t i = 0; i <  m_auxPatches.size(); i++)
         {
             if(m_auxPatches[i].getPatchRotated().orientation() == -1)
                 m_auxPatches[i].swapAxis();
@@ -199,8 +199,8 @@ namespace gismo
     {
         computeAuxTopology();
 
-//        gsMultiPatch<> temp_mp;
-//        for(unsigned i = 0; i <  m_auxPatches.size(); i++)
+//        gsMultiPatch<T> temp_mp;
+//        for(index_t i = 0; i <  m_auxPatches.size(); i++)
 //            temp_mp.addPatch(m_auxPatches[i].getPatchRotated());
 //
 //        temp_mp.computeTopology();

@@ -39,7 +39,7 @@ public:
     typedef memory::unique_ptr< gsMPBESHSplineBasis > uPtr;
 
     /// Dimension of the parameter domain
-    static const int Dim = d;
+    static const index_t Dim = d;
 
     typedef index_t                                             indexType;
     typedef gsMPBESBasis<d,T>                                   Base;
@@ -78,18 +78,18 @@ public:
     { }
 
     gsMPBESHSplineBasis (std::vector<BasisType *> const & bases, gsBoxTopology const & topol,
-                       int increaseSmoothnessLevel=-1, int minEVDistance=-1);
+                       index_t increaseSmoothnessLevel=-1, index_t minEVDistance=-1);
 
     gsMPBESHSplineBasis (std::vector<BasisType *> const & bases, gsBoxTopology const & topol,
-                       std::vector<gsMatrix<T> * > & coefs,int increaseSmoothnessLevel=-1, int minEVDistance=-1);
+                       std::vector<gsMatrix<T> * > & coefs,index_t increaseSmoothnessLevel=-1, index_t minEVDistance=-1);
 
     gsMPBESHSplineBasis (BasisType const & base, gsBoxTopology const & topol);
 
-    gsMPBESHSplineBasis( gsMultiPatch<T> const & mp, int increaseSmoothnessLevel = -1,
-                       int minEVDistance=-1);
+    gsMPBESHSplineBasis( gsMultiPatch<T> const & mp, index_t increaseSmoothnessLevel = -1,
+                       index_t minEVDistance=-1);
 
-    gsMPBESHSplineBasis( gsMultiBasis<T> const & mb,gsBoxTopology const & topol, int increaseSmoothnessLevel = -1,
-                       int minEVDistance=-1);
+    gsMPBESHSplineBasis( gsMultiBasis<T> const & mb,gsBoxTopology const & topol, index_t increaseSmoothnessLevel = -1,
+                       index_t minEVDistance=-1);
 
     gsMPBESHSplineBasis( const gsMPBESHSplineBasis& other );
 
@@ -159,7 +159,7 @@ public:
     /// on patch \em k with extension \em refExt.
     ///
     /// See gsHTensorBasis::refine() for further documentation.
-    virtual void refineWithExtension(const index_t patch,gsMatrix<T> const & boxes, int refExt = 0,bool updateBasis = true);
+    virtual void refineWithExtension(const index_t patch,gsMatrix<T> const & boxes, index_t refExt = 0,bool updateBasis = true);
 
 //private:
     //////////////////////////////////////////////////
@@ -174,7 +174,7 @@ public:
     bool _boxesMatchNeighbours(const index_t patch,
                                std::vector<index_t>& boxes, std::vector<index_t>& checkPatches);
 
-    void _addBoundaryBox(const index_t patch,const boxSide s,const int start, const int end,const unsigned level, std::vector<index_t> & boxes, std::vector<bool> & sideToCheck);
+    void _addBoundaryBox(const index_t patch,const boxSide s,const index_t start, const index_t end,const unsigned level, std::vector<index_t> & boxes, std::vector<bool> & sideToCheck);
 
     void _addFunBox(const index_t patch,const unsigned uMin,const unsigned vMin,const unsigned uMax,const unsigned vMax,const unsigned level, std::vector<index_t> & boxes);
 

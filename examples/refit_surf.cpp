@@ -209,32 +209,46 @@ int main(int argc, char *argv[])
 
     if (noTHB)
     {
+        // Check if any of the patches is a THB patch. If so, we transfer to tensor-bspline on the finest level
+        // Also get the max level
         unsigned maxLvl = 0;
+        bool THBcheck = false;
         gsHTensorBasis<2,real_t> * hbasis;
-        for (index_t p=0; p!=geom.nPatches(); p++)
-            if (hbasis = dynamic_cast<gsHTensorBasis<2,real_t> *>(&geom.basis(p)))
-                maxLvl = std::max(maxLvl,hbasis->maxLevel());
-        gsDebugVar(maxLvl);
-
-        gsTHBSpline<2,real_t> * THBspline;
-        gsTensorBSpline<2,real_t> bspline;
-        mp = geom;
-        for (index_t p=0; p!=geom.nPatches(); p++)
+        for (index_t p=0; p!=mp.nPatches(); p++)
         {
-            if (THBspline = dynamic_cast<gsTHBSpline<2,real_t> *>(&mp.patch(p)))
+            if (hbasis = dynamic_cast<gsHTensorBasis<2,real_t> *>(&mp.basis(p)))
             {
-                THBspline->convertToBSpline(bspline);
-                if (THBspline->basis().maxLevel()==0)
-                    for (unsigned l=0; l!=maxLvl; l++)
-                    {
-                        mp.patch(p) = bspline;
-                        mp.patch(p).uniformRefine();
-                    }
-                else if (THBspline->basis().maxLevel()!=maxLvl)
-                    GISMO_ERROR("Something went wrong");
+                maxLvl = std::max(maxLvl,hbasis->maxLevel());
+                THBcheck = true;
             }
         }
-        geom = mp;
+        gsDebugVar(maxLvl);
+        if (THBcheck)
+        {
+            //
+            gsTHBSpline<2,real_t> * THBspline;
+            gsTensorBSpline<2,real_t> bspline;
+            for (index_t p=0; p!=mp.nPatches(); p++)
+            {
+                if ((THBspline = dynamic_cast<gsTHBSpline<2,real_t> *>(&mp.patch(p))))
+                {
+                    THBspline->convertToBSpline(bspline);
+                    if (THBspline->basis().maxLevel()==0)
+                        for (unsigned l=0; l!=maxLvl; l++)
+                        {
+                            bspline.uniformRefine();
+                            geom.addPatch(bspline);
+                        }
+                    else if (THBspline->basis().maxLevel()!=maxLvl)
+                        GISMO_ERROR("Something went wrong");
+                    else
+                    {
+                            geom.addPatch(bspline);
+                    }
+                }
+            }
+            geom.computeTopology();
+        }
     }
     if (plot) gsWriteParaview(geom,"geom",1000,mesh);
 

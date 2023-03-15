@@ -51,7 +51,7 @@ private:
 
     typedef T weightType;
     typedef index_t indexType; //indizes of gsMatrix
-    typedef std::vector<std::pair<int,int> >::iterator step_iter;
+    typedef std::vector<std::pair<index_t,index_t> >::iterator step_iter;
     typedef gsBasis<T> BasisType;
     typedef typename std::vector<BasisType *>::const_iterator ConstBasisIter;
     typedef typename std::vector<BasisType *>::iterator BasisIter;
@@ -107,7 +107,7 @@ public:
 protected:
 
     /// getter for m_bases[i]
-    BasisType* getBasePointer(int i)
+    BasisType* getBasePointer(index_t i)
     { return m_bases[i]; }
 
     /// create a new mapping of the local basisfunctions
@@ -165,7 +165,7 @@ public:
     //////////////////////////////////////////////////
 
     /// getter for m_incrSmoothnessDegree
-    int getIncrSmoothnessDegree() const
+    index_t getIncrSmoothnessDegree() const
     { return m_incrSmoothnessDegree; }
 
     unsigned getMinDist() const
@@ -183,7 +183,7 @@ public:
      * \param[in] updateBasis : if true, a new mapping will be constructed for the new basis functions,
      *                          only set to false if one wants to insert more boxes
      */
-    void uniformRefine(int numKnots = 1, int mul=1,bool updateBasis = true);
+    void uniformRefine(index_t numKnots = 1, index_t mul=1,bool updateBasis = true);
 
     /** makes a uniform refinement of all the bases, with a defined number of new knots
      *  inserted in every knot span.
@@ -193,7 +193,7 @@ public:
      * \param[in] updateBasis : if true, a new mapping will be constructed for the new basis functions,
      *                          only set to false if one wants to insert more boxes
      */
-    void uniformRefine_withCoefs(gsMatrix<T>& localCoefs, int numKnots = 1, int mul=1,
+    void uniformRefine_withCoefs(gsMatrix<T>& localCoefs, index_t numKnots = 1, index_t mul=1,
                                  bool updateBasis = true);
 
     /** inserts the given boxes in the specified patch. The concrete implementation
@@ -365,7 +365,7 @@ private:
         T getParamDist(const patchCorner& pc,const gsMPBESBasis<d,T>& basis) const;
 
         /// determines the right values for the two distances, only used in the constructer
-        void _determineValues(patchSide side,patchSide ls,patchSide rs,int dist,unsigned degree,unsigned max,
+        void _determineValues(patchSide side,patchSide ls,patchSide rs,index_t dist,unsigned degree,unsigned max,
                               unsigned& left,unsigned& right,const gsMPBESBasis<d,T>& basis) const;
     };
 

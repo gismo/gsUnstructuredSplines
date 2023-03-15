@@ -14,7 +14,7 @@ namespace gismo
 {
 
 template<short_t d, class T>
-gsMPBESBasis<d,T> * getCompBasisFromMultiPatch(const gsMultiPatch<> & mp,int incrSmoothness = -1,int minEVDistance = -1 )
+gsMPBESBasis<d,T> * getCompBasisFromMultiPatch(const gsMultiPatch<T> & mp,index_t incrSmoothness = -1,index_t minEVDistance = -1 )
 {
     gsMPBESBasis<d,T> * compBasis=NULL;
     bool tensorBSpline= true;
@@ -43,7 +43,7 @@ gsMPBESBasis<d,T> * getCompBasisFromMultiPatch(const gsMultiPatch<> & mp,int inc
 }
 
 template<short_t d, class T>
-gsMPBESBasis<d,T> * getCompBasisFromMultiPatch_withCoefs(const gsMultiPatch<> & mp, std::vector<gsMatrix<T>* >&coefs,int incrSmoothness = -1,int minEVDistance = -1 )
+gsMPBESBasis<d,T> * getCompBasisFromMultiPatch_withCoefs(const gsMultiPatch<T> & mp, std::vector<gsMatrix<T>* >&coefs,index_t incrSmoothness = -1,index_t minEVDistance = -1 )
 {
     gsMPBESBasis<d,T> * compBasis=NULL;
     bool tensorBSpline= true;

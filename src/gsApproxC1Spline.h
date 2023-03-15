@@ -67,13 +67,13 @@ public:
      *
      * @param      bb2   The basis
      */
-    void update(gsMappedBasis<2,real_t> & bb2)
+    void update(gsMappedBasis<d,T> & bb2)
     {
         this->init();
         this->compute();
 
         m_matrix = m_matrix.transpose();
-        gsMultiBasis<> dbasis_temp;
+        gsMultiBasis<T> dbasis_temp;
         this->getMultiBasis(dbasis_temp);
 
         bb2.init(dbasis_temp,m_matrix);

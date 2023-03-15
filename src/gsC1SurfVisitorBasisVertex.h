@@ -34,7 +34,7 @@ namespace gismo
                         gsQuadRule<T>    & rule)
         {
             gsVector<index_t> numQuadNodes( basis.dim() );
-            for (int i = 0; i < basis.dim(); ++i) // to do: improve
+            for (index_t i = 0; i < basis.dim(); ++i) // to do: improve
                 numQuadNodes[i] = basis.degree(i) + 1;
 
             // Setup Quadrature
@@ -56,9 +56,9 @@ namespace gismo
                              std::vector<gsBSplineBasis<T>>      & basis_minus,
                              const gsGeometry<T>    & geo, // patch
                              gsMatrix<T>            & quNodes,
-                             gsMatrix<>  & gluingData,
+                             gsMatrix<T>  & gluingData,
                              std::vector<bool> & isBoundary,
-                             gsMatrix<>  & Phi)
+                             gsMatrix<T>  & Phi)
         {
             md.points = quNodes;
 
@@ -76,20 +76,20 @@ namespace gismo
             numActive = actives.rows();
 
             // Computing c, c+ and c-
-            std::vector<gsMatrix<>> c_0, c_1;
+            std::vector<gsMatrix<T>> c_0, c_1;
             std::vector<gsMatrix < >> c_0_plus, c_1_plus, c_2_plus;
             std::vector<gsMatrix < >> c_0_plus_deriv, c_1_plus_deriv, c_2_plus_deriv;
             std::vector<gsMatrix < >> c_0_minus, c_1_minus;
             for (index_t i = 0; i < 2; i++) // i == 0 == u , i == 1 == v
             {
-                gsMatrix<> b_0, b_1;
-                gsMatrix<> b_0_plus, b_1_plus, b_2_plus;
-                gsMatrix<> b_0_plus_deriv, b_1_plus_deriv, b_2_plus_deriv;
-                gsMatrix<> b_0_minus, b_1_minus;
+                gsMatrix<T> b_0, b_1;
+                gsMatrix<T> b_0_plus, b_1_plus, b_2_plus;
+                gsMatrix<T> b_0_plus_deriv, b_1_plus_deriv, b_2_plus_deriv;
+                gsMatrix<T> b_0_minus, b_1_minus;
 
-//                gsBSplineBasis<T> bsp_temp = dynamic_cast<gsBSplineBasis<> & >(basis_geo.component(i));
-//                real_t p = bsp_temp.maxDegree();
-//                real_t h_geo = bsp_temp.knots().at(p + 2);
+//                gsBSplineBasis<T> bsp_temp = dynamic_cast<gsBSplineBasis<T> & >(basis_geo.component(i));
+//                T p = bsp_temp.maxDegree();
+//                T h_geo = bsp_temp.knots().at(p + 2);
 
                 basis_geo.component(i).evalSingle_into(0, md.points.row(i),b_0); // first
                 basis_geo.component(i).evalSingle_into(1, md.points.row(i),b_1); // second
@@ -106,7 +106,7 @@ namespace gismo
                 basis_minus[i].evalSingle_into(1, md.points.row(i),b_1_minus);
 
                 // Point zero
-                gsMatrix<> zero;
+                gsMatrix<T> zero;
                 zero.setZero(2,1);
 
                 gsMatrix<T> b_1_0, b_1_minus_0;
@@ -117,22 +117,22 @@ namespace gismo
 //
 //                c_0_minus.push_back(b_0_minus + b_1_minus);
 //                c_1_minus.push_back(h_geo/ (p-1) * b_1_minus);
-                real_t factor_b_1 = 1.0/b_1_0(0,0);
+                T factor_b_1 = 1.0/b_1_0(0,0);
                 c_0.push_back(b_0 + b_1);
                 c_1.push_back(factor_b_1 * b_1);
 
-                real_t factor_b_1_minus = 1.0/b_1_minus_0(0,0);
+                T factor_b_1_minus = 1.0/b_1_minus_0(0,0);
                 c_0_minus.push_back(b_0_minus + b_1_minus);
                 c_1_minus.push_back(factor_b_1_minus * b_1_minus);
 
-                gsMatrix<> der_b_1_plus_0, der2_b_1_plus_0, der2_b_2_plus_0;
+                gsMatrix<T> der_b_1_plus_0, der2_b_1_plus_0, der2_b_2_plus_0;
                 basis_plus[i].derivSingle_into(1, zero.row(i), der_b_1_plus_0);
                 basis_plus[i].deriv2Single_into(1, zero.row(i), der2_b_1_plus_0);
                 basis_plus[i].deriv2Single_into(2, zero.row(i), der2_b_2_plus_0);
 
-                real_t factor_c_1_plus = 1/der_b_1_plus_0(0,0);
-                real_t factor2_c_1_plus = -der2_b_1_plus_0(0,0)/(der_b_1_plus_0(0,0)*der2_b_2_plus_0(0,0));
-                real_t factor_c_2_plus = 1/der2_b_2_plus_0(0,0);
+                T factor_c_1_plus = 1/der_b_1_plus_0(0,0);
+                T factor2_c_1_plus = -der2_b_1_plus_0(0,0)/(der_b_1_plus_0(0,0)*der2_b_2_plus_0(0,0));
+                T factor_c_2_plus = 1/der2_b_2_plus_0(0,0);
 
                 c_0_plus.push_back(b_0_plus + b_1_plus + b_2_plus);
                 c_1_plus.push_back(factor_c_1_plus * b_1_plus + factor2_c_1_plus * b_2_plus);
@@ -177,10 +177,10 @@ namespace gismo
 //            beta_deriv.push_back(gluingData[1].get_local_beta_tilde(0).deriv(zero.row(0))); // v
 //        }
 
-            std::vector<gsMatrix<>> alpha, beta, alpha_0, beta_0, alpha_deriv, beta_deriv;
+            std::vector<gsMatrix<T>> alpha, beta, alpha_0, beta_0, alpha_deriv, beta_deriv;
 
             // Point zero
-            gsMatrix<> zero;
+            gsMatrix<T> zero;
             zero.setZero(2,1);
 
             // Geo data:
@@ -188,14 +188,14 @@ namespace gismo
             geo_jac = geo.jacobian(zero);
             geo_der2 = geo.deriv2(zero);
 
-            gsMatrix<> zeros(1, md.points.cols());
+            gsMatrix<T> zeros(1, md.points.cols());
             zeros.setZero();
 
             // Point One
-            gsMatrix<> one;
+            gsMatrix<T> one;
             one.setOnes(2,1);
 
-            gsMatrix<> ones(1, md.points.cols());
+            gsMatrix<T> ones(1, md.points.cols());
             ones.setOnes();
 
             alpha.push_back( gluingData(0, 0) * ( ones - md.points.row(0) ) + gluingData(1, 0) * md.points.row(0) ); // u
@@ -215,8 +215,8 @@ namespace gismo
             beta_deriv.push_back( ( gluingData(3, 1) - gluingData(2, 1) ) * ones.col(0) ); // v
 
             // Compute dd^^(i_k) and dd^^(i_k-1)
-            gsMatrix<> dd_ik_plus, dd_ik_minus;
-            gsMatrix<> dd_ik_minus_deriv, dd_ik_plus_deriv;
+            gsMatrix<T> dd_ik_plus, dd_ik_minus;
+            gsMatrix<T> dd_ik_minus_deriv, dd_ik_plus_deriv;
 
             dd_ik_minus = ( -1 / alpha_0[0](0,0) ) * ( geo_jac.col(1) +
                                                        beta_0[0](0,0) * geo_jac.col(0) );
@@ -224,7 +224,7 @@ namespace gismo
             dd_ik_plus = ( 1 / alpha_0[1](0,0) ) * ( geo_jac.col(0) +
                                                      beta_0[1](0,0) * geo_jac.col(1) );
 
-            gsMatrix<> geo_deriv2_12(geo.targetDim(), 1), geo_deriv2_11(geo.targetDim(), 1), geo_deriv2_22(geo.targetDim(), 1);
+            gsMatrix<T> geo_deriv2_12(geo.targetDim(), 1), geo_deriv2_11(geo.targetDim(), 1), geo_deriv2_22(geo.targetDim(), 1);
 
             geo_deriv2_12.row(0) = geo_der2.row(2);
             geo_deriv2_12.row(1) = geo_der2.row(5);
@@ -244,8 +244,8 @@ namespace gismo
                 geo_deriv2_22.row(2) = geo_der2.row(7);
             }
 
-            gsMatrix<> alpha_squared_u = alpha_0[0]*alpha_0[0];
-            gsMatrix<> alpha_squared_v = alpha_0[1]*alpha_0[1];
+            gsMatrix<T> alpha_squared_u = alpha_0[0]*alpha_0[0];
+            gsMatrix<T> alpha_squared_v = alpha_0[1]*alpha_0[1];
 
             dd_ik_minus_deriv = -1/(alpha_squared_u(0,0)) * // N^2
                                 ( ( geo_deriv2_12 + (beta_deriv[0](0,0) * geo_jac.col(0) + beta_0[0](0,0) * geo_deriv2_11) ) * alpha_0[0](0,0) -
@@ -262,7 +262,7 @@ namespace gismo
             //    gsInfo << dd_ik_plus_deriv << "\n";
 
             // Comupute d_(0,0)^(i_k), d_(1,0)^(i_k), d_(0,1)^(i_k), d_(1,1)^(i_k) ; i_k == 2
-            std::vector<gsMatrix<>> d_ik;
+            std::vector<gsMatrix<T>> d_ik;
             d_ik.push_back(Phi.row(0).transpose());
 
             d_ik.push_back(Phi.block(1, 0, geo.targetDim(), 6).transpose() * geo_jac.col(0) ); // deriv into u
@@ -297,7 +297,7 @@ namespace gismo
 
 //        gsInfo << "d_ik: " << d_ik.back() << " : " << Phi << "\n";
             // Compute d_(*,*)^(il,ik)
-            std::vector<gsMatrix<>> d_ilik_minus, d_ilik_plus;
+            std::vector<gsMatrix<T>> d_ilik_minus, d_ilik_plus;
 
 //      d_(*,*)^(ik-1,ik)
             d_ilik_minus.push_back(Phi.row(0).transpose());
@@ -429,12 +429,12 @@ namespace gismo
                 for (index_t k = 0; k < quWeights.rows(); ++k) // loop over quadrature nodes
                 {
                     T weight = quWeights[k];
-                    gsMatrix<> Jk = md.jacobian(k);
+                    gsMatrix<T> Jk = md.jacobian(k);
 
                     if( Jk.dim().second + 1 == Jk.dim().first)
                     {
-                        gsMatrix<> G = Jk.transpose() * Jk;
-                        real_t detG = G.determinant();
+                        gsMatrix<T> G = Jk.transpose() * Jk;
+                        T detG = G.determinant();
                         weight *= sqrt(detG);
                     }
                     else
@@ -448,12 +448,12 @@ namespace gismo
             }
         }
 
-        inline void localToGlobal(const int patchIndex,
+        inline void localToGlobal(const index_t patchIndex,
                                   const std::vector<gsMatrix<T> >    & eliminatedDofs,
                                   std::vector< gsSparseSystem<T> >     & system)
         {
             gsMatrix<index_t> actives_temp;
-            for (unsigned i = 0; i < system.size(); i++) // 6
+            for (size_t i = 0; i < system.size(); i++) // 6
             {
                 // Map patch-local DoFs to global DoFs
                 system.at(i).mapColIndices(actives, patchIndex, actives_temp);

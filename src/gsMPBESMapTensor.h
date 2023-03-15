@@ -35,7 +35,7 @@ private:
 
     typedef T weightType;
     typedef index_t indexType; //indizes of gsMatrix
-    typedef std::vector<std::pair<int,int> >::iterator step_iter;
+    typedef std::vector<std::pair<index_t,index_t> >::iterator step_iter;
     typedef gsBasis<T> BasisType;
     typedef typename std::vector<BasisType *>::const_iterator ConstBasisIter;
     typedef typename std::vector<BasisType *>::iterator BasisIter;
@@ -43,10 +43,10 @@ private:
     typedef typename gsSparseMatrix<weightType,0,indexType>::InnerIterator InIterMat;
     typedef std::vector<indexType> IndexContainer;
     typedef std::vector<indexType>::const_iterator ConstIndexIter;
-    //int m_dim = 2;
+    //index_t m_dim = 2;
 
 public:
-    gsMPBESMapTensor(int incrSmoothnessDegree, gsBoxTopology * topol, gsMPBESBasis<d,T> * basis) :
+    gsMPBESMapTensor(index_t incrSmoothnessDegree, gsBoxTopology * topol, gsMPBESBasis<d,T> * basis) :
         m_incrSmoothnessDegree(incrSmoothnessDegree), m_topol(topol), m_basis(basis), m_global(0)
     {
         m_mapper=NULL;
@@ -60,13 +60,13 @@ public:
 
     gsWeightMapper<T> * makeMapper() const
     {
-        unsigned locals = _getNrOfLocalBasisFunktions();
-        unsigned size = m_basis->nPatches();
+        index_t locals = _getNrOfLocalBasisFunktions();
+        index_t size = m_basis->nPatches();
         std::vector<index_t> offsets;
-        for(unsigned i = 0;i<size;i++)
+        for(index_t i = 0;i<size;i++)
             offsets.push_back(_getFirstLocalIndex(i));
         m_mapper = new gsWeightMapper<T>(locals,locals);
-        for(unsigned i = 0;i<size;i++)
+        for(index_t i = 0;i<size;i++)
             _setMappingOfPatch(i);
         _finalize();
         gsWeightMapper<T> * mapper = m_mapper;
@@ -83,11 +83,11 @@ protected:
 
     virtual void _finalize() const = 0;
 
-    virtual void _setMappingOfPatch(unsigned const patch) const = 0;
+    virtual void _setMappingOfPatch(index_t const patch) const = 0;
 
-    int _getNrOfLocalBasisFunktions() const
+    index_t _getNrOfLocalBasisFunktions() const
     {
-        int size = 0;
+        index_t size = 0;
         for (size_t i = 0; i < m_basis->nPatches(); ++i)
             size += m_basis->getBase(i).size();
         return size;
@@ -100,12 +100,12 @@ protected:
 
     virtual index_t getDistanceOfVertex(const patchCorner& pc,const patchSide& ps) const = 0;
 
-    void _setTensorMappingOfPatch(unsigned const patch) const
+    void _setTensorMappingOfPatch(index_t const patch) const
     {
         const gsBasis<T> & base = m_basis->getBase(patch);
-        unsigned degree_u = std::min(base.degree(0),(short_t)(m_incrSmoothnessDegree+1));
-        unsigned degree_v = std::min(base.degree(1),(short_t)(m_incrSmoothnessDegree+1));
-        unsigned u_amount =_getParMax(patch,0)+1, v_amount=_getParMax(patch,1)+1;
+        index_t degree_u = std::min(base.degree(0),(short_t)(m_incrSmoothnessDegree+1));
+        index_t degree_v = std::min(base.degree(1),(short_t)(m_incrSmoothnessDegree+1));
+        index_t u_amount =_getParMax(patch,0)+1, v_amount=_getParMax(patch,1)+1;
         patchSide ps_north(patch,boundary::north);
         patchSide ps_south(patch,boundary::south);
         patchSide ps_east(patch,boundary::east);
@@ -123,14 +123,14 @@ protected:
         bool southeast = m_basis->isSpecialVertex(pc_southeast);
         bool southwest = m_basis->isSpecialVertex(pc_southwest);
 
-        unsigned ne_l_u = getDistanceOfVertex(pc_northeast,ps_north);
-        unsigned nw_l_u = getDistanceOfVertex(pc_northwest,ps_north);
-        unsigned se_l_u = getDistanceOfVertex(pc_southeast,ps_south);
-        unsigned sw_l_u = getDistanceOfVertex(pc_southwest,ps_south);
-        unsigned se_l_v = getDistanceOfVertex(pc_southeast,ps_east);
-        unsigned ne_l_v = getDistanceOfVertex(pc_northeast,ps_east);
-        unsigned sw_l_v = getDistanceOfVertex(pc_southwest,ps_west);
-        unsigned nw_l_v = getDistanceOfVertex(pc_northwest,ps_west);
+        index_t ne_l_u = getDistanceOfVertex(pc_northeast,ps_north);
+        index_t nw_l_u = getDistanceOfVertex(pc_northwest,ps_north);
+        index_t se_l_u = getDistanceOfVertex(pc_southeast,ps_south);
+        index_t sw_l_u = getDistanceOfVertex(pc_southwest,ps_south);
+        index_t se_l_v = getDistanceOfVertex(pc_southeast,ps_east);
+        index_t ne_l_v = getDistanceOfVertex(pc_northeast,ps_east);
+        index_t sw_l_v = getDistanceOfVertex(pc_southwest,ps_west);
+        index_t nw_l_v = getDistanceOfVertex(pc_northwest,ps_west);
 
         if(ne_l_u+nw_l_u>u_amount)
         {
@@ -153,10 +153,10 @@ protected:
             nw_l_v=v_amount-sw_l_v;
         }
 
-        unsigned n_l_v = north ? degree_v : 0;
-        unsigned s_l_v = south ? degree_v : 0;
-        unsigned e_l_u = east ? degree_u : 0;
-        unsigned w_l_u = west ? degree_u : 0;
+        index_t n_l_v = north ? degree_v : 0;
+        index_t s_l_v = south ? degree_v : 0;
+        index_t e_l_u = east ? degree_u : 0;
+        index_t w_l_u = west ? degree_u : 0;
         // added for one-patch gluing
         bool north_same=false;
         bool east_same=false;
@@ -166,10 +166,10 @@ protected:
             east_same = east;
         }
 
-        unsigned localIndex;
+        index_t localIndex;
         // south-west
-        for(unsigned j = 0;j<sw_l_v ;j++)
-            for(unsigned i = 0;i<sw_l_u ;i++)
+        for(index_t j = 0;j<sw_l_v ;j++)
+            for(index_t i = 0;i<sw_l_u ;i++)
             {
                 if(!_getLocalIndex_into(patch,i,j,localIndex))
                     continue;
@@ -191,8 +191,8 @@ protected:
                     _addFreeToMap(localIndex);
             }
         // south-middle
-        for(unsigned j=0;j<s_l_v;j++)
-            for(unsigned i=sw_l_u;i<u_amount-se_l_u;i++)
+        for(index_t j=0;j<s_l_v;j++)
+            for(index_t i=sw_l_u;i<u_amount-se_l_u;i++)
             {
                 if(!_getLocalIndex_into(patch,i,j,localIndex))
                     continue;
@@ -202,8 +202,8 @@ protected:
                     _addFreeToMap(localIndex);
             }
         // south-east
-        for(unsigned j = 0;j<se_l_v ;j++)
-            for(unsigned i = u_amount-se_l_u; i<u_amount ;i++)
+        for(index_t j = 0;j<se_l_v ;j++)
+            for(index_t i = u_amount-se_l_u; i<u_amount ;i++)
             {
                 if(!_getLocalIndex_into(patch,i,j,localIndex))
                     continue;
@@ -227,8 +227,8 @@ protected:
                     _addFreeToMap(localIndex);
             }
         // west-middle
-        for(unsigned j=sw_l_v;j<v_amount-nw_l_v;j++)
-            for(unsigned i=0;i<w_l_u;i++)
+        for(index_t j=sw_l_v;j<v_amount-nw_l_v;j++)
+            for(index_t i=0;i<w_l_u;i++)
             {
                 if(!_getLocalIndex_into(patch,i,j,localIndex))
                     continue;
@@ -238,8 +238,8 @@ protected:
                     _addFreeToMap(localIndex);
             }
         // middle-middle
-        for(unsigned j=s_l_v;j<v_amount-n_l_v;j++)
-            for(unsigned i=w_l_u;i<u_amount-e_l_u;i++)
+        for(index_t j=s_l_v;j<v_amount-n_l_v;j++)
+            for(index_t i=w_l_u;i<u_amount-e_l_u;i++)
             {
                 if(j<sw_l_v&&j<degree_v&&i<sw_l_u&&i<degree_u)
                     continue;
@@ -254,8 +254,8 @@ protected:
                 _addFreeToMap(localIndex);
             }
         // east-middle
-        for(unsigned j=se_l_v;j<v_amount-ne_l_v;j++)
-            for(unsigned i=u_amount-e_l_u;i<u_amount;i++)
+        for(index_t j=se_l_v;j<v_amount-ne_l_v;j++)
+            for(index_t i=u_amount-e_l_u;i<u_amount;i++)
             {
                 if(!_getLocalIndex_into(patch,i,j,localIndex))
                     continue;
@@ -267,8 +267,8 @@ protected:
                     _addFreeToMap(localIndex);
             }
         // north-west
-        for(unsigned j = v_amount-nw_l_v;j<v_amount ;j++)
-            for(unsigned i = 0; i<nw_l_u ;i++)
+        for(index_t j = v_amount-nw_l_v;j<v_amount ;j++)
+            for(index_t i = 0; i<nw_l_u ;i++)
             {
                 if(!_getLocalIndex_into(patch,i,j,localIndex))
                     continue;
@@ -292,8 +292,8 @@ protected:
                     _addFreeToMap(localIndex);
             }
         // north-middle
-        for(unsigned j=v_amount-n_l_v;j<v_amount;j++)
-            for(unsigned i=nw_l_u;i<u_amount-ne_l_u;i++)
+        for(index_t j=v_amount-n_l_v;j<v_amount;j++)
+            for(index_t i=nw_l_u;i<u_amount-ne_l_u;i++)
             {
                 if(!_getLocalIndex_into(patch,i,j,localIndex))
                     continue;
@@ -305,8 +305,8 @@ protected:
                     _addFreeToMap(localIndex);
             }
         // north-east
-        for(unsigned j = v_amount-ne_l_v;j<v_amount ;j++)
-            for(unsigned i = u_amount-ne_l_u; i<u_amount ;i++)
+        for(index_t j = v_amount-ne_l_v;j<v_amount ;j++)
+            for(index_t i = u_amount-ne_l_u; i<u_amount ;i++)
             {
                 if(!_getLocalIndex_into(patch,i,j,localIndex))
                     continue;
@@ -329,7 +329,7 @@ protected:
                 else
                     _addFreeToMap(localIndex);
             }
-//        gsVector<unsigned> point(m_dim);
+//        gsVector<index_t> point(m_dim);
 //        std::vector<index_t> lengths(m_dim);
 //        lengths.push_back(degree_u);
 //        lengths.push_back(degree_v);
@@ -345,7 +345,7 @@ protected:
 //            if(_isInMiddle(point,lengths,maxima))
 //                addFreeToMap();
 //            _getDistancesToBoundary(point,distances);
-//            for(unsigned i = 0;i<point.rows();++i)
+//            for(index_t i = 0;i<point.rows();++i)
 //            {
 
 //                //dists
@@ -364,10 +364,10 @@ protected:
 //        }while(_nextPoint(lengths,point));
     }
 
-//    bool _isInMiddle(const gsVector<unsigned>& point,const std::vector<index_t>& lengths,
+//    bool _isInMiddle(const gsVector<index_t>& point,const std::vector<index_t>& lengths,
 //                     const std::vector<index_t>& maxima)
 //    {
-//        for(unsigned i = 0;i<point.rows();++i)
+//        for(index_t i = 0;i<point.rows();++i)
 //        {
 //            if(point(i)<lengths[i]||maxima[i]-lengths[i]<point(i))
 //                return false;
@@ -375,9 +375,9 @@ protected:
 //        return true;
 //    }
 
-//    void _getDistancesToBoundary(const gsVector<unsigned>& point, std::vector<index_t>& dists)
+//    void _getDistancesToBoundary(const gsVector<index_t>& point, std::vector<index_t>& dists)
 //    {
-//        for(unsigned i = 0;i<point.rows();++i)
+//        for(index_t i = 0;i<point.rows();++i)
 //        {
 //            dists.push_back(point((i+1)%point.rows()));
 //        }
@@ -387,7 +387,7 @@ private:
     // functions calculating the weights for the mapping
     //////////////////////////////////////////////////
 
-    void _getBoehmCoefs(gsKnotVector<T> kv0i,bool dir0,T weight0,gsKnotVector<T> kv1i,bool dir1,T weight1,unsigned degree,unsigned knot_index,std::vector<T> & result) const
+    void _getBoehmCoefs(gsKnotVector<T> kv0i,bool dir0,T weight0,gsKnotVector<T> kv1i,bool dir1,T weight1,index_t degree,index_t knot_index,std::vector<T> & result) const
     {
         result.clear();
         if(degree==1)
@@ -406,7 +406,7 @@ private:
         gsKnotVector<T> kv0(give(temp0), kv0i.degree());
         gsKnotVector<T> kv1(give(temp1), kv1i.degree());
 
-        unsigned l0 = kv0.size();
+        index_t l0 = kv0.size();
         if (!dir0)
           kv0.reverse();
         if (dir1)
@@ -420,9 +420,9 @@ private:
         boem_mat.setZero(kv0.size()-kv0.degree()-1,1);
         boem_mat.coeffRef(l0-(kv1.degree()+2)-knot_index)=1;
         gsBoehm<T,gsKnotVector<T>,gsMatrix<T> >(kv0,boem_mat,inserted,degree-1,false);
-        for(unsigned i = 0;i<degree;i++)
+        for(index_t i = 0;i<degree;i++)
         {
-            //unsigned ind=dir0 ? boem_mat.rows()-1-i : i;
+            //index_t ind=dir0 ? boem_mat.rows()-1-i : i;
             result.push_back(boem_mat.coeff(i+l0-(kv0.degree()+2)-knot_index,0));
             if(i==knot_index)
                 result.push_back(boem_mat.coeff(i+l0-(kv0.degree()+2)-knot_index,0));
@@ -430,9 +430,9 @@ private:
     }
 
 protected:
-    virtual gsKnotVector<T> _getKnotVector(unsigned const patch,unsigned const par) const = 0;
+    virtual gsKnotVector<T> _getKnotVector(index_t const patch,index_t const par) const = 0;
 
-    virtual index_t _getParMax(unsigned patch,bool par) const = 0;
+    virtual index_t _getParMax(index_t patch,bool par) const = 0;
 
 private:
     //////////////////////////////////////////////////
@@ -442,13 +442,13 @@ private:
     bool _alreadyHandled(patchSide const & ps,bool flag) const
     {
         std::vector<indexType> vertices = _findVertexInPatches(ps,flag);
-        for(unsigned i = 0;i<vertices.size();i++)
+        for(size_t i = 0;i<vertices.size();i++)
             if(_getPatch(vertices[i]) < ps.patch )
                 return true;
         return false;
     }
 
-    bool _alreadyHandled(std::vector<index_t> local_BFs,unsigned startPatch) const
+    bool _alreadyHandled(std::vector<index_t> local_BFs,index_t startPatch) const
     {
         for(size_t i = 0;i<local_BFs.size();i++)
             if((index_t)startPatch>_getPatch(local_BFs[i]))
@@ -465,14 +465,14 @@ private:
         std::vector<patchCorner> cornerList;
         m_topol->getCornerList(start,cornerList);
         std::vector<indexType> vertices;
-        for(unsigned i = 0;i<cornerList.size();++i)
+        for(size_t i = 0;i<cornerList.size();++i)
             vertices.push_back(_getLocalIndex(cornerList[i]));
         return vertices;
     }
 
     void _flipOverCorner(patchSide & ps,bool & flag) const
     {
-        int patch = ps.patch;
+        index_t patch = ps.patch;
         switch(ps.side())
         {
         case boundary::north : ps = patchSide(patch,flag ? boundary::east : boundary::west);
@@ -500,12 +500,12 @@ private:
 
     void _addToMap(std::vector<indexType> indices,std::vector<weightType> weights) const
     {
-        for(unsigned i = 0;i<indices.size();++i)
+        for(size_t i = 0;i<indices.size();++i)
             m_mapper->setEntry(indices[i],m_global,weights[i]);
         m_global++;
     }
 
-    void _addFreeToMap(unsigned localIndex) const
+    void _addFreeToMap(index_t localIndex) const
     {
         std::vector<indexType> indices;
         indices.push_back(localIndex);
@@ -514,9 +514,9 @@ private:
         _addToMap(indices,weights);
     }
 
-    void _addSingularCornerToMap(unsigned localIndex) const
+    void _addSingularCornerToMap(index_t localIndex) const
     {
-        unsigned u=_getPar(localIndex,0), v=_getPar(localIndex,1), patch=_getPatch(localIndex);
+        index_t u=_getPar(localIndex,0), v=_getPar(localIndex,1), patch=_getPatch(localIndex);
         bool flag=0;
         patchSide ps;
         if(u==0&&v==0)
@@ -535,7 +535,7 @@ private:
         std::vector<indexType> vertices = _findVertexInPatches(ps,flag);
         std::vector<indexType> locals;
         std::vector<weightType> weights;
-        for(unsigned i = 0;i<vertices.size();i++)
+        for(size_t i = 0;i<vertices.size();i++)
         {
             locals.push_back(vertices[i]);
             weights.push_back(static_cast<weightType>(1));
@@ -543,7 +543,7 @@ private:
         _addToMap(locals,weights);
     }
 
-    void _addCombinedLineToMap(patchSide & ps,unsigned localStartIndex,unsigned length,int distToPs) const
+    void _addCombinedLineToMap(patchSide & ps,index_t localStartIndex,index_t length,index_t distToPs) const
     {
         std::vector<patchSide> sides;
         std::vector<index_t> lengths;
@@ -554,7 +554,7 @@ private:
         _addBlockToMap(localStartIndex,sides,lengths,dists);
     }
 
-    void _addCombinedBlockToMap(patchSide & ps_u,patchSide & ps_v,unsigned localStartIndex,unsigned length_u,unsigned length_v,int distToPs_u, int distToPs_v) const
+    void _addCombinedBlockToMap(patchSide & ps_u,patchSide & ps_v,index_t localStartIndex,index_t length_u,index_t length_v,index_t distToPs_u, index_t distToPs_v) const
     {
         std::vector<patchSide> sides;
         std::vector<index_t> lengths;
@@ -568,18 +568,18 @@ private:
         _addBlockToMap(localStartIndex,sides,lengths,dists);
     }
 
-    void _addBlockToMap(unsigned localStartIndex, std::vector<patchSide> const & sides, std::vector<index_t> const & lengths, std::vector<index_t> const & dists) const
+    void _addBlockToMap(index_t localStartIndex, std::vector<patchSide> const & sides, std::vector<index_t> const & lengths, std::vector<index_t> const & dists) const
     {
         patchSide ps,ps_neighbour;
         bool par,par_neigh;
-        int dir,dir_neigh;
+        index_t dir,dir_neigh;
         gsKnotVector<T> kv_neigh,kv_this;
         std::vector<std::vector<T> > weights1D;
         std::vector<bool> minus_dir;
         std::vector<index_t> dirs;
         std::vector<weightType> weight;
         T w0,w1;
-        for(unsigned i = 0; i<sides.size();++i)
+        for(size_t i = 0; i<sides.size();++i)
         {
             ps=sides[i];
             if(!m_topol->getNeighbour(ps,ps_neighbour))
@@ -600,19 +600,19 @@ private:
         }
         std::vector<indexType> locals;
         std::vector<weightType> weights;
-        std::vector<std::pair<int,int> >steps;
+        std::vector<std::pair<index_t,index_t> >steps;
         gsVector<index_t> distances(sides.size());
         distances.setZero();
         do
         {
             steps.clear();
             weightType weight2 = 1.0;
-            for(unsigned i=0;i<sides.size();++i)
+            for(size_t i=0;i<sides.size();++i)
             {
                 steps.push_back(std::make_pair(minus_dir[i] ? -distances(i) : distances(i),dirs[i]));
                 weight2 *= weights1D[i][distances(i)];
             }
-            unsigned localIndexTravelled = _travelUVSteps(localStartIndex,steps);
+            index_t localIndexTravelled = _travelUVSteps(localStartIndex,steps);
             locals.push_back(localIndexTravelled);
             weights.push_back(weight2);
         }while(_nextPoint(lengths,distances));
@@ -623,7 +623,7 @@ private:
 
     bool _nextPoint(std::vector<index_t> const & lengths, gsVector<index_t> & point) const
     {
-        for(unsigned i = 0; i<lengths.size(); ++i)
+        for(size_t i = 0; i<lengths.size(); ++i)
         {
             if(++point(i)<=lengths[i])
             {
@@ -640,7 +640,7 @@ private:
     // functions for travelling through the basis-function indizes of patches
     //////////////////////////////////////////////////
 
-    unsigned _transformToNeighbour(unsigned localIndex,step_iter current,step_iter end) const
+    index_t _transformToNeighbour(index_t localIndex,step_iter current,step_iter end) const
     {
         index_t patch = _getPatch(localIndex);
         index_t u = _getPar(localIndex,0);
@@ -658,18 +658,18 @@ private:
                      "steps does not fit to point");
         GISMO_ASSERT(current->first!=0,"stepsize is zero, which is not allowed in this position.");
         bool orient = bf.dirOrientation(ps,1-ps.direction());
-        unsigned non_fixed = current->second==1 ? u : v;
+        index_t non_fixed = current->second==1 ? u : v;
         current->first>0 ? current->first-- : current->first++;
         _transformStepsToNeighbour(current,end,ps,ps_neighbour,orient);
         localIndex=_transformIndexToNeighbour(localIndex,ps_neighbour,orient,non_fixed);
         return localIndex;
     }
 
-    unsigned _transformIndexToNeighbour(unsigned localIndex,patchSide const & ps_neighbour,bool orient, int non_fixed) const
+    index_t _transformIndexToNeighbour(index_t localIndex,patchSide const & ps_neighbour,bool orient, index_t non_fixed) const
     {
-        unsigned patch = ps_neighbour.patch;
-        int u_max = _getParMax(patch,0);
-        int v_max = _getParMax(patch,1);
+        index_t patch = ps_neighbour.patch;
+        index_t u_max = _getParMax(patch,0);
+        index_t v_max = _getParMax(patch,1);
         if((ps_neighbour.direction()))
             localIndex = _getLocalIndex(patch,orient ? non_fixed : u_max-non_fixed,ps_neighbour.parameter() ? v_max : 0);
         else
@@ -708,12 +708,12 @@ private:
             }
     }
 
-    unsigned _travelInsidePatch(unsigned localIndex,bool dir,step_iter current) const
+    index_t _travelInsidePatch(index_t localIndex,bool dir,step_iter current) const
     {
-        unsigned patch = _getPatch(localIndex);
-        int par = _getPar(localIndex,dir);
-        int par_max = _getParMax(patch,dir);
-        int fixed_par = _getPar(localIndex,!dir);
+        index_t patch = _getPatch(localIndex);
+        index_t par = _getPar(localIndex,dir);
+        index_t par_max = _getParMax(patch,dir);
+        index_t fixed_par = _getPar(localIndex,!dir);
         if(0<=par+current->first&&par+current->first<=par_max)
         {
             par+=current->first;
@@ -733,7 +733,7 @@ private:
         return localIndex;
     }
 
-    unsigned _travelUVSteps(unsigned localIndex,std::vector<std::pair<int, int> > steps) const
+    index_t _travelUVSteps(index_t localIndex,std::vector<std::pair<index_t, index_t> > steps) const
     {
         step_iter current = steps.begin();
         step_iter end = steps.end();
@@ -755,9 +755,9 @@ protected:
     //////////////////////////////////////////////////
 
     //localIndex: this is the index going over all local basis functions of all patches
-    virtual bool _getLocalIndex_into(unsigned const patch,unsigned const u,unsigned const v,unsigned & localIndex) const=0;
+    virtual bool _getLocalIndex_into(index_t const patch,index_t const u,index_t const v,index_t & localIndex) const=0;
 
-    index_t _getLocalIndex(unsigned const patch,unsigned const patchIndex) const
+    index_t _getLocalIndex(index_t const patch,index_t const patchIndex) const
     {
         return _getFirstLocalIndex(patch)+patchIndex;
     }
@@ -774,34 +774,34 @@ protected:
         return _getLocalIndex(ps.patch,ps.side(),flag);
     }
 
-    index_t _getLocalIndex(unsigned const patch,boxSide const side,bool const flag) const
+    index_t _getLocalIndex(index_t const patch,boxSide const side,bool const flag) const
     {
         return _getLocalIndex(patch,_getPatchIndex(patch,side,flag));
     }
 
-    virtual index_t _getLocalIndex(unsigned const patch,unsigned u,unsigned v) const = 0;
+    virtual index_t _getLocalIndex(index_t const patch,index_t u,index_t v) const = 0;
 
-    index_t _getFirstLocalIndex(unsigned const patch) const
+    index_t _getFirstLocalIndex(index_t const patch) const
     {
-        unsigned index=0;
-        for(unsigned i=0;i<patch;i++)
+        index_t index=0;
+        for(index_t i=0;i<patch;i++)
         {
             index+=m_basis->localSize(i);
         }
         return index;
     }
 
-    index_t _getLastLocalIndex(unsigned const patch) const
+    index_t _getLastLocalIndex(index_t const patch) const
     {
         return _getFirstLocalIndex(patch)+m_basis->localSize(patch)-1;
     }
 
     //patchIndex: this is the index going over all local basis functions of one patch
-    virtual index_t _getPatchIndex(unsigned const patch,boxSide const side,bool const flag) const = 0;
+    virtual index_t _getPatchIndex(index_t const patch,boxSide const side,bool const flag) const = 0;
 
-    index_t _getPatchIndex(unsigned localIndex) const
+    index_t _getPatchIndex(index_t localIndex) const
     {
-        unsigned patchIndex=localIndex;
+        index_t patchIndex=localIndex;
         for(index_t i = 0;i<_getPatch(localIndex);i++)
         {
             patchIndex-=m_basis->localSize(i);
@@ -809,7 +809,7 @@ protected:
         return patchIndex;
     }
 
-    index_t _getPatch(unsigned localIndex) const
+    index_t _getPatch(index_t localIndex) const
     {
         size_t patch;
         for (patch = 0; patch < m_basis->nPatches(); patch++)
@@ -830,7 +830,7 @@ protected:
     gsBoxTopology const *m_topol;
     gsMPBESBasis<d,T> const *m_basis;
     mutable gsWeightMapper<T> *m_mapper;
-    mutable unsigned m_global;
+    mutable index_t m_global;
 };// class gsMPBESMapTensor
 
 }

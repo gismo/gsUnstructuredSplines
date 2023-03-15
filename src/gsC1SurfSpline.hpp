@@ -36,12 +36,12 @@ namespace gismo
         // Check requirements
         for (size_t p=0; p!=m_multiBasis.nBases(); p++)
         {
-            gsTensorBSplineBasis<d, T> * basis_patch = dynamic_cast<gsTensorBSplineBasis<d, T> *>(&m_multiBasis.basis(p));
+            gsTensorBSplineBasis<d, T> * basis_patch = dynamic_cast<gsTensorBSplineBasis<d, T> *>(&m_patches.basis(p));
             index_t degree;
             for (short_t dd = 0; dd!=d; dd++)
             {
                 degree = basis_patch->component(dd).knots().degree();
-                GISMO_ENSURE(basis_patch->component(dd).knots().size()-2*(degree+1)>=(size_t)(5-degree),"For a degree="<<degree<<" basis, the knot vector should at least have "<<5-degree<<" inner knots, but now it has "<<basis_patch->component(dd).knots().size()-2*(degree+1)<<" inner knots.");
+                GISMO_ENSURE((index_t)(basis_patch->component(dd).knots().size()-2*(degree+1))>=(index_t)(5-degree),"For a degree="<<degree<<" basis, the knot vector should at least have "<<5-degree<<" inner knots, but now it has "<<basis_patch->component(dd).knots().size()-2*(degree+1)<<" inner knots.");
             }
 
             // regularity check (r=p-2)
@@ -84,10 +84,10 @@ namespace gismo
             index_t dir = m_patches.interfaces()[numInt].first().m_index < 3 ? 1 : 0;
             gsBSplineBasis<T> basis_edge = dynamic_cast<gsBSplineBasis<T> &>(m_multiBasis.basis(m_patches.interfaces()[numInt].first().patch).component(dir)); // If the interface matches!!!
 
-            gsBSplineBasis<> basis_plus(basis_edge);
+            gsBSplineBasis<T> basis_plus(basis_edge);
             basis_plus.elevateContinuity(1);
 
-            gsBSplineBasis<> basis_minus(basis_edge);
+            gsBSplineBasis<T> basis_minus(basis_edge);
             basis_minus.degreeReduce(1);
 
             index_t numDofs = basis_plus.size() + basis_minus.size() - 10;
@@ -105,10 +105,10 @@ namespace gismo
             index_t dir = side_1 < 3 ? 1 : 0;
             gsBSplineBasis<T> basis_edge = dynamic_cast<gsBSplineBasis<T> &>(m_multiBasis.basis(patch_1).component(dir)); // If the interface matches!!!
 
-            gsBSplineBasis<> basis_plus(basis_edge);
+            gsBSplineBasis<T> basis_plus(basis_edge);
             basis_plus.elevateContinuity(1);
 
-            gsBSplineBasis<> basis_minus(basis_edge);
+            gsBSplineBasis<T> basis_minus(basis_edge);
             basis_minus.degreeReduce(1);
 
             index_t numDofs = basis_plus.size() + basis_minus.size() - 10;
@@ -134,7 +134,7 @@ namespace gismo
         m_matrix.reserve(nz);
 
 //        gsInfo << m_multiBasis << "\n";
-//        for (size_t np = 0; np < m_patches.nPatches(); np++)
+//        for (index_t np = 0; np < m_patches.nPatches(); np++)
 //            gsInfo << "Basis " << np << " Size: " << m_multiBasis.basis(np).size() << "\n";
 //        gsInfo << "Mat dim: (" << row_dofs  << " : " << dim_col << ")\n";
     }
@@ -240,8 +240,8 @@ namespace gismo
         for (size_t numVer = 0; numVer < m_patches.vertices().size(); numVer++)
         {
             std::vector<patchCorner> allcornerLists = m_patches.vertices()[numVer];
-            std::vector<size_t> patchIndex;
-            std::vector<size_t> vertIndex;
+            std::vector<index_t> patchIndex;
+            std::vector<index_t> vertIndex;
             for (size_t j = 0; j < allcornerLists.size(); j++)
             {
                 patchIndex.push_back(allcornerLists[j].patch);
@@ -255,7 +255,7 @@ namespace gismo
             for(size_t pInd=0; pInd < patchIndex.size(); pInd++)
             {
                 index_t begin_col = 0, end_col = 0, shift_col = 0;
-                for (size_t np = 0; np < patchIndex[pInd]; ++np)
+                for (index_t np = 0; np < patchIndex[pInd]; ++np)
                     shift_col += m_bases[np].size();
 
                 end_col += m_bases[patchIndex[pInd]].piece(0).size();
@@ -264,10 +264,7 @@ namespace gismo
                     index_t jj = 0;
                     for (index_t j = begin_col; j < end_col; ++j, ++jj) {
                         if (basisVertex[pInd].patch(ii).coef(jj, 0) * basisVertex[pInd].patch(ii).coef(jj, 0) > 1e-25)
-                        {
                             m_matrix.insert(shift_row + ii, shift_col + j) = basisVertex[pInd].patch(ii).coef(jj, 0);
-                        }
-
                     }
                 }
             }

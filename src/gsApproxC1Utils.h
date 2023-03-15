@@ -199,7 +199,7 @@ public:
             {
                 _geo.jacobian_into(uv.col(i),ev);
                 D0  = ev.col(m_uv);
-                real_t D1 = T(1.0)/ D0.norm();
+                T D1 = T(1.0)/ D0.norm();
                 uv(0,i) = - gamma * D1 * D1 * ev.col(1).transpose() * ev.col(0);
             }
             result = uv.row(0);
@@ -217,7 +217,7 @@ public:
             {
                 _geo.jacobian_into(uv.col(i),ev);
                 D0  = ev.col(m_uv);
-                real_t D1 = T(1.0)/ D0.norm();
+                T D1 = T(1.0)/ D0.norm();
                 uv(0,i) = - gamma * D1 * D1 * ev.col(1).transpose() * ev.col(0);
             }
             result = uv.row(0);
@@ -291,10 +291,10 @@ public:
         result.resize( targetDim() , u.cols() );
 
         // tau/p
-        gsBSplineBasis<T> bsp_temp = dynamic_cast<gsBSplineBasis<> & >(m_basis.component(1-m_uv));
+        gsBSplineBasis<T> bsp_temp = dynamic_cast<gsBSplineBasis<T> & >(m_basis.component(1-m_uv));
 
-        real_t p = bsp_temp.degree();
-        real_t tau_1 = bsp_temp.knots().at(p + 1); // p + 2
+        T p = bsp_temp.degree();
+        T tau_1 = bsp_temp.knots().at(p + 1); // p + 2
 
         gsMatrix<T> beta, N_0, N_1, N_i_plus, der_N_i_plus;
 
@@ -378,10 +378,10 @@ public:
         result.resize( targetDim() , u.cols() );
 
         // tau/p
-        gsBSplineBasis<T> bsp_temp = dynamic_cast<gsBSplineBasis<> & >(m_basis.component(1-m_uv));
+        gsBSplineBasis<T> bsp_temp = dynamic_cast<gsBSplineBasis<T> & >(m_basis.component(1-m_uv));
 
-        real_t p = bsp_temp.degree();
-        real_t tau_1 = bsp_temp.knots().at(p + 1); // p + 2
+        T p = bsp_temp.degree();
+        T tau_1 = bsp_temp.knots().at(p + 1); // p + 2
 
         gsMatrix<T> alpha, N_1, N_j_minus;
 
@@ -417,7 +417,7 @@ protected:
     std::vector<gsBSplineBasis<T>>       m_basis_plus;
     std::vector<gsBSplineBasis<T>>       m_basis_minus;
 
-    const gsMatrix<> m_Phi;
+    const gsMatrix<T> m_Phi;
     const std::vector<bool> m_kindOfEdge;
 
     const index_t m_bfID;
@@ -437,7 +437,7 @@ public:
                   std::vector<gsBSpline<T>> beta,
                   std::vector<gsBSplineBasis<T>> basis_plus,
                   std::vector<gsBSplineBasis<T>> basis_minus,
-                  const gsMatrix<> Phi,
+                  const gsMatrix<T> Phi,
                   const std::vector<bool> kindOfEdge,
                   const index_t bfID
             ) : m_geo(geo), m_basis(basis), m_alpha(alpha), m_beta(beta), m_basis_plus(basis_plus), m_basis_minus(basis_minus),
@@ -482,16 +482,16 @@ public:
         std::vector<gsMatrix <T>> c_0_minus, c_1_minus;
         for (index_t i = 0; i < 2; i++) // i == 0 == u , i == 1 == v
         {
-            gsMatrix<> b_0, b_1;
-            gsMatrix<> b_0_plus, b_1_plus, b_2_plus;
-            gsMatrix<> b_0_plus_deriv, b_1_plus_deriv, b_2_plus_deriv;
-            gsMatrix<> b_0_minus, b_1_minus;
+            gsMatrix<T> b_0, b_1;
+            gsMatrix<T> b_0_plus, b_1_plus, b_2_plus;
+            gsMatrix<T> b_0_plus_deriv, b_1_plus_deriv, b_2_plus_deriv;
+            gsMatrix<T> b_0_minus, b_1_minus;
 
-            //gsBSplineBasis<T> bsp_temp = dynamic_cast<gsBSplineBasis<> & >(m_basis.component(i));
-            //gsBSplineBasis<T> bsp_temp_2 = dynamic_cast<gsBSplineBasis<> & >(m_basis.component(i));
-            //real_t p = bsp_temp.degree();
-            //real_t h_geo = bsp_temp.knots().at(p + 1);
-            //real_t h_geo_2 = bsp_temp_2.knots().at(p + 1);
+            //gsBSplineBasis<T> bsp_temp = dynamic_cast<gsBSplineBasis<T> & >(m_basis.component(i));
+            //gsBSplineBasis<T> bsp_temp_2 = dynamic_cast<gsBSplineBasis<T> & >(m_basis.component(i));
+            //T p = bsp_temp.degree();
+            //T h_geo = bsp_temp.knots().at(p + 1);
+            //T h_geo_2 = bsp_temp_2.knots().at(p + 1);
 
             m_basis.component(i).evalSingle_into(0, u.row(i),b_0); // first
             m_basis.component(i).evalSingle_into(1, u.row(i),b_1); // second
@@ -511,11 +511,11 @@ public:
             m_basis.component(i).derivSingle_into(1, zero.row(i),b_1_0);
             m_basis_minus[i].derivSingle_into(1, zero.row(i),b_1_minus_0);
 
-            real_t factor_b_1 = 1.0/b_1_0(0,0);
+            T factor_b_1 = 1.0/b_1_0(0,0);
             c_0.push_back(b_0 + b_1);
             c_1.push_back(factor_b_1 * b_1);
 
-            real_t factor_b_1_minus = 1.0/b_1_minus_0(0,0);
+            T factor_b_1_minus = 1.0/b_1_minus_0(0,0);
             c_0_minus.push_back(b_0_minus + b_1_minus);
             c_1_minus.push_back(factor_b_1_minus * b_1_minus);
 
@@ -524,9 +524,9 @@ public:
             m_basis_plus[i].deriv2Single_into(1, zero.row(i), der2_b_1_plus_0);
             m_basis_plus[i].deriv2Single_into(2, zero.row(i), der2_b_2_plus_0);
 
-            real_t factor_c_1_plus = 1.0/der_b_1_plus_0(0,0);
-            real_t factor2_c_1_plus = -der2_b_1_plus_0(0,0)/(der_b_1_plus_0(0,0)*der2_b_2_plus_0(0,0));
-            real_t factor_c_2_plus = 1.0/der2_b_2_plus_0(0,0);
+            T factor_c_1_plus = 1.0/der_b_1_plus_0(0,0);
+            T factor2_c_1_plus = -der2_b_1_plus_0(0,0)/(der_b_1_plus_0(0,0)*der2_b_2_plus_0(0,0));
+            T factor_c_2_plus = 1.0/der2_b_2_plus_0(0,0);
 
             c_0_plus.push_back(b_0_plus + b_1_plus + b_2_plus);
             c_1_plus.push_back(factor_c_1_plus * b_1_plus + factor2_c_1_plus * b_2_plus);
