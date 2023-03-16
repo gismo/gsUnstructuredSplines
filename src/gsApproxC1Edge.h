@@ -63,7 +63,7 @@ public:
         reparametrizeInterfacePatches(sidesContainer);
 
         compute(sidesContainer);
-
+/*
         if (m_optionList.getSwitch("plot"))
         {
             std::string fileName;
@@ -87,6 +87,7 @@ public:
 
             //gsWriteParaview(basisEdgeResult[0], "interface_basis", 20000);
         }
+*/
     }
 
     gsApproxC1Edge(gsMultiPatch<T> const & mp,
@@ -105,7 +106,7 @@ public:
         reparametrizeSinglePatch(item.side().index());
 
         compute(sidesContainer);
-
+/*
         if (m_optionList.getSwitch("plot")) {
             std::string fileName;
             std::string basename = "BoundaryBasisFunctions" + util::to_string(numBdy);
@@ -116,10 +117,11 @@ public:
                 fileName = basename + "_0_" + util::to_string(i);
                 gsField<T> temp_field(m_mp.patch(item.patch), basisEdgeResult[0].patch(i));
                 gsWriteParaview(temp_field, fileName, 5000);
-                collection.addTimestep(fileName, i, "0.vts");
+                collection.newTimeStep(fileName, i, "0.vts");
             }
             collection.save();
         }
+*/
     }
 
     std::vector<gsMultiPatch<T>> getEdgeBasis() { return basisEdgeResult; };

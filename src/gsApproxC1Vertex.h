@@ -349,7 +349,7 @@ public:
             for(size_t i = 0; i < m_patchesAroundVertex.size(); i++)
                 m_auxPatches[i].parametrizeBasisBack(basisVertexResult[i]); // parametrizeBasisBack
         }
-
+/*
         if (m_optionList.getSwitch("plot"))
         {
             std::string fileName;
@@ -372,6 +372,7 @@ public:
             //if (m_patchesAroundVertex.size() == 2)
             //    gsWriteParaview(basisVertexResult[0], "vertex_basis", 20000);
         }
+*/
     }
 
     void reparametrizeVertexPatches();
