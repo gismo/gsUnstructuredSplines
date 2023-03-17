@@ -481,30 +481,36 @@ namespace gismo
     template<short_t d,class T>
     gsMatrix<T> gsDPatchBase<d,T>::allCoefficients() const
     {
-        std::vector<index_t> sizes(m_patches.nPatches());
-        index_t totalsize = 0;
-        for (size_t p=0; p!=m_patches.nPatches(); p++) // patches
-        {
-            sizes.at(p) = m_patches.patch(p).coefs().rows();
-            totalsize += sizes.at(p);
-        }
+        // gsMultiBasis<T> basis(m_patches);
+        // gsDofMapper tmpMap(basis);
+        // tmpMap.finalize();
 
-        gsMultiBasis<T> basis(m_patches);
-        gsDofMapper tmpMap(basis);
-        tmpMap.finalize();
 
-        gsMatrix<T> coefs(totalsize,m_patches.geoDim());
-        index_t offset = 0;
-        for (size_t p=0; p!=m_patches.nPatches(); p++) // patches
-        {
-            for (index_t k=0; k!=sizes.at(p); k++)
-            {
-                    coefs.row(tmpMap.index(k,p)) = m_patches.patch(p).coefs().row(k);
-            }
-            offset += sizes.at(p);
-        }
+        // std::vector<index_t> sizes(m_patches.nPatches());
+        // index_t totalsize = 0;
+        // for (size_t p=0; p!=m_patches.nPatches(); p++) // patches
+        // {
+        //     sizes.at(p) = m_patches.patch(p).coefs().rows();
+        //     totalsize += sizes.at(p);
+        // }
 
-        return coefs;
+        // gsMultiBasis<T> basis(m_patches);
+        // gsDofMapper tmpMap(basis);
+        // tmpMap.finalize();
+
+        // gsMatrix<T> coefs(totalsize,m_patches.geoDim());
+        // index_t offset = 0;
+        // for (size_t p=0; p!=m_patches.nPatches(); p++) // patches
+        // {
+        //     for (index_t k=0; k!=sizes.at(p); k++)
+        //     {
+        //             coefs.row(tmpMap.index(k,p)) = m_patches.patch(p).coefs().row(k);
+        //     }
+        //     offset += sizes.at(p);
+        // }
+        return m_patches.coefs();
+
+        // return coefs;
     }
 
 //     template<short_t d,class T>
