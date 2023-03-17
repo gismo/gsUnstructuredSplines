@@ -292,6 +292,7 @@ int main(int argc, char *argv[])
 {
     //! [Parse command line]
     bool plot  = false;
+    bool nested  = false;
     bool plotApproxC1 = false;
     bool mesh  = false;
 
@@ -314,6 +315,7 @@ int main(int argc, char *argv[])
     std::string xml;
     std::string output;
     std::string write;
+    std::string assemberOptionsFile("options/assembler_options.xml");
     std::string geometry = "g1000";
 
     std::string fn;
@@ -324,6 +326,9 @@ int main(int argc, char *argv[])
 
     // Flags related to the problem (default: first biharmonic problem)
     cmd.addSwitch("second", "Solve the second biharmonic problem", second);
+
+    // Perform nested refinement for D-Patch or Almost-C1
+    cmd.addSwitch("nested", "Perform nested refinement for D-Patch or Almost-C1", nested);
 
     // Flags related to the input/geometry
     cmd.addString( "f", "file", "Input geometry file from path (with .xml)", fn );
@@ -351,6 +356,7 @@ int main(int argc, char *argv[])
     cmd.addSwitch("mesh", "Plot the mesh", mesh);
     cmd.addSwitch("cond", "Estimate condition number (slow!)", cond);
 
+    cmd.addString("O", "Aopt", "Assembler options file", assemberOptionsFile);
     cmd.addString("o", "output", "Output in xml (for python)", output);
     cmd.addString("w", "write", "Write to csv", write);
     try { cmd.getValues(argc,argv); } catch (int rv) { return rv; }
@@ -360,7 +366,7 @@ int main(int argc, char *argv[])
     gsMultiPatch<real_t> mp;
     gsBoundaryConditions<> bc;
     gsFunctionExpr<real_t> f, ms;
-    gsOptionList optionList;
+    gsOptionList optionList, Aopt;
     //! [Initialize data]
 
     //! [Read Argument inputs]
@@ -408,6 +414,10 @@ int main(int argc, char *argv[])
 
         optionList = cmd;
         gsInfo << "OptionList: " << optionList << "\n";
+
+        gsFileData<> fd(assemberOptionsFile); // "planar/biharmonic_pde/bvp1.xml"
+        fd.getAnyFirst(Aopt);
+
         gsInfo << "Finished\n";
     }
     //! [Read Argument inputs]
@@ -460,9 +470,6 @@ int main(int argc, char *argv[])
         interpolation = optionList.getSwitch("interpolation");
     }
 
-    gsMultiPatch<> geom = mp;
-    gsMultiPatch<> geom0 = mp;
-
     //! [Read XML file]
 
 //    gsMatrix<> coefs;
@@ -513,6 +520,8 @@ int main(int argc, char *argv[])
         dbasis.basis(0).component(1).uniformRefine(1);
     }
 
+    gsMultiPatch<> geom = mp;
+    gsMultiPatch<> geom0 = mp;
 
 //    gsWriteParaview(mp, "geom", 2000);
 //
@@ -538,7 +547,8 @@ int main(int argc, char *argv[])
 
     //! [Problem setup]
     gsExprAssembler<real_t> A(1,1);
-    //gsInfo<<"Active options:\n"<< A.options() <<"\n";
+    A.setOptions(Aopt);
+    gsInfo<<"Active options:\n"<< A.options() <<"\n";
 
     // Elements used for numerical integration
     A.setIntegrationElements(dbasis);
@@ -598,12 +608,18 @@ int main(int argc, char *argv[])
         }
         else if (method == MethodFlags::DPATCH)
         {
+            if (!nested) mp = geom;
             mp.uniformRefine(1,degree-smoothness);
+
+            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&dbasis.basis(0)))
+                meshsize[r] = test->tensorLevel(0).getMinCellLength();
+            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&dbasis.basis(0)))
+                meshsize[r] = test->getMinCellLength();
 
             // Construct the D-Patch on mp
             gsSparseMatrix<real_t> global2local;
             gsDPatch<2,real_t> dpatch(mp);
-            dpatch.options().setInt("RefLevel",r);
+            if (nested) dpatch.options().setInt("RefLevel",r);
             dpatch.options().setInt("Pi",0);
             dpatch.options().setSwitch("SharpCorners",false);
             dpatch.compute();
@@ -613,32 +629,37 @@ int main(int argc, char *argv[])
             dbasis = dpatch.localBasis();
             bb2.init(dbasis,global2local);
 
-            ///////////////////////////////////////////
-            if (r>0)
+
+            if (nested)
             {
-                gsDofMapper mapper(dbasis);
-                mapper.finalize();
-                gsMatrix<> coefs;
-                gsL2Projection<real_t>::projectGeometry(dbasis,geom0,coefs);
-                coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
+                ///////////////////////////////////////////
+                if (r>0)
+                {
+                    gsDofMapper mapper(dbasis);
+                    mapper.finalize();
+                    gsMatrix<> coefs;
+                    gsL2Projection<real_t>::projectGeometry(dbasis,geom0,coefs);
+                    coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
 
-                for (index_t p = 0; p != geom.nPatches(); p++)
-                    for (index_t k=0; k!=mapper.patchSize(p); k++)
-                        geom.patch(p).coefs().row(k) = coefs.row(mapper.index(k,p));
+                    for (index_t p = 0; p != geom.nPatches(); p++)
+                        for (index_t k=0; k!=mapper.patchSize(p); k++)
+                            geom.patch(p).coefs().row(k) = coefs.row(mapper.index(k,p));
 
+                }
+                geom0 = geom;
             }
-            geom0 = geom;
         }
         else if (method == MethodFlags::ALMOSTC1)
         {
+            if (!nested) mp = geom;
             mp.uniformRefine(1,degree-smoothness);
-            dbasis.uniformRefine(1,degree-smoothness);
 
             if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&dbasis.basis(0)))
                 meshsize[r] = test->tensorLevel(0).getMinCellLength();
             else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&dbasis.basis(0)))
                 meshsize[r] = test->getMinCellLength();
 
+            // Construct the D-Patch on mp
             gsSparseMatrix<real_t> global2local;
             gsAlmostC1<2,real_t> almostC1(mp);
             almostC1.compute();
@@ -648,20 +669,25 @@ int main(int argc, char *argv[])
             dbasis = almostC1.localBasis();
             bb2.init(dbasis,global2local);
 
-            if (r>0)
+
+            if (nested)
             {
-                gsDofMapper mapper(dbasis);
-                mapper.finalize();
-                gsMatrix<> coefs;
-                gsL2Projection<real_t>::projectGeometry(dbasis,geom0,coefs);
-                coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
+                ///////////////////////////////////////////
+                if (r>0)
+                {
+                    gsDofMapper mapper(dbasis);
+                    mapper.finalize();
+                    gsMatrix<> coefs;
+                    gsL2Projection<real_t>::projectGeometry(dbasis,geom0,coefs);
+                    coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
 
-                for (index_t p = 0; p != geom.nPatches(); p++)
-                    for (index_t k=0; k!=mapper.patchSize(p); k++)
-                        geom.patch(p).coefs().row(k) = coefs.row(mapper.index(k,p));
+                    for (index_t p = 0; p != geom.nPatches(); p++)
+                        for (index_t k=0; k!=mapper.patchSize(p); k++)
+                            geom.patch(p).coefs().row(k) = coefs.row(mapper.index(k,p));
 
+                }
+                geom0 = geom;
             }
-            geom0 = geom;
         }
         else if (method == MethodFlags::SURFASG1) // Andrea
         {
@@ -832,21 +858,19 @@ int main(int argc, char *argv[])
         if (cond)
         {
 #ifdef gsSpectra_ENABLED
-	    gsInfo<<"Computing the condition number using Spectra\n";
+            gsDebug<<"Computing the condition number using Spectra\n";
             real_t minev, maxev;
             index_t sz = A.matrix().cols();
             gsSpectraSymSolver<gsSparseMatrix<real_t>> evsolver(A.matrix(),1, sz);
             evsolver.compute(Spectra::SortRule::SmallestAlge,1000,1e-10,Spectra::SortRule::SmallestAlge);
-            gsInfo << "Symmetric solver:\n";
-            gsInfo << "Eigenvalues A*x=lambda*x:\n" << evsolver.eigenvalues().transpose() <<"\n\n";
+            gsDebug << "Eigenvalues A*x=lambda*x:\n" << evsolver.eigenvalues().transpose() <<"\n\n";
             minev = evsolver.eigenvalues()(0);
 
             evsolver.compute(Spectra::SortRule::LargestAlge,1000,1e-10,Spectra::SortRule::LargestAlge);
-            gsInfo << "Symmetric solver:\n";
-            gsInfo << "Eigenvalues A*x=lambda*x:\n" << evsolver.eigenvalues().transpose() <<"\n\n";
+            gsDebug << "Eigenvalues A*x=lambda*x:\n" << evsolver.eigenvalues().transpose() <<"\n\n";
             maxev = evsolver.eigenvalues()(0);
 
-            gsInfo << "Cond Number: " <<maxev/minev<< "\n";
+            gsDebug << "Cond Number: " <<maxev/minev<< "\n";
             cond_num[r] = maxev/minev;
 #else
             //Eigen::MatrixXd mat = A.matrix().toDense().cast<double>()
@@ -880,7 +904,7 @@ int main(int argc, char *argv[])
             gsInfo << "Cond Number: " << eigenvalues.bottomRows(1)(0,0)/ eigenvalues(0,0) << "\n";
             cond_num[r] = eigenvalues.bottomRows(1)(0,0)/ eigenvalues(0,0);
             //cond_num[r] = cg.getConditionNumber();
-
+/*
             gsMatrix<> x, x2;
             x.setRandom( A.matrix().rows(), 1 );
 
@@ -909,14 +933,12 @@ int main(int argc, char *argv[])
             gsInfo << "min_ev: " << min_ev << "\n";
             gsInfo << "Cond: " << max_ev/min_ev << "\n";
             cond_num[r] = max_ev/min_ev;
-
+*/
 #endif
         }
         else
             cond_num[r] = 0;
 
-       }
-*/
         err_time += timer.stop();
         gsInfo<< ". " <<std::flush; // Error computations done
     } //for loop
