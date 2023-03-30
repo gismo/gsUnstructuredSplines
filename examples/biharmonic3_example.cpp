@@ -611,9 +611,9 @@ int main(int argc, char *argv[])
             if (!nested) mp = geom;
             mp.uniformRefine(1,degree-smoothness);
 
-            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&dbasis.basis(0)))
+            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&mp.basis(0)))
                 meshsize[r] = test->tensorLevel(0).getMinCellLength();
-            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&dbasis.basis(0)))
+            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&mp.basis(0)))
                 meshsize[r] = test->getMinCellLength();
 
             // Construct the D-Patch on mp
@@ -654,9 +654,9 @@ int main(int argc, char *argv[])
             if (!nested) mp = geom;
             mp.uniformRefine(1,degree-smoothness);
 
-            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&dbasis.basis(0)))
+            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&mp.basis(0)))
                 meshsize[r] = test->tensorLevel(0).getMinCellLength();
-            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&dbasis.basis(0)))
+            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&mp.basis(0)))
                 meshsize[r] = test->getMinCellLength();
 
             // Construct the D-Patch on mp
@@ -861,14 +861,37 @@ int main(int argc, char *argv[])
             gsDebug<<"Computing the condition number using Spectra\n";
             real_t minev, maxev;
             index_t sz = A.matrix().cols();
-            gsSpectraSymSolver<gsSparseMatrix<real_t>> evsolver(A.matrix(),1, sz);
-            evsolver.compute(Spectra::SortRule::SmallestAlge,1000,1e-10,Spectra::SortRule::SmallestAlge);
-            gsDebug << "Eigenvalues A*x=lambda*x:\n" << evsolver.eigenvalues().transpose() <<"\n\n";
-            minev = evsolver.eigenvalues()(0);
+            gsStopwatch ev_time;
+            gsSparseMatrix<real_t> I(A.matrix().rows(),A.matrix().cols());
+            I.setIdentity();
 
-            evsolver.compute(Spectra::SortRule::LargestAlge,1000,1e-10,Spectra::SortRule::LargestAlge);
-            gsDebug << "Eigenvalues A*x=lambda*x:\n" << evsolver.eigenvalues().transpose() <<"\n\n";
-            maxev = evsolver.eigenvalues()(0);
+            ev_time.restart();
+            gsSpectraGenSymSolver<gsSparseMatrix<real_t>,Spectra::GEigsMode::RegularInverse> evsolver_upp(A.matrix(),I,1, sz);
+            evsolver_upp.init();
+            evsolver_upp.compute(Spectra::SortRule::LargestMagn,1000,1e-10,Spectra::SortRule::LargestMagn);
+            gsDebug<<"Largest eigenvalue computation finished in "<<ev_time.stop()<<" seconds\n";
+
+            maxev = evsolver_upp.eigenvalues()(0);
+            if (evsolver_upp.info()==Spectra::CompInfo::Successful)         { gsDebug<<"Spectra converged in "<<evsolver_upp.num_iterations()<<" iterations and with "<<evsolver_upp.num_operations()<<"operations. \n"; }
+            else if (evsolver_upp.info()==Spectra::CompInfo::NumericalIssue){ GISMO_ERROR("Spectra did not converge! Error code: NumericalIssue"); }
+            else if (evsolver_upp.info()==Spectra::CompInfo::NotConverging) { GISMO_ERROR("Spectra did not converge! Error code: NotConverging"); }
+            else if (evsolver_upp.info()==Spectra::CompInfo::NotComputed)   { GISMO_ERROR("Spectra did not converge! Error code: NotComputed");   }
+            else                                                      { GISMO_ERROR("No error code known"); }
+            gsDebug << "Eigenvalues A*x=lambda*x:\n" << evsolver_upp.eigenvalues().transpose() <<"\n\n";
+
+            ev_time.restart();
+            gsSpectraGenSymShiftSolver<gsSparseMatrix<real_t>,Spectra::GEigsMode::ShiftInvert> evsolver_low(A.matrix(),I,1, sz,0);
+            evsolver_low.init();
+            evsolver_low.compute(Spectra::SortRule::LargestMagn,1000,1e-10,Spectra::SortRule::LargestMagn);
+            gsDebug<<"Smallest eigenvalue computation finished in "<<ev_time.stop()<<" seconds\n";
+            if (evsolver_low.info()==Spectra::CompInfo::Successful)         { gsDebug<<"Spectra converged in "<<evsolver_low.num_iterations()<<" iterations and with "<<evsolver_low.num_operations()<<"operations. \n"; }
+            else if (evsolver_low.info()==Spectra::CompInfo::NumericalIssue){ GISMO_ERROR("Spectra did not converge! Error code: NumericalIssue"); }
+            else if (evsolver_low.info()==Spectra::CompInfo::NotConverging) { GISMO_ERROR("Spectra did not converge! Error code: NotConverging"); }
+            else if (evsolver_low.info()==Spectra::CompInfo::NotComputed)   { GISMO_ERROR("Spectra did not converge! Error code: NotComputed");   }
+            else                                                      { GISMO_ERROR("No error code known"); }
+            gsDebug << "Eigenvalues A*x=lambda*x:\n" << evsolver_low.eigenvalues().transpose() <<"\n\n";
+            minev = evsolver_low.eigenvalues()(0);
+
 
             gsDebug << "Cond Number: " <<maxev/minev<< "\n";
             cond_num[r] = maxev/minev;
