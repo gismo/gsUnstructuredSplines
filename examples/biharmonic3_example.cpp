@@ -309,6 +309,7 @@ int main(int argc, char *argv[])
     bool info = false;
     bool second = false;
     bool cond = false;
+    bool writeMatrix= false;
     bool interpolation = false;
 
     real_t penalty_init = -1.0;
@@ -359,6 +360,9 @@ int main(int argc, char *argv[])
     cmd.addString("O", "Aopt", "Assembler options file", assemberOptionsFile);
     cmd.addString("o", "output", "Output in xml (for python)", output);
     cmd.addString("w", "write", "Write to csv", write);
+
+    cmd.addSwitch("writeMat", "Write projection matrix",writeMatrix);
+
     try { cmd.getValues(argc,argv); } catch (int rv) { return rv; }
     //! [Parse command line]
 
@@ -381,6 +385,7 @@ int main(int argc, char *argv[])
         gsInfo << "Filedata: " << string_geo << "\n";
         gsReadFile<>(string_geo, mp);
         mp.clearTopology();
+        mp.fixOrientation();
         mp.computeTopology();
 
         gsFunctionExpr<>source("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
@@ -629,6 +634,12 @@ int main(int argc, char *argv[])
             dbasis = dpatch.localBasis();
             bb2.init(dbasis,global2local);
 
+            if (writeMatrix)
+            {
+                gsWrite(global2local,"mat");
+                //gsWrite(geom,"geom");
+                //gsWrite(dbasis,"dbasis");
+            }
 
             if (nested)
             {

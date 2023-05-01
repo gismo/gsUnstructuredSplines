@@ -974,7 +974,7 @@ namespace gismo
             for (typename gsSparseMatrix<T>::iterator it = matrix.begin(i); it; ++it)
                 colSums.at(i) += it.value();
 
-        return (colSums.array() < 1+1e-8).any() && (colSums.array() > 1-1e-8).any();
+        return (colSums.array() < 1+1e-8).all() && (colSums.array() > 1-1e-8).all(); // Lower?
     }
 
 //     /*=====================================================================================
