@@ -8,7 +8,7 @@ Module for unstructured splines
 
 Module for the unstructured splines. The module is based on `gismo`'s Expression Assembler `gsExprAssembler`.
 
-|CMake flags|```-DGISMO_gsUnstructuredSplines=ON``` (default ```OFF```)|
+|CMake flags|```-DGISMO_OPTIONAL="<other submodules>;gsUnstructuredSplines"```|
 |--:|---|
 |License|[MPL 2.0](https://www.mozilla.org/en-US/MPL/2.0/)|
 |OS support|Linux, Windows, macOS|
@@ -25,7 +25,7 @@ No dependencies
 #### Installation
 ```
 cd path/to/build/dir
-cmake . -DGISMO_gsUnstructuredSplines=ON
+cmake . -DGISMO_OPTIONAL="<other submodules>;gsUnstructuredSplines"
 make
 ```
 
