@@ -640,25 +640,6 @@ int main(int argc, char *argv[])
                 //gsWrite(geom,"geom");
                 //gsWrite(dbasis,"dbasis");
             }
-
-            if (nested)
-            {
-                ///////////////////////////////////////////
-                if (r>0)
-                {
-                    gsDofMapper mapper(dbasis);
-                    mapper.finalize();
-                    gsMatrix<> coefs;
-                    gsL2Projection<real_t>::projectGeometry(dbasis,geom0,coefs);
-                    coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
-
-                    for (index_t p = 0; p != geom.nPatches(); p++)
-                        for (index_t k=0; k!=mapper.patchSize(p); k++)
-                            geom.patch(p).coefs().row(k) = coefs.row(mapper.index(k,p));
-
-                }
-                geom0 = geom;
-            }
         }
         else if (method == MethodFlags::ALMOSTC1)
         {
@@ -679,26 +660,6 @@ int main(int argc, char *argv[])
             geom = almostC1.exportToPatches();
             dbasis = almostC1.localBasis();
             bb2.init(dbasis,global2local);
-
-
-            if (nested)
-            {
-                ///////////////////////////////////////////
-                if (r>0)
-                {
-                    gsDofMapper mapper(dbasis);
-                    mapper.finalize();
-                    gsMatrix<> coefs;
-                    gsL2Projection<real_t>::projectGeometry(dbasis,geom0,coefs);
-                    coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
-
-                    for (index_t p = 0; p != geom.nPatches(); p++)
-                        for (index_t k=0; k!=mapper.patchSize(p); k++)
-                            geom.patch(p).coefs().row(k) = coefs.row(mapper.index(k,p));
-
-                }
-                geom0 = geom;
-            }
         }
         else if (method == MethodFlags::SURFASG1) // Andrea
         {
