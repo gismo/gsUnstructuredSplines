@@ -613,7 +613,7 @@ int main(int argc, char *argv[])
         }
         else if (method == MethodFlags::DPATCH)
         {
-            if (!nested) mp = geom;
+            if (nested) mp = geom;
             mp.uniformRefine(1,degree-smoothness);
 
             if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&mp.basis(0)))
@@ -662,7 +662,7 @@ int main(int argc, char *argv[])
         }
         else if (method == MethodFlags::ALMOSTC1)
         {
-            if (!nested) mp = geom;
+            if (nested) mp = geom;
             mp.uniformRefine(1,degree-smoothness);
 
             if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&mp.basis(0)))
@@ -877,9 +877,9 @@ int main(int argc, char *argv[])
             I.setIdentity();
 
             ev_time.restart();
-            gsSpectraGenSymSolver<gsSparseMatrix<real_t>,Spectra::GEigsMode::RegularInverse> evsolver_upp(A.matrix(),I,1, sz);
+            gsSpectraGenSymSolver<gsSparseMatrix<real_t>,Spectra::GEigsMode::Cholesky> evsolver_upp(A.matrix(),I,1, sz);
             evsolver_upp.init();
-            evsolver_upp.compute(Spectra::SortRule::LargestMagn,1000,1e-10,Spectra::SortRule::LargestMagn);
+            evsolver_upp.compute(Spectra::SortRule::LargestMagn,100,1e-10,Spectra::SortRule::LargestMagn);
             gsDebug<<"Largest eigenvalue computation finished in "<<ev_time.stop()<<" seconds\n";
 
             maxev = evsolver_upp.eigenvalues()(0);
@@ -893,7 +893,7 @@ int main(int argc, char *argv[])
             ev_time.restart();
             gsSpectraGenSymShiftSolver<gsSparseMatrix<real_t>,Spectra::GEigsMode::ShiftInvert> evsolver_low(A.matrix(),I,1, sz,0);
             evsolver_low.init();
-            evsolver_low.compute(Spectra::SortRule::LargestMagn,1000,1e-10,Spectra::SortRule::LargestMagn);
+            evsolver_low.compute(Spectra::SortRule::LargestMagn,100,1e-10,Spectra::SortRule::LargestMagn);
             gsDebug<<"Smallest eigenvalue computation finished in "<<ev_time.stop()<<" seconds\n";
             if (evsolver_low.info()==Spectra::CompInfo::Successful)         { gsDebug<<"Spectra converged in "<<evsolver_low.num_iterations()<<" iterations and with "<<evsolver_low.num_operations()<<"operations. \n"; }
             else if (evsolver_low.info()==Spectra::CompInfo::NumericalIssue){ GISMO_ERROR("Spectra did not converge! Error code: NumericalIssue"); }

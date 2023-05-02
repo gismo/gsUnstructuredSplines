@@ -310,17 +310,17 @@ namespace gismo
 
                         // C11 coefficients
                         cij[0](patches[side.patch],0) = this->_indexFromVert(1,corners[i],side,1,0);
-                        // C12 coefficients
-                        cij[1](patches[side.patch],0) = this->_indexFromVert(2,corners[i],side,1,0);
                         // C21 coefficients
-                        cij[2](patches[otherSide.patch],0) = this->_indexFromVert(2,otherCorner,otherSide,1,0);
+                        cij[1](patches[otherSide.patch],0) = this->_indexFromVert(2,otherCorner,otherSide,1,0);
+                        // C12 coefficients
+                        cij[2](patches[side.patch],0) = this->_indexFromVert(2,corners[i],side,1,0);
 
                         // C11 coefficients
                         cijo[0](patches[side.patch],0) = this->_indexFromVert(m_Bbases,1,corners[i],side,1);
-                        // C12 coefficients
-                        cijo[1](patches[side.patch],0) = this->_indexFromVert(m_Bbases,2,corners[i],side,1);
                         // C21 coefficients
-                        cijo[2](patches[otherSide.patch],0) = this->_indexFromVert(m_Bbases,2,otherCorner,otherSide,1);
+                        cijo[1](patches[otherSide.patch],0) = this->_indexFromVert(m_Bbases,2,otherCorner,otherSide,1);
+                        // C12 coefficients
+                        cijo[2](patches[side.patch],0) = this->_indexFromVert(m_Bbases,2,corners[i],side,1);
                     }
 
                     std::vector<gsMatrix<index_t>> rowIndices(3);
@@ -342,7 +342,6 @@ namespace gismo
                     }
 
                     gsMatrix<T> Pi = _makePi(N);
-
                     gsVector<T> c(3*N);
                     index_t colIdx = 0, idx = 0;
                     for (index_t i = 0; i!=N; i++) // for all involved corners
@@ -389,6 +388,11 @@ namespace gismo
                         }
                     }
 
+                    #pragma omp critical (_computeEV2)
+                        _push(entries);
+
+                    entries.clear();
+
                     // interface smoothing
                     for (index_t i = 0; i!=N; i++) // for all involved interfaces
                     {
@@ -423,7 +427,7 @@ namespace gismo
                         }
                     }
 
-                    #pragma omp critical (_computeEV2)
+                    #pragma omp critical (_computeEV3)
                         _push(entries);
                 }
             }
