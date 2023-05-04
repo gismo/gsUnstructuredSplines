@@ -30,20 +30,21 @@ namespace gismo
                                     Coefficients
     =====================================================================================*/
     template<short_t d,class T>
-    gsMatrix<T> gsSmoothInterfaces<d,T>::_preCoefficients()
+    gsMatrix<T> gsSmoothInterfaces<d,T>::_preCoefficients(const gsMultiPatch<T> & patches)
     {
         GISMO_ASSERT(m_mapModified.isFinalized(),"Mapper is not finalized, run XXXX first");
+        GISMO_ASSERT(!patches.empty(),"The reference multipatch is empty!");
 
-        gsMatrix<T> coefs(m_mapModified.freeSize(),m_patches.geoDim());
+        gsMatrix<T> coefs(m_mapModified.freeSize(),patches.geoDim());
 
         index_t size;
-        for (size_t p=0; p!=m_patches.nPatches(); p++) // patches
+        for (size_t p=0; p!=m_bases.nBases(); p++) // patches
         {
             size = m_mapModified.patchSize(p);
             for (index_t k=0; k!=size; k++)
             {
                 if (m_mapModified.is_free(k,p))
-                    coefs.row(m_mapModified.index(k,p,0)) = m_patches.patch(p).coefs().row(k);
+                    coefs.row(m_mapModified.index(k,p,0)) = patches.patch(p).coefs().row(k);
             }
         }
 
@@ -86,7 +87,6 @@ namespace gismo
     template<short_t d,class T>
     void gsSmoothInterfaces<d,T>::_makeTHB()
     {
-        m_RefPatches = gsMultiPatch<T>(m_patches);
     }
 
     template<short_t d,class T>
@@ -107,7 +107,7 @@ namespace gismo
         size_t tmp;
         m_size = tmp = 0;
         // number of interior basis functions
-        for (size_t p=0; p!=m_patches.nPatches(); p++)
+        for (size_t p=0; p!=m_bases.nBases(); p++)
         {
             tmp += m_bases.basis(p).size();
             for (index_t k=0; k!=2; k++)
@@ -127,7 +127,7 @@ namespace gismo
         gsBasis<T> * basis2;
         gsVector<index_t> indices1,indices2;
         tmp = 0;
-        for(gsBoxTopology::const_iiterator iit = m_patches.iBegin(); iit!= m_patches.iEnd(); iit++)
+        for(gsBoxTopology::const_iiterator iit = m_topology.iBegin(); iit!= m_topology.iEnd(); iit++)
         {
             basis1 = &m_bases.basis(iit->first().patch);
             basis2 = &m_bases.basis(iit->second().patch);
@@ -139,7 +139,7 @@ namespace gismo
 
         // boundaries
         tmp = 0;
-        for(gsBoxTopology::const_biterator bit = m_patches.bBegin(); bit!= m_patches.bEnd(); bit++)
+        for(gsBoxTopology::const_biterator bit = m_topology.bBegin(); bit!= m_topology.bEnd(); bit++)
         {
             basis1 = &m_bases.basis(bit->patch);
             tmp += (basis1->boundaryOffset(bit->side(),0).size() - 4);
@@ -150,18 +150,18 @@ namespace gismo
 
         // vertices
         tmp = 0;
-        std::vector<bool> passed(m_patches.nPatches()*4);
+        std::vector<bool> passed(m_bases.nBases()*4);
         std::fill(passed.begin(), passed.end(), false);
 
         std::vector<patchCorner> corners;
         // index_t corn = 0;
-        for (size_t p=0; p!=m_patches.nPatches(); p++)
+        for (size_t p=0; p!=m_bases.nBases(); p++)
             for (index_t c=1; c<5; c++)
             {
                 index_t idx = this->_vertIndex(p,c);
                 if (!passed.at(idx))
                 {
-                    m_patches.getCornerList(patchCorner(p,c),corners);
+                    m_topology.getCornerList(patchCorner(p,c),corners);
 
                     for (size_t k=0; k!=corners.size(); k++)
                         passed.at(this->_vertIndex(corners[k].patch,corners[k])) = true;

@@ -55,6 +55,14 @@ public:
      *
      * @param      mp    Multipatch of the geometry
      */
+    gsDPatch(const gsMultiBasis<T> & mb) ;
+
+
+    /**
+     * @brief      Default constructor
+     *
+     * @param      mp    Multipatch of the geometry
+     */
     gsDPatch(const gsMultiPatch<T> & mp) ;
 
     GISMO_CLONE_FUNCTION(gsDPatch)
@@ -73,9 +81,7 @@ protected:
      * Takes the coefficients which are tagged as "free" in the modified DoFMapper (m_mapModified) and when a boundary vertex with valence=3 is present, this one is shifted.
      *
      */
-    gsMatrix<T> _preCoefficients();
-
-    // using Base::allCoefficients;
+    gsMatrix<T> _preCoefficients(const gsMultiPatch<T> & patches);
 
     // using Base::exportPatch;
 
@@ -311,10 +317,9 @@ protected:
     using Base::_whichHandled;
 
 protected:
-    using Base::m_patches;
     using Base::m_computed;
+    using Base::m_topology;
 
-    using Base::m_RefPatches;
     using Base::m_bases;
     using Base::m_Bbases;
     using Base::m_tMatrix;

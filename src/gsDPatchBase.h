@@ -45,9 +45,28 @@ public:
     /// Empty constructor
     gsDPatchBase()
     :
-    gsDPatchBase(gsMultiPatch<T>())
+    gsDPatchBase(gsMultiBasis<T>(),gsMultiPatch<T>())
     { }
 
+    /**
+     * @brief      Default constructor
+     *
+     * @param      mn    MultiBasis
+     */
+    gsDPatchBase(const gsMultiBasis<T> & mb, const gsMultiPatch<T> & mp)
+    :
+    m_patches(mp),
+    m_Bbases(mb),
+    m_topology(m_Bbases.topology()),
+    m_computed(false)             
+    {
+    }
+
+    gsDPatchBase(const gsMultiBasis<T> & mb)
+    :
+    gsDPatchBase(mb, gsMultiPatch<T>())
+    {
+    }
 
     /**
      * @brief      Default constructor
@@ -56,15 +75,8 @@ public:
      */
     gsDPatchBase(const gsMultiPatch<T> & mp)
     :
-    m_patches(mp),
-    m_computed(false)
+    gsDPatchBase(gsMultiBasis<T>(mp), mp)
     {
-
-    }
-
-    ~gsDPatchBase()
-    {
-        freeAll(m_bases);
     }
 
 public:
@@ -113,18 +125,26 @@ public:
      *
      * @return     A multipatch with the geometry
      */
-    virtual gsMultiPatch<T> exportToPatches()
+    virtual gsMultiPatch<T> exportToPatches(const gsMultiPatch<T> & patches)
     {
         GISMO_ASSERT(m_computed,"The method has not been computed! Call compute().");
-        m_coefs = this->_preCoefficients();
+        gsDebugVar(m_patches.empty());
+        GISMO_ASSERT(!patches.empty(),"The reference multipatch is empty!");
+        m_coefs = this->_preCoefficients(patches);
         m_coefs = m_matrix.transpose() * m_coefs;
 
-        std::vector<gsGeometry<T> *> patches(m_patches.nPatches());
-        for (size_t p=0; p!=m_patches.nPatches(); p++)
-            patches[p]= this->exportPatch(p,false);
+        std::vector<gsGeometry<T> *> PatchContainer(patches.nPatches());
+        for (size_t p=0; p!=patches.nPatches(); p++)
+            PatchContainer[p]= this->exportPatch(p,false);
 
-        return gsMultiPatch<T>(patches,m_patches.boundaries(),m_patches.interfaces());
+        return gsMultiPatch<T>(PatchContainer,m_topology.boundaries(),m_topology.interfaces());
     }
+
+    virtual gsMultiPatch<T> exportToPatches()
+    {
+        return this->exportToPatches(m_patches);
+    }
+
 
     /**
      * @brief      Returns the smoothing matrix into \a matrix
@@ -195,6 +215,8 @@ public:
     virtual void cornerInfo() const;
 
 
+    gsMatrix<T> preCoefficients() { return _preCoefficients();};
+
 protected:
 //----------------------------------------------------------------------------------------------------------------------------
 // Pure virtual functions (to be overloaded)
@@ -204,7 +226,11 @@ protected:
      * Takes the coefficients which are tagged as "free" in the modified DoFMapper (m_mapModified) and when a boundary vertex with valence=3 is present, this one is shifted.
      *
      */
-    virtual gsMatrix<T> _preCoefficients() = 0;
+    virtual gsMatrix<T> _preCoefficients(const gsMultiPatch<T> & patches) = 0;
+    virtual gsMatrix<T> _preCoefficients()
+    {
+        return _preCoefficients(m_patches);
+    }
 
     /**
      * @brief      Initializes the class:
@@ -341,13 +367,6 @@ protected:
      * @brief      Corrects the EVs
      */
     virtual void _computeEVs() = 0;
-
-//----------------------------------------------------------------------------------------------------------------------------
-// Virtual functions (could be overloaded)
-    /**
-     * @brief       Computes the local coefficients and puts them in one big matrix
-     */
-    virtual gsMatrix<T> allCoefficients() const;
 
 protected:
     // Boundary vertex of valence 1
@@ -639,11 +658,6 @@ protected:
     virtual void _initMatrix();
 
     /**
-     * @brief      Initializes the coefficients.
-     */
-    virtual void _initCoefs();
-
-    /**
      * @brief      Performs checks on sides, vertices and bases
      */
     virtual void _performChecks(bool basis);
@@ -672,10 +686,14 @@ protected:
 //     }
 
 protected:
-    const gsMultiPatch<T> m_patches;
+    const gsMultiPatch<T> & m_patches;
+    const gsMultiBasis<T> & m_Bbases;
     bool m_computed;
-    gsMultiPatch<T> m_RefPatches;
-    gsMultiBasis<T> m_bases, m_Bbases;
+    
+    gsMultiBasis<T> m_bases;
+    typename gsMultiBasis<T>::BasisContainer m_basesContainer;
+
+    gsBoxTopology m_topology;
     mutable gsSparseMatrix<T> m_tMatrix;
     mutable std::vector<bool> m_sideCheck;
     mutable std::vector<bool> m_vertCheck;

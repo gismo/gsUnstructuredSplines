@@ -623,14 +623,17 @@ int main(int argc, char *argv[])
 
             // Construct the D-Patch on mp
             gsSparseMatrix<real_t> global2local;
-            gsDPatch<2,real_t> dpatch(mp);
+
+            dbasis = gsMultiBasis<>(mp);
+            gsDPatch<2,real_t> dpatch(dbasis);
+            // gsDPatch<2,real_t> dpatch(mp);
             if (nested) dpatch.options().setInt("RefLevel",r);
             dpatch.options().setInt("Pi",0);
             dpatch.options().setSwitch("SharpCorners",false);
             dpatch.compute();
             dpatch.matrix_into(global2local);
             global2local = global2local.transpose();
-            geom = dpatch.exportToPatches();
+            geom = dpatch.exportToPatches(mp);
             dbasis = dpatch.localBasis();
             bb2.init(dbasis,global2local);
 
