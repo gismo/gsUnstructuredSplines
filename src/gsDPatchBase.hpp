@@ -868,14 +868,8 @@ namespace gismo
     void gsDPatchBase<d,T>::_initTHB()
     {
         // Cast all patches of the mp object to THB splines
-        gsTHBSplineBasis<d,T> thb_basis;
-        gsTensorBSplineBasis<d,T> * basis;
-        // gsTHBSpline<d,T> * basis2;
         for (size_t k=0; k!=m_Bbases.nBases(); ++k)
         {
-            gsDebugVar(k);
-            gsDebugVar(m_Bbases.nBases());
-            gsDebugVar(m_Bbases.basis(k));
             if ( (dynamic_cast<const gsTensorBSplineBasis<d,T> * > (&m_Bbases.basis(k))) )
             {
                 gsDebug<<"Making gsTHBSplineBasis\n";
@@ -888,7 +882,18 @@ namespace gismo
             else
                 gsWarn<<"No THB basis was constructed";
         }
-        gsDebugVar(m_bases.nBases());
+
+        // Set knot multiplicities
+        gsTHBSplineBasis<d,T> * thb_basis;
+        index_t multiplicity = m_options.getInt("KnotMultiplicity");
+        if (multiplicity!=1)
+        {
+            for (size_t k=0; k!=m_bases.nBases(); ++k)
+            {
+                thb_basis = dynamic_cast<gsTHBSplineBasis<d,T> * > (&m_bases.basis(k));
+                thb_basis->setMultiplicity(multiplicity);
+            }   
+        }
     }
 
     template<short_t d,class T>

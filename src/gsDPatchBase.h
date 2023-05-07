@@ -75,7 +75,7 @@ public:
      */
     gsDPatchBase(const gsMultiPatch<T> & mp)
     :
-    gsDPatchBase(gsMultiBasis<T>(mp), mp)
+    gsDPatchBase(give(gsMultiBasis<T>(mp)), mp)
     {
     }
 
@@ -687,11 +687,10 @@ protected:
 
 protected:
     const gsMultiPatch<T> & m_patches;
-    const gsMultiBasis<T> & m_Bbases;
+    const gsMultiBasis<T> m_Bbases;
     bool m_computed;
     
     gsMultiBasis<T> m_bases;
-    typename gsMultiBasis<T>::BasisContainer m_basesContainer;
 
     gsBoxTopology m_topology;
     mutable gsSparseMatrix<T> m_tMatrix;

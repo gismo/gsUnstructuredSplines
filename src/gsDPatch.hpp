@@ -51,6 +51,7 @@ namespace gismo
         Base::defaultOptions();
         m_options.addInt("Pi","Pi matrix to be applied, 0: Non-negative, 1: Idempotent",0);
         m_options.addInt("RefLevel","Refinement level",0);
+        m_options.addInt("KnotMultiplicity","Knot multiplicity of interior knots (needed to trigger THB refinement correctly)",1);
     }
 
     /*=====================================================================================
