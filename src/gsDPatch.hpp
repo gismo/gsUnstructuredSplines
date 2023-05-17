@@ -199,8 +199,8 @@ namespace gismo
     void gsDPatch<d,T>::_computeEVs()
     {
         /*
-            Our goal is to create three vectors c11, c12, c21 which all contain the
-            c11, c12 and c21 coefficients of the patches around the EV in the right order
+            Our goal is to create three vectors cij[0], cij[1], cij[2] which all contain the
+            cij[0], cij[1] and cij[2] coefficients of the patches around the EV in the right order
             (counter)-clockwise.
         */
 
@@ -224,6 +224,8 @@ namespace gismo
             std::vector<boundaryInterface> interfaces;
             m_patches.getEVs(cornerLists);
 
+            sparseEntry_t entries;
+
             if (cornerLists.size()!=0)
             {
                 for (size_t v =0; v!=cornerLists.size(); v++) // over EVs
@@ -235,19 +237,17 @@ namespace gismo
                     corners.resize(N);
                     interfaces.resize(N);
 
-                    gsMatrix<index_t> c11(N,1);
-                    gsMatrix<index_t> c12(N,1);
-                    gsMatrix<index_t> c21(N,1);
-                    gsMatrix<index_t> c11o(N,1);
-                    gsMatrix<index_t> c12o(N,1);
-                    gsMatrix<index_t> c21o(N,1);
+                    std::vector<gsMatrix<index_t>> cij(3);
+                    for (index_t k=0; k!=3; k++)
+                        cij.at(k) = gsMatrix<index_t>::Zero(N,1);
 
+                    std::vector<gsMatrix<index_t>> cijo = cij;
 
                     /*
                         First, we loop over all the interfaces to construct a (counter)clock-wise map for our coefficients
                         Looping clock-wise or counter clock-wise does not matter, as long as the coefficients are neighboring
                     */
-                    // Loop over all sides such that we can fill c12 and c21. We just start from side 0 of corner 0
+                    // Loop over all sides such that we can fill cij[1] and cij[2]. We just start from side 0 of corner 0
                     patchCorner corner = cornerLists[v][0];
                     patchCorner otherCorner = patchCorner(0,0);
                     corner.getContainingSides(d,sides);
@@ -308,90 +308,100 @@ namespace gismo
                             side = interfaces[i].second();
                         }
 
-                        c11(patches[side.patch],0) = this->_indexFromVert(1,corners[i],side,1,0);
-                        c12(patches[side.patch],0) = this->_indexFromVert(2,corners[i],side,1,0);
-                        c21(patches[otherSide.patch],0) = this->_indexFromVert(2,otherCorner,otherSide,1,0);
+                        // C11 coefficients
+                        cij[0](patches[side.patch],0) = this->_indexFromVert(1,corners[i],side,1,0);
+                        // C21 coefficients
+                        cij[1](patches[otherSide.patch],0) = this->_indexFromVert(2,otherCorner,otherSide,1,0);
+                        // C12 coefficients
+                        cij[2](patches[side.patch],0) = this->_indexFromVert(2,corners[i],side,1,0);
 
-                        c11o(patches[side.patch],0) = this->_indexFromVert(m_Bbases,1,corners[i],side,1);
-                        c12o(patches[side.patch],0) = this->_indexFromVert(m_Bbases,2,corners[i],side,1);
-                        c21o(patches[otherSide.patch],0) = this->_indexFromVert(m_Bbases,2,otherCorner,otherSide,1);
-
+                        // C11 coefficients
+                        cijo[0](patches[side.patch],0) = this->_indexFromVert(m_Bbases,1,corners[i],side,1);
+                        // C21 coefficients
+                        cijo[1](patches[otherSide.patch],0) = this->_indexFromVert(m_Bbases,2,otherCorner,otherSide,1);
+                        // C12 coefficients
+                        cijo[2](patches[side.patch],0) = this->_indexFromVert(m_Bbases,2,corners[i],side,1);
                     }
 
-                    // to do: integrate this loop
-                    gsMatrix<index_t> rowIndices(3*N,1);
+                    std::vector<gsMatrix<index_t>> rowIndices(3);
+                    for (index_t k=0; k!=3; k++)
+                        rowIndices.at(k) = gsMatrix<index_t>::Zero(N,1);
+
                     for (index_t i = 0; i!=N; i++)
                     {
                         corner = corners[i];
                         corner.getContainingSides(d,sides);
                         // we look for the 1,1 index so it does not matter which side we use
                         // rowIndices(i,0) = m_mapModified.index(this->_indexFromVert(1,corner,sides[0],1,-1),corner.patch);
-                        rowIndices(i,0)     = m_mapModified.index(c11o(i,0),corners[i].patch);
-                        rowIndices(i+N,0)   = m_mapModified.index(c12o(i,0),corners[i].patch);
-                        rowIndices(i+2*N,0) = m_mapModified.index(c21o(i,0),corners[i].patch);
+                        for (index_t k=0; k!=3; k++)
+                        {
+                            rowIndices[k](i,0) = m_mapModified.index(cijo[k](i,0),corners[i].patch);
 
-                        c11(i,0) = m_mapOriginal.index(c11(i,0),corners[i].patch);
-                        c12(i,0) = m_mapOriginal.index(c12(i,0),corners[i].patch);
-                        c21(i,0) = m_mapOriginal.index(c21(i,0),corners[i].patch);
+                            cij[k](i,0) = m_mapOriginal.index(cij[k](i,0),corners[i].patch);
+                        }
                     }
 
                     gsMatrix<T> Pi = _makePi(N);
-
                     gsVector<T> c(3*N);
                     index_t colIdx = 0, idx = 0;
                     for (index_t i = 0; i!=N; i++) // for all involved corners
                     {
-                        for (index_t k=0; k!=3; k++)// c11, c12, c21
+                        for (index_t k = 0; k!=3; k++) // loop over ij=11,12,21
                         {
                             for (index_t j=0; j!=N; j++) // loop over the connected corners
-                            {
-                                c.at(j) = m_matrix(rowIndices(i+k*N,0),c11(j,0));
-                                c.at(j+N) = m_matrix(rowIndices(i+k*N,0),c21(j,0));
-                                c.at(j+2*N) = m_matrix(rowIndices(i+k*N,0),c12(j,0));
-                            }
+                                for (index_t l = 0; l!=3; l++) // loop over ij=11,12,21
+                                    c.at(j+l*N) = m_matrix.coeff(rowIndices[k](i,0),cij[l](j,0));
                             c = Pi * c;
                             for (index_t j=0; j!=N; j++) // loop over the connected corners
-                            {
-                                m_matrix(rowIndices(i+k*N,0),c11(j,0)) = c.at(j);
-                                m_matrix(rowIndices(i+k*N,0),c21(j,0)) = c.at(j+N);
-                                m_matrix(rowIndices(i+k*N,0),c12(j,0)) = c.at(j+2*N);
-                            }
+                                for (index_t l = 0; l!=3; l++) // loop over ij=11,12,21
+                                    entries.push_back(std::make_tuple(rowIndices[k](i,0),cij[l](j,0),c.at(j+l*N)));
                         }
                     }
 
-                    // smoothing center
+                    #pragma omp critical (_computeEV1)
+                        _push(entries);
+
+                    entries.clear();
+
+                    // smoothing center, i.e all 0,0, 1,0 and 0,1 basis functions get the same value as the 1,1
                     for (index_t i = 0; i!=N; i++) // for all involved corners
                     {
-                        for (index_t k=0; k!=3; k++)
+                        for (index_t j=0; j!=N; j++) // loop over the connected corners
                         {
-                            for (index_t j=0; j!=N; j++) // loop over the connected corners
+                            for (index_t k = 0; k!=3; k++) // loop over ij=11,12,21
                             {
                                 corners[j].getContainingSides(d,sides);
+                                /////////////////////////////////////////////////////////////////
                                 colIdx = this->_indexFromVert(0,corners[j],sides[0],0,0); // 0,0
                                 colIdx = m_mapOriginal.index(colIdx,corners[j].patch);
-                                m_matrix(rowIndices(i+k*N,0),colIdx) = m_matrix.coeff(rowIndices(i+k*N,0),c11(i,0)); // by construction >>>> PROBLEMATIC
+                                entries.push_back(std::make_tuple(rowIndices[k](i,0),colIdx,m_matrix.coeff(rowIndices[k](i,0),cij[0](j,0))));
 
                                 colIdx = this->_indexFromVert(1,corners[j],sides[0],0,0); // 1,0
                                 colIdx = m_mapOriginal.index(colIdx,corners[j].patch);
-                                m_matrix(rowIndices(i+k*N,0),colIdx) = m_matrix.coeff(rowIndices(i+k*N,0),c11(i,0)); // by construction >>>> PROBLEMATIC
+                                entries.push_back(std::make_tuple(rowIndices[k](i,0),colIdx,m_matrix.coeff(rowIndices[k](i,0),cij[0](j,0))));
 
                                 colIdx = this->_indexFromVert(1,corners[j],sides[1],0,0); // 0,1
                                 colIdx = m_mapOriginal.index(colIdx,corners[j].patch);
-                                m_matrix(rowIndices(i+k*N,0),colIdx) = m_matrix.coeff(rowIndices(i+k*N,0),c11(i,0)); // by construction >>>> PROBLEMATIC
+                                entries.push_back(std::make_tuple(rowIndices[k](i,0),colIdx,m_matrix.coeff(rowIndices[k](i,0),cij[0](j,0))));
+
                             }
                         }
                     }
+
+                    #pragma omp critical (_computeEV2)
+                        _push(entries);
+
+                    entries.clear();
 
                     // interface smoothing
                     for (index_t i = 0; i!=N; i++) // for all involved interfaces
                     {
+                        patchCorner corner = corners[patches[interfaces[i][0].patch]];
+                        patchCorner otherCorner = corners[patches[interfaces[i][1].patch]];
+                        patchSide side = interfaces[i][0];
+                        patchSide otherSide = interfaces[i][1];
                         for (index_t k = 2; k!=4 ; k++)// std::max(basis1->maxDegree(),basis2->maxDegree())+
                         {
-                            patchCorner corner = corners[patches[interfaces[i][0].patch]];
-                            patchCorner otherCorner = corners[patches[interfaces[i][1].patch]];
-                            patchSide side = interfaces[i][0];
-                            patchSide otherSide = interfaces[i][1];
-
                             idx = this->_indexFromVert(k,corner,side,0,0);
                             index_t j0k = m_mapOriginal.index(idx,side.patch);
 
@@ -405,15 +415,20 @@ namespace gismo
                             index_t j1k = m_mapOriginal.index(idx,otherSide.patch); // point (k,0)
 
                             index_t row;
-                            for (index_t r=0; r!=rowIndices.rows(); r++)
+                            for (index_t l = 0; l!=3; l++) // loop over ij=11,12,21
                             {
-                                row = rowIndices(r,0);
-                                m_matrix(row,j0k) = 0.5 * ( m_matrix.coeff(row,jk1) + m_matrix.coeff(row,j1k) );
-                                m_matrix(row,jk0) = 0.5 * ( m_matrix.coeff(row,jk1) + m_matrix.coeff(row,j1k) ); //  >>>> PROBLEMATIC
+                                for (index_t r=0; r!=N; r++)
+                                {
+                                    row = rowIndices[l](r,0);
+                                    entries.push_back(std::make_tuple(rowIndices[l](r,0),j0k,0.5 * ( m_matrix.coeff(row,jk1) + m_matrix.coeff(row,j1k) )));
+                                    entries.push_back(std::make_tuple(rowIndices[l](r,0),jk0,0.5 * ( m_matrix.coeff(row,jk1) + m_matrix.coeff(row,j1k) )));
+                                }
                             }
-
                         }
                     }
+
+                    #pragma omp critical (_computeEV3)
+                        _push(entries);
                 }
             }
         }
@@ -434,7 +449,7 @@ namespace gismo
         std::complex<T> I(0,1);
         T beta = 0.4 * std::pow(0.5,m_options.getInt("RefLevel"));
         T psi = std::arg( std::complex<T>((T(1.0)+I*beta*T(math::sin(phi)))*math::exp( -I*phi / T(2.0) ) ));
-        if (m_options.getInt("Pi")==0)
+        if (m_options.getInt("Pi")==0)//idempotent
         {
             for (index_t j=0; j!=valence; j++)
             {
@@ -444,7 +459,7 @@ namespace gismo
                 P(j,7) = 1.0 / (3.0 * valence) * ( 1.0 + 3.0*math::cos( 2.0 * psi - j * phi ) );
             }
         }
-        else if (m_options.getInt("Pi")==1)
+        else if (m_options.getInt("Pi")==1) //non-negative entries
         {
             for (index_t j=0; j!=valence; j++)
             {

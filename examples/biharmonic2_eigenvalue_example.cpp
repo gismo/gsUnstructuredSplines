@@ -122,9 +122,9 @@ void setDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> &
 int main(int argc, char *argv[])
 {
     // Input options
-    int degree      = 2;
-    int smoothness  = 1;
-    int numHref     = 4;
+    index_t degree      = 2;
+    index_t smoothness  = 1;
+    index_t numHref     = 4;
     bool plot       = false;
     bool write      = false;
     bool first      = false;
@@ -146,14 +146,14 @@ int main(int argc, char *argv[])
     //! [Read geometry]
     gsMultiPatch<> mp;
 
-    // real_t thickness = 0.01;
-    // real_t E_modulus = 1e5;
-    // real_t Density = 1e5;
-    // real_t PoissonRatio = 0.3;
-    // real_t D = E_modulus*math::pow(thickness,3)/(12*(1-math::pow(PoissonRatio,2)));
-    real_t D = 1;
-    real_t Density = 1;
-    real_t thickness = 1;
+    real_t thickness = 0.01;
+    real_t E_modulus = 1e5;
+    real_t Density = 1e5;
+    real_t PoissonRatio = 0.3;
+    real_t D = E_modulus*math::pow(thickness,3)/(12*(1-math::pow(PoissonRatio,2)));
+    // real_t D = 1;
+    // real_t Density = 1;
+    // real_t thickness = 1;
 
 
     mp.addPatch( gsNurbsCreator<>::BSplineSquare(1) ); // degree
@@ -255,7 +255,7 @@ int main(int argc, char *argv[])
             std::string fileName = "ModalResults/modes" + util::to_string(m);
             ev.writeParaview( u_sol, G, fileName);
             fileName = "modes" + util::to_string(m) + "0";
-            collection.addTimestep(fileName,m,".vts");
+            collection.addPart(fileName + ".vts",m);
         }
         collection.save();
     }

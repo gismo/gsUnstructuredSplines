@@ -564,7 +564,7 @@ int main(int argc, char *argv[])
             for (index_t p = 0; p!=mp.nPatches(); p++)
             {
                 fileName = "modes" + util::to_string(m);
-                collection.addTimestep(fileName,p,m,".vts");
+                collection.addPart(fileName + ".vts",m,"",p);
             }
         }
         collection.save();

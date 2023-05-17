@@ -309,6 +309,7 @@ int main(int argc, char *argv[])
     bool info = false;
     bool second = false;
     bool cond = false;
+    bool writeMatrix= false;
     bool interpolation = false;
 
     real_t penalty_init = -1.0;
@@ -359,6 +360,9 @@ int main(int argc, char *argv[])
     cmd.addString("O", "Aopt", "Assembler options file", assemberOptionsFile);
     cmd.addString("o", "output", "Output in xml (for python)", output);
     cmd.addString("w", "write", "Write to csv", write);
+
+    cmd.addSwitch("writeMat", "Write projection matrix",writeMatrix);
+
     try { cmd.getValues(argc,argv); } catch (int rv) { return rv; }
     //! [Parse command line]
 
@@ -381,6 +385,7 @@ int main(int argc, char *argv[])
         gsInfo << "Filedata: " << string_geo << "\n";
         gsReadFile<>(string_geo, mp);
         mp.clearTopology();
+        mp.fixOrientation();
         mp.computeTopology();
 
         gsFunctionExpr<>source("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
@@ -608,12 +613,12 @@ int main(int argc, char *argv[])
         }
         else if (method == MethodFlags::DPATCH)
         {
-            if (!nested) mp = geom;
+            if (nested) mp = geom;
             mp.uniformRefine(1,degree-smoothness);
 
-            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&dbasis.basis(0)))
+            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&mp.basis(0)))
                 meshsize[r] = test->tensorLevel(0).getMinCellLength();
-            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&dbasis.basis(0)))
+            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&mp.basis(0)))
                 meshsize[r] = test->getMinCellLength();
 
             // Construct the D-Patch on mp
@@ -629,34 +634,21 @@ int main(int argc, char *argv[])
             dbasis = dpatch.localBasis();
             bb2.init(dbasis,global2local);
 
-
-            if (nested)
+            if (writeMatrix)
             {
-                ///////////////////////////////////////////
-                if (r>0)
-                {
-                    gsDofMapper mapper(dbasis);
-                    mapper.finalize();
-                    gsMatrix<> coefs;
-                    gsL2Projection<real_t>::projectGeometry(dbasis,geom0,coefs);
-                    coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
-
-                    for (index_t p = 0; p != geom.nPatches(); p++)
-                        for (index_t k=0; k!=mapper.patchSize(p); k++)
-                            geom.patch(p).coefs().row(k) = coefs.row(mapper.index(k,p));
-
-                }
-                geom0 = geom;
+                gsWrite(global2local,"mat");
+                //gsWrite(geom,"geom");
+                //gsWrite(dbasis,"dbasis");
             }
         }
         else if (method == MethodFlags::ALMOSTC1)
         {
-            if (!nested) mp = geom;
+            if (nested) mp = geom;
             mp.uniformRefine(1,degree-smoothness);
 
-            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&dbasis.basis(0)))
+            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&mp.basis(0)))
                 meshsize[r] = test->tensorLevel(0).getMinCellLength();
-            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&dbasis.basis(0)))
+            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&mp.basis(0)))
                 meshsize[r] = test->getMinCellLength();
 
             // Construct the D-Patch on mp
@@ -668,26 +660,6 @@ int main(int argc, char *argv[])
             geom = almostC1.exportToPatches();
             dbasis = almostC1.localBasis();
             bb2.init(dbasis,global2local);
-
-
-            if (nested)
-            {
-                ///////////////////////////////////////////
-                if (r>0)
-                {
-                    gsDofMapper mapper(dbasis);
-                    mapper.finalize();
-                    gsMatrix<> coefs;
-                    gsL2Projection<real_t>::projectGeometry(dbasis,geom0,coefs);
-                    coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
-
-                    for (index_t p = 0; p != geom.nPatches(); p++)
-                        for (index_t k=0; k!=mapper.patchSize(p); k++)
-                            geom.patch(p).coefs().row(k) = coefs.row(mapper.index(k,p));
-
-                }
-                geom0 = geom;
-            }
         }
         else if (method == MethodFlags::SURFASG1) // Andrea
         {
@@ -861,14 +833,37 @@ int main(int argc, char *argv[])
             gsDebug<<"Computing the condition number using Spectra\n";
             real_t minev, maxev;
             index_t sz = A.matrix().cols();
-            gsSpectraSymSolver<gsSparseMatrix<real_t>> evsolver(A.matrix(),1, sz);
-            evsolver.compute(Spectra::SortRule::SmallestAlge,1000,1e-10,Spectra::SortRule::SmallestAlge);
-            gsDebug << "Eigenvalues A*x=lambda*x:\n" << evsolver.eigenvalues().transpose() <<"\n\n";
-            minev = evsolver.eigenvalues()(0);
+            gsStopwatch ev_time;
+            gsSparseMatrix<real_t> I(A.matrix().rows(),A.matrix().cols());
+            I.setIdentity();
 
-            evsolver.compute(Spectra::SortRule::LargestAlge,1000,1e-10,Spectra::SortRule::LargestAlge);
-            gsDebug << "Eigenvalues A*x=lambda*x:\n" << evsolver.eigenvalues().transpose() <<"\n\n";
-            maxev = evsolver.eigenvalues()(0);
+            ev_time.restart();
+            gsSpectraGenSymSolver<gsSparseMatrix<real_t>,Spectra::GEigsMode::Cholesky> evsolver_upp(A.matrix(),I,1, sz);
+            evsolver_upp.init();
+            evsolver_upp.compute(Spectra::SortRule::LargestMagn,100,1e-10,Spectra::SortRule::LargestMagn);
+            gsDebug<<"Largest eigenvalue computation finished in "<<ev_time.stop()<<" seconds\n";
+
+            maxev = evsolver_upp.eigenvalues()(0);
+            if (evsolver_upp.info()==Spectra::CompInfo::Successful)         { gsDebug<<"Spectra converged in "<<evsolver_upp.num_iterations()<<" iterations and with "<<evsolver_upp.num_operations()<<"operations. \n"; }
+            else if (evsolver_upp.info()==Spectra::CompInfo::NumericalIssue){ GISMO_ERROR("Spectra did not converge! Error code: NumericalIssue"); }
+            else if (evsolver_upp.info()==Spectra::CompInfo::NotConverging) { GISMO_ERROR("Spectra did not converge! Error code: NotConverging"); }
+            else if (evsolver_upp.info()==Spectra::CompInfo::NotComputed)   { GISMO_ERROR("Spectra did not converge! Error code: NotComputed");   }
+            else                                                      { GISMO_ERROR("No error code known"); }
+            gsDebug << "Eigenvalues A*x=lambda*x:\n" << evsolver_upp.eigenvalues().transpose() <<"\n\n";
+
+            ev_time.restart();
+            gsSpectraGenSymShiftSolver<gsSparseMatrix<real_t>,Spectra::GEigsMode::ShiftInvert> evsolver_low(A.matrix(),I,1, sz,0);
+            evsolver_low.init();
+            evsolver_low.compute(Spectra::SortRule::LargestMagn,100,1e-10,Spectra::SortRule::LargestMagn);
+            gsDebug<<"Smallest eigenvalue computation finished in "<<ev_time.stop()<<" seconds\n";
+            if (evsolver_low.info()==Spectra::CompInfo::Successful)         { gsDebug<<"Spectra converged in "<<evsolver_low.num_iterations()<<" iterations and with "<<evsolver_low.num_operations()<<"operations. \n"; }
+            else if (evsolver_low.info()==Spectra::CompInfo::NumericalIssue){ GISMO_ERROR("Spectra did not converge! Error code: NumericalIssue"); }
+            else if (evsolver_low.info()==Spectra::CompInfo::NotConverging) { GISMO_ERROR("Spectra did not converge! Error code: NotConverging"); }
+            else if (evsolver_low.info()==Spectra::CompInfo::NotComputed)   { GISMO_ERROR("Spectra did not converge! Error code: NotComputed");   }
+            else                                                      { GISMO_ERROR("No error code known"); }
+            gsDebug << "Eigenvalues A*x=lambda*x:\n" << evsolver_low.eigenvalues().transpose() <<"\n\n";
+            minev = evsolver_low.eigenvalues()(0);
+
 
             gsDebug << "Cond Number: " <<maxev/minev<< "\n";
             cond_num[r] = maxev/minev;
