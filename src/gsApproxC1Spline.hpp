@@ -30,12 +30,17 @@ void gsApproxC1Spline<d,T>::defaultOptions()
     gsTensorBSplineBasis<d, T> basis = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(0));
     index_t p = basis.degree(0);
 
+    // Check if the degree is the same for each patch
     for (size_t np = 0; np < m_patches.nPatches(); np++)
     {
         gsTensorBSplineBasis<d, T> basis = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(np));
         if (p != basis.degree(0))
             gsWarn << "Not suitable for different degrees! \n";
     }
+
+    // Check if the multipatch has no inner knots
+
+    // Check 
 
     m_options.addSwitch("info","Print debug information",  false );
     m_options.addSwitch("plot","Print debug information",  false );
