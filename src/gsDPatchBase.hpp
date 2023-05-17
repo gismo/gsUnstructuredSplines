@@ -41,6 +41,7 @@ namespace gismo
         m_options.addSwitch("SharpCorners","Reproduce sharp corners",true);
         m_options.addReal("SharpCornerTolerance","Sharp corner tolerance",1e-2);
         m_options.addSwitch("Verbose","Verbose output",false);
+        m_options.addInt("KnotMultiplicity","Knot multiplicity of interior knots (needed to trigger THB refinement correctly)",1);
     }
 
     template<short_t d,class T>
@@ -838,7 +839,6 @@ namespace gismo
         _initChecks();
 
         m_C0s.resize(m_nVerts);
-        gsDebugVar(m_nVerts);
         if (m_options.getSwitch("SharpCorners"))
             m_C0s = getSharpCorners(m_options.getReal("SharpCornerTolerance"));
         else
@@ -871,14 +871,9 @@ namespace gismo
         for (size_t k=0; k!=m_Bbases.nBases(); ++k)
         {
             if ( (dynamic_cast<const gsTensorBSplineBasis<d,T> * > (&m_Bbases.basis(k))) )
-            {
-                gsDebug<<"Making gsTHBSplineBasis\n";
                 m_bases.addBasis(new gsTHBSplineBasis<d,T>(m_Bbases.basis(k)));
-            }
             else if ((dynamic_cast<const gsTHBSplineBasis<d,T> * > (&m_Bbases.basis(k))))
-            { 
                 m_bases.addBasis(m_Bbases.basis(k).clone());
-            }
             else
                 gsWarn<<"No THB basis was constructed";
         }
@@ -894,12 +889,12 @@ namespace gismo
                 thb_basis->setMultiplicity(multiplicity);
             }   
         }
+        m_bases.setTopology(m_topology);
     }
 
     template<short_t d,class T>
     void gsDPatchBase<d,T>::_initBasis()
     {
-        // m_Bbases = m_bases;
     }
 
     template<short_t d,class T>

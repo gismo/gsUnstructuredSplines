@@ -73,7 +73,6 @@ public:
 
     // using Base::exportToPatches;
 
-
 protected:
     /**
      * @brief       Computes the C1 coefficients for pre-multiplication to make the multipatch

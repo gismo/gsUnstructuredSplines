@@ -51,7 +51,6 @@ namespace gismo
         Base::defaultOptions();
         m_options.addInt("Pi","Pi matrix to be applied, 0: Non-negative, 1: Idempotent",0);
         m_options.addInt("RefLevel","Refinement level",0);
-        m_options.addInt("KnotMultiplicity","Knot multiplicity of interior knots (needed to trigger THB refinement correctly)",1);
     }
 
     /*=====================================================================================
@@ -60,7 +59,7 @@ namespace gismo
     template<short_t d,class T>
     gsMatrix<T> gsDPatch<d,T>::_preCoefficients(const gsMultiPatch<T> & patches)
     {
-        GISMO_ASSERT(m_mapModified.isFinalized(),"Mapper is not finalized, run XXXX first");
+        GISMO_ASSERT(m_mapModified.isFinalized(),"Mapper is not finalized");
 
         gsMatrix<T> coefs(m_mapModified.freeSize(),patches.geoDim());
 
@@ -160,15 +159,7 @@ namespace gismo
                     boxes.col(1) << vec;
 
 
-                    gsHTensorBasis<2,T> *basis;
-                    if ((basis = dynamic_cast<gsHTensorBasis<2,T>*>(&refBases.basis(corner.patch))))
-                        gsDebug<<"gsHTensorBasis\n";
-                    else if ((dynamic_cast<gsTHBSplineBasis<2,T>*>(&refBases.basis(corner.patch))))
-                        gsDebug<<"gsTHBSplineBasis\n";
-                    else if ((dynamic_cast<gsTensorBSplineBasis<2,T>*>(&refBases.basis(corner.patch))))
-                        gsDebug<<"gsTensorBSplineBasis\n";
-                    else
-                        GISMO_ERROR("Cast failed");
+                    gsHTensorBasis<2,T> *basis = dynamic_cast<gsHTensorBasis<2,T>*>(&refBases.basis(corner.patch));
                     std::vector<index_t> elements = basis->asElements(boxes,1);
 
                     elVec.at(corner.patch).insert(elVec.at(corner.patch).end(), elements.begin(), elements.end());

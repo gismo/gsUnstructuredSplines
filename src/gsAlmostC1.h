@@ -79,7 +79,12 @@ protected:
      * Takes the coefficients which are tagged as "free" in the modified DoFMapper (m_mapModified) and when a boundary vertex with valence=3 is present, this one is shifted.
      *
      */
-    gsMatrix<T> _preCoefficients(const gsMultiPatch<T> & patches);
+    gsMatrix<T> _preCoefficients();
+    gsMatrix<T> _preCoefficients(const gsMultiPatch<T> & patches)
+    {
+        GISMO_UNUSED(patches);
+        return _preCoefficients();
+    }
 
     /**
      * @brief       Computes the C1 coefficients for pre-multiplication to make the multipatch
@@ -87,7 +92,7 @@ protected:
      * Takes the coefficients which are tagged as "free" in the modified DoFMapper (m_mapModified)
      *
      */
-    gsMatrix<T> freeCoefficients(const gsMultiPatch<T> & patches);
+    gsMatrix<T> freeCoefficients();
 
     /**
      * @brief      Set the coefficients of mp to \a coefs
@@ -146,7 +151,7 @@ protected:
 
     gsMatrix<T> _getNormals(const std::vector<patchCorner> & corners) const;
 
-    std::tuple<gsMatrix<T>,gsMatrix<T>,gsMatrix<index_t>> _makeTriangle(const gsMultiPatch<T> & patches, const patchCorner & corner) const;
+    std::tuple<gsMatrix<T>,gsMatrix<T>,gsMatrix<index_t>> _makeTriangle(const patchCorner & corner) const;
 
     gsMatrix<T,3,3> _getRotationMatrix(const gsVector<T,3> & a, const gsVector<T,3> & b) const;
 
@@ -192,6 +197,10 @@ protected:
      */
     // void _computeSmoothMatrix();
     using Base::_computeSmoothMatrix;
+
+    void _initBasis();
+
+    void _initTHB();
 
     /**
      * @brief      Prepares the THB basis if needed.

@@ -128,7 +128,6 @@ public:
     virtual gsMultiPatch<T> exportToPatches(const gsMultiPatch<T> & patches)
     {
         GISMO_ASSERT(m_computed,"The method has not been computed! Call compute().");
-        gsDebugVar(m_patches.empty());
         GISMO_ASSERT(!patches.empty(),"The reference multipatch is empty!");
         m_coefs = this->_preCoefficients(patches);
         m_coefs = m_matrix.transpose() * m_coefs;
@@ -142,6 +141,7 @@ public:
 
     virtual gsMultiPatch<T> exportToPatches()
     {
+        GISMO_ASSERT(!m_patches.empty(),"The reference multipatch is empty!");
         return this->exportToPatches(m_patches);
     }
 
