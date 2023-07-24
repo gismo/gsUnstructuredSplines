@@ -21,9 +21,6 @@
 #include <gsUnstructuredSplines/src/gsDPatch.h>
 #include <gsUnstructuredSplines/src/gsAlmostC1.h>
 #include <gsUnstructuredSplines/src/gsC1SurfSpline.h>
-#ifdef GISMO_WITH_SPECTRA
-#include <gsSpectra/gsSpectra.h>
-#endif
 #include <gsUtils/gsL2Projection.h>
 using namespace gismo;
 //! [Include namespace]
@@ -50,8 +47,6 @@ int main(int argc, char *argv[])
     //! [Parse command line]
     bool plot  = false;
     bool mesh  = false;
-    bool noTHB  = false;
-
     index_t method = 0;
 
     index_t numRefine  = 3;
@@ -78,9 +73,6 @@ int main(int argc, char *argv[])
 
     cmd.addString("S", "basisOutput", "Output in xml", basisOutput);
     cmd.addString("G", "geoOutput", "Output in xml", geoOutput);
-
-    cmd.addSwitch("noTHB", "No THB in export", noTHB);
-
 
     // cmd.addString("w", "write", "Write to csv", write);
     try { cmd.getValues(argc,argv); } catch (int rv) { return rv; }

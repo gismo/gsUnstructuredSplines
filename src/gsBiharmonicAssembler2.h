@@ -21,73 +21,74 @@ namespace gismo
 template <class T>
   class gsBiharmonicAssembler2
   {
-    
+
   public:
 
     /// Default empty constructor
     gsBiharmonicAssembler2() { };
 
     gsBiharmonicAssembler2(gsMultiPatch<T> & mp,
-			   gsMultiBasis<T> & mb,
-			   bool & second = false)
-      : m_mp(mp), m_mb(mb)
+      gsMultiBasis<T> & mb,
+      bool & second = false)
+    : m_mp(mp), m_mb(mb)
     {
-        gsFunctionExpr<>source("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
-	m_f.swap(source);
-	gsInfo << "Source function " << m_f << "\n";
-	
-	gsFunctionExpr<> solution("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",2);
-	m_ms.swap(solution);
-	gsInfo << "Exact function  " << m_ms << "\n";
+      gsFunctionExpr<>source("1*pi*pi*pi*pi*(4*cos(1*pi*x)*cos(1*pi*y) - cos(1*pi*x) - cos(1*pi*y))",2);
+      m_f.swap(source);
+      gsInfo << "Source function " << m_f << "\n";
 
-	gsBoundaryConditions<> bc;	
-	for (gsMultiPatch<>::const_biterator bit = mp.bBegin(); bit != mp.bEnd(); ++bit) {
-	  // Laplace
-	  gsFunctionExpr<> laplace ("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
-	  
-	  // Neumann
-	  gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
-				   "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)", 2);
-	  
-	  bc.addCondition(*bit, condition_type::dirichlet, m_ms);
-	  if (second)
-	    bc.addCondition(*bit, condition_type::laplace, laplace);
-	  else
-	    bc.addCondition(*bit, condition_type::neumann, sol1der);  
-	}
-	bc.setGeoMap(mp);
-	m_bc.swap(bc);
-	gsInfo << "Boundary conditions:\n" << m_bc << "\n";
-    };
-    
-    gsBiharmonicAssembler2(gsMultiPatch<T> & mp,
-			   gsMultiBasis<T> & mb,
-			   const gsBoundaryConditions<T> & bc,
-			   const gsFunctionExpr<T> & f,
-			   const gsFunctionExpr<T> & ms)
-      : m_mp(mp), m_mb(mb), m_bc(bc), m_f(f), m_ms(ms)
-    {
-      
-    };
+      gsFunctionExpr<> solution("(cos(1*pi*x) - 1) * (cos(1*pi*y) - 1)",2);
+      m_ms.swap(solution);
+      gsInfo << "Exact function  " << m_ms << "\n";
+
+      gsBoundaryConditions<> bc;	
+      for (gsMultiPatch<>::const_biterator bit = mp.bBegin(); bit != mp.bEnd(); ++bit) 
+      {
+        // Laplace
+        gsFunctionExpr<> laplace ("-1*pi*pi*(2*cos(1*pi*x)*cos(1*pi*y) - cos(1*pi*x) - cos(1*pi*y))",2);
+
+        // Neumann
+        gsFunctionExpr<> sol1der( "-1*pi*(cos(1*pi*y) - 1)*sin(1*pi*x)",
+                                  "-1*pi*(cos(1*pi*x) - 1)*sin(1*pi*y)", 2);
+
+        bc.addCondition(*bit, condition_type::dirichlet, m_ms);
+        if (second)
+          bc.addCondition(*bit, condition_type::laplace, laplace);
+        else
+          bc.addCondition(*bit, condition_type::neumann, sol1der);  
+      }
+      bc.setGeoMap(mp);
+      m_bc.swap(bc);
+      gsInfo << "Boundary conditions:\n" << m_bc << "\n";
+   };
+
+   gsBiharmonicAssembler2(gsMultiPatch<T> & mp,
+    gsMultiBasis<T> & mb,
+    const gsBoundaryConditions<T> & bc,
+    const gsFunctionExpr<T> & f,
+    const gsFunctionExpr<T> & ms)
+   : m_mp(mp), m_mb(mb), m_bc(bc), m_f(f), m_ms(ms)
+   {
+
+   };
 
 
-  public:
+ public:
 
-    void initialize()
-    {
+  void initialize()
+  {
       // Expression Assembler (1x1 Block Matrix)
-      m_A = gsExprAssembler<real_t>(1,1);
-      
+    m_A = gsExprAssembler<real_t>(1,1);
+
       // Elements used for numerical integration
-      m_A.setIntegrationElements(m_mb);
-      m_ev = gsExprEvaluator<real_t>(m_A);
-    };
-    
-    void assemble(gsMappedBasis<2,T> & bb2)
-    {
+    m_A.setIntegrationElements(m_mb);
+    m_ev = gsExprEvaluator<real_t>(m_A);
+  };
+
+  void assemble(gsMappedBasis<2,T> & bb2)
+  {
       // Set the geometry map
-      auto G = m_A.getMap(m_mp);
-  
+    auto G = m_A.getMap(m_mp);
+
       // Set the source term
       auto ff = m_A.getCoeff(m_f, G); // Laplace example
 
@@ -120,65 +121,65 @@ template <class T>
 
     void solve()
     {
-       gsSparseSolver<real_t>::SimplicialLDLT solver;
-       solver.compute( m_A.matrix() );
-       m_solVector = solver.solve(m_A.rhs());
-    };
+     gsSparseSolver<real_t>::SimplicialLDLT solver;
+     solver.compute( m_A.matrix() );
+     m_solVector = solver.solve(m_A.rhs());
+   };
 
-    void computeError(gsMappedBasis<2,T> & bb2,
-		      T & l2err,
-		      T & h1err,
-		      T & h2err)
-    {	
+   void computeError(gsMappedBasis<2,T> & bb2,
+    T & l2err,
+    T & h1err,
+    T & h2err)
+   {	
 	// Set the geometry map
-	auto G = m_A.getMap(m_mp);
+     auto G = m_A.getMap(m_mp);
 
-	auto u = m_A.getSpace(bb2);
-	auto u_sol = m_A.getSolution(u, m_solVector);
-	
+     auto u = m_A.getSpace(bb2);
+     auto u_sol = m_A.getSolution(u, m_solVector);
+
 	// Recover manufactured solution
-	auto u_ex = m_ev.getVariable(m_ms, G);
+     auto u_ex = m_ev.getVariable(m_ms, G);
 
-	l2err = math::sqrt( m_ev.integral( (u_ex - u_sol).sqNorm() * meas(G) ) );
-	h1err = l2err + math::sqrt(m_ev.integral( ( igrad(u_ex) - igrad(u_sol,G) ).sqNorm() * meas(G) ));	
-	h2err = h1err + math::sqrt(m_ev.integral( ( ihess(u_ex) - ihess(u_sol,G) ).sqNorm() * meas(G) )); 
-    };
-    
-    T numDofs() { return m_A.numDofs(); };
+     l2err = math::sqrt( m_ev.integral( (u_ex - u_sol).sqNorm() * meas(G) ) );
+     h1err = l2err + math::sqrt(m_ev.integral( ( igrad(u_ex) - igrad(u_sol,G) ).sqNorm() * meas(G) ));	
+     h2err = h1err + math::sqrt(m_ev.integral( ( ihess(u_ex) - ihess(u_sol,G) ).sqNorm() * meas(G) )); 
+   };
 
-  private:
-    
-    void setMapperForBiharmonic(gsBoundaryConditions<> & bc, gsMappedBasis<2,real_t> & bb2, gsDofMapper & mapper)
+   T numDofs() { return m_A.numDofs(); };
+
+ private:
+
+  void setMapperForBiharmonic(gsBoundaryConditions<> & bc, gsMappedBasis<2,real_t> & bb2, gsDofMapper & mapper)
+  {
+    mapper.setIdentity(bb2.nPatches(), bb2.size(), 1);
+
+    gsMatrix<index_t> bnd;
+    for (typename gsBoundaryConditions<real_t>::const_iterator
+      it = bc.begin("Dirichlet"); it != bc.end("Dirichlet"); ++it)
     {
-      mapper.setIdentity(bb2.nPatches(), bb2.size(), 1);
-      
-      gsMatrix<index_t> bnd;
-      for (typename gsBoundaryConditions<real_t>::const_iterator
-	     it = bc.begin("Dirichlet"); it != bc.end("Dirichlet"); ++it)
-	{
-        bnd = bb2.basis(it->ps.patch).boundary(it->ps.side());
-        mapper.markBoundary(it->ps.patch, bnd, 0);
-	}
-      
-      for (typename gsBoundaryConditions<real_t>::const_iterator
-             it = bc.begin("Neumann"); it != bc.end("Neumann"); ++it)
-	{
-        bnd = bb2.basis(it->ps.patch).boundaryOffset(it->ps.side(),1);
-        mapper.markBoundary(it->ps.patch, bnd, 0);
-	}
-      mapper.finalize();
-    };
+      bnd = bb2.basis(it->ps.patch).boundary(it->ps.side());
+      mapper.markBoundary(it->ps.patch, bnd, 0);
+    }
 
-    void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp,
-					      gsMultiBasis<> & dbasis,
-					      gsBoundaryConditions<> & bc,
-					      gsMappedBasis<2,real_t> & bb2,
-					      const expr::gsFeSpace<real_t> & u)
+    for (typename gsBoundaryConditions<real_t>::const_iterator
+     it = bc.begin("Neumann"); it != bc.end("Neumann"); ++it)
     {
-      const gsDofMapper & mapper = u.mapper();
+      bnd = bb2.basis(it->ps.patch).boundaryOffset(it->ps.side(),1);
+      mapper.markBoundary(it->ps.patch, bnd, 0);
+    }
+    mapper.finalize();
+  };
 
-      gsMatrix<index_t> bnd = mapper.findFree(mapper.numPatches()-1);
-      gsDofMapper mapperBdy;
+  void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp,
+   gsMultiBasis<> & dbasis,
+   gsBoundaryConditions<> & bc,
+   gsMappedBasis<2,real_t> & bb2,
+   const expr::gsFeSpace<real_t> & u)
+  {
+    const gsDofMapper & mapper = u.mapper();
+
+    gsMatrix<index_t> bnd = mapper.findFree(mapper.numPatches()-1);
+    gsDofMapper mapperBdy;
       mapperBdy.setIdentity(bb2.nPatches(), bb2.size(), 1);  // bb2.nPatches() == 1
       mapperBdy.markBoundary(0, bnd, 0);
       mapperBdy.finalize();
@@ -200,10 +201,10 @@ template <class T>
       A.assembleBdr(bc.get("Dirichlet"), uu * uu.tr() * meas(G));
       A.assembleBdr(bc.get("Dirichlet"), uu * g_bdy * meas(G));
       A.assembleBdr(bc.get("Neumann"),
-		    lambda * (igrad(uu, G) * nv(G).normalized()) *
-		    (igrad(uu, G) * nv(G).normalized()).tr() * meas(G));
+        lambda * (igrad(uu, G) * nv(G).normalized()) *
+        (igrad(uu, G) * nv(G).normalized()).tr() * meas(G));
       A.assembleBdr(bc.get("Neumann"),
-		    lambda *  (igrad(uu, G) * nv(G).normalized()) * (g_bdy.tr() * nv(G).normalized()) * meas(G));
+        lambda *  (igrad(uu, G) * nv(G).normalized()) * (g_bdy.tr() * nv(G).normalized()) * meas(G));
 
       gsSparseSolver<real_t>::SimplicialLDLT solver;
       solver.compute( A.matrix() );

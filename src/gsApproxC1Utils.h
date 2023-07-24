@@ -131,7 +131,7 @@ public:
                     D0(1,0) = ev(2,0);
                     D0(2,0) = ev(4,0);
                 }
-                uv(0, i) = 1.0 / Duv.norm() * Eigen::numext::sqrt(D0.determinant());
+                uv(0, i) = 1.0 / Duv.norm() * gsEigen::numext::sqrt(D0.determinant());
             }
             result = uv.row(0);
             //gsDebugVar(result);

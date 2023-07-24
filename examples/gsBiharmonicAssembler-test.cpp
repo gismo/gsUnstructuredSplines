@@ -57,17 +57,31 @@ int main()
     "\nDoFs: ";
   double setup_time(0), ma_time(0), slv_time(0), err_time(0);
   gsStopwatch timer;
-  for (int r=0; r<=numRefine; ++r) {
+  for (int r=0; r<=numRefine; ++r) 
+  {
     dbasis.uniformRefine(1, degree-smoothness);
+
     meshsize[r] = dbasis.basis(0).getMinCellLength();
 
     biharmonicAssembler.initialize();
     
-    // The approx. C1 space
-    gsApproxC1Spline<2,real_t> approxC1(mp,dbasis);
-    approxC1.update(bb2);
-    gsInfo<< "." <<std::flush; // Approx C1 construction done
+    // // The approx. C1 space
+    // gsApproxC1Spline<2,real_t> approxC1(mp,dbasis);
+    // approxC1.update(bb2);
+    // gsInfo<< "." <<std::flush; // Approx C1 construction done
     
+    // DPatch
+    gsDPatch<2,real_t> dpatch(dbasis);
+    dpatch.options().setInt("RefLevel",r);
+    dpatch.options().setInt("Pi",0);
+    dpatch.options().setSwitch("SharpCorners",false);
+    dpatch.compute();
+    dpatch.matrix_into(global2local);
+    gsSparseMatrix<real_t> global2local = global2local.transpose();
+    geom = dpatch.exportToPatches();
+    gsMultiBasis<> localbasis = dpatch.localBasis();
+    bb2.init(localbasis,global2local);
+
     // Setup the system
     biharmonicAssembler.assemble(bb2);
     
@@ -75,7 +89,7 @@ int main()
     gsInfo<< "." <<std::flush;// Assemblying done
 
     dofs[r] = biharmonicAssembler.numDofs();
-    
+    gsInfo<<dofs[r];
     timer.restart();    
     biharmonicAssembler.solve();
     slv_time += timer.stop();

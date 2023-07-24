@@ -80,7 +80,8 @@ protected:
      * Takes the coefficients which are tagged as "free" in the modified DoFMapper (m_mapModified) and when a boundary vertex with valence=3 is present, this one is shifted.
      *
      */
-    gsMatrix<T> _preCoefficients(const gsMultiPatch<T> & patches);
+    gsMatrix<T> _preCoefficients(const gsMultiPatch<T> & patches) override;
+    using Base::_preCoefficients;
 
     // using Base::exportPatch;
 
@@ -123,9 +124,13 @@ protected:
     // void _computeSmoothMatrix();
     using Base::_computeSmoothMatrix;
 
-    void _makeTHB();
+    void _initTHB() override;
 
-    void _computeEVs();
+    void _initBasis() override;
+
+    void _makeTHB() override;
+
+    void _computeEVs() override;
 
     /**
      * @brief      Makes the Pi matrix
@@ -140,7 +145,6 @@ protected:
 
     using Base::getSharpCorners;
     using Base::_indexFromSides;
-    using Base::_indicesFromVert;
     using Base::_indexFromVert;
     using Base::_vertexData;
     using Base::_sideIndex;
@@ -149,8 +153,6 @@ protected:
     using Base::_removeLowestCorners;
     using Base::_getLowestIndices;
     using Base::_removeLowestIndices;
-    using Base::_getInterfaceIndices;
-    using Base::_getAllInterfaceIndices;
 
     using Base::_push;
     using Base::_pushAndCheck;
@@ -320,8 +322,10 @@ protected:
     using Base::m_topology;
 
     using Base::m_bases;
+    gsMultiBasis<T> m_bases0;
     using Base::m_Bbases;
     using Base::m_tMatrix;
+    std::vector<gsSparseMatrix<T>> m_tMatrices;
     using Base::m_sideCheck;
     using Base::m_vertCheck;
     using Base::m_basisCheck;

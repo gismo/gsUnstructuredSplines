@@ -91,8 +91,8 @@ void setMapperForBiharmonic(gsBoundaryConditions<> & bc, gsMultiBasis<> & dbasis
     mapper.finalize();
 }
 
-void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & dbasis, gsBoundaryConditions<> & bc,
-                                           gsMappedBasis<2,real_t> & bb2, const expr::gsFeSpace<real_t> & u)
+void gsDirichletNeumannValuesL2Projection(const gsFunctionSet<> & mp, const gsMultiBasis<> & dbasis, const gsBoundaryConditions<> & bc,
+                                           const gsMappedBasis<2,real_t> & bb2, const expr::gsFeSpace<real_t> & u, const real_t lambda)
 {
     const gsDofMapper & mapper = u.mapper();
 
@@ -113,7 +113,7 @@ void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & 
     gsMatrix<real_t> & fixedDofs_A = const_cast<expr::gsFeSpace<real_t>&>(uu).fixedPart();
     fixedDofs_A.setZero( uu.mapper().boundarySize(), 1 );
 
-    real_t lambda = 1e-5;
+    // real_t lambda = 1e-5;
 
     A.initSystem();
     A.assembleBdr(bc.get("Dirichlet"), uu * uu.tr() * meas(G));
@@ -129,7 +129,7 @@ void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & 
     fixedDofs = solver.solve(A.rhs());
 }
 
-void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & dbasis, gsBoundaryConditions<> & bc, const expr::gsFeSpace<real_t> & u)
+void gsDirichletNeumannValuesL2Projection(const gsFunctionSet<> & mp, const gsMultiBasis<> & dbasis, const gsBoundaryConditions<> & bc, const expr::gsFeSpace<real_t> & u, const real_t lambda)
 {
     gsDofMapper mapper = u.mapper();
     gsDofMapper mapperBdy(dbasis, u.dim());
@@ -138,7 +138,7 @@ void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & 
     {
         dbasis.matchInterface(*it, mapperBdy);
     }
-    for (size_t np = 0; np < mp.nPatches(); np++)
+    for (size_t np = 0; np < mp.nPieces(); np++)
     {
         gsMatrix<index_t> bnd = mapper.findFree(np);
         mapperBdy.markBoundary(np, bnd, 0);
@@ -156,7 +156,7 @@ void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & 
     gsMatrix<real_t> & fixedDofs_A = const_cast<expr::gsFeSpace<real_t>&>(uu).fixedPart();
     fixedDofs_A.setZero( uu.mapper().boundarySize(), 1 );
 
-    real_t lambda = 1e-5;
+    // real_t lambda = 1e-5;
 
     A.initSystem();
     A.assembleBdr(bc.get("Dirichlet"), uu * uu.tr() * meas(G));
@@ -174,7 +174,7 @@ void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & 
     // Reordering the dofs of the boundary
     fixedDofs.setZero(mapper.boundarySize(),1);
     index_t sz = 0;
-    for (size_t np = 0; np < mp.nPatches(); np++)
+    for (size_t np = 0; np < mp.nPieces(); np++)
     {
         gsMatrix<index_t> bnd = mapperBdy.findFree(np);
         bnd.array() += sz;
@@ -187,7 +187,7 @@ void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & 
     }
 }
 
-void computeStabilityParameter(gsMultiPatch<> mp, gsMultiBasis<> dbasis, gsMatrix<real_t> & mu_interfaces)
+void computeStabilityParameter(const gsMultiPatch<> & mp, const gsMultiBasis<> & dbasis, gsMatrix<real_t> & mu_interfaces)
 {
     mu_interfaces.setZero();
 
@@ -251,9 +251,9 @@ void computeStabilityParameter(gsMultiPatch<> mp, gsMultiBasis<> dbasis, gsMatri
         B2.assemble(ilapl(uB, GB) * ilapl(uB, GB).tr() * meas(GB));
 
         // TODO INSTABLE && SLOW
-        Eigen::MatrixXd AA = A2.matrix().toDense().cast<double>();
-        Eigen::MatrixXd BB = B2.matrix().toDense().cast<double>();
-        Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXd> ges(AA, BB);
+        gsMatrix<real_t> AA = A2.matrix().toDense().cast<real_t>();
+        gsMatrix<real_t> BB = B2.matrix().toDense().cast<real_t>();
+        gsEigen:gsEigen::GeneralizedSelfAdjointEigenSolver<gsEigen::MatrixXd> ges(AA, BB);
 
         real_t m_h      = dbasis_temp.basis(0).getMinCellLength(); // dbasis.basis(0).getMinCellLength();
         mu_interfaces(i,0) = 16.0 * m_h * ges.eigenvalues().array().maxCoeff();
@@ -287,6 +287,21 @@ void computeStabilityParameter(gsMultiPatch<> mp, gsMultiBasis<> dbasis, gsMatri
     }
 }
 
+void writeToCSVfile(std::string name, gsMatrix<> matrix)
+{
+  std::ofstream file(name.c_str());
+
+  for(int  i = 0; i < matrix.rows(); i++){
+      for(int j = 0; j < matrix.cols(); j++){
+         if(j+1 == matrix.cols()){
+             file<<std::to_string(matrix(i,j));
+         }else{
+             file<<std::to_string(matrix(i,j))<<',';
+         }
+      }
+      file<<'\n';
+  }
+}
 
 int main(int argc, char *argv[])
 {
@@ -299,6 +314,7 @@ int main(int argc, char *argv[])
     index_t method = 0;
 
     index_t numRefine  = 3;
+    index_t numRefineIni  = 0;
     index_t degree = 3;
     index_t smoothness = 2;
 
@@ -312,6 +328,8 @@ int main(int argc, char *argv[])
     bool writeMatrix= false;
     bool interpolation = false;
 
+    bool project    = false;
+
     real_t penalty_init = -1.0;
     std::string xml;
     std::string output;
@@ -321,6 +339,9 @@ int main(int argc, char *argv[])
 
     std::string fn;
 
+    real_t scaling = 1.0;
+    real_t lambda = 1e-5;
+    real_t beta = 0.4;
     gsCmdLine cmd("Tutorial on solving a Biharmonic problem with different spaces.");
     // Flags related to the method (default: Approx C1 method)
     cmd.addInt( "m", "method", "The chosen method for the biharmonic problem", method );
@@ -340,6 +361,7 @@ int main(int argc, char *argv[])
     cmd.addInt( "p", "degree", "Set the polynomial degree of the basis.", degree );
     cmd.addInt( "s", "smoothness", "Set the smoothness of the basis.",  smoothness );
     cmd.addInt( "r", "numRefine", "Number of refinement-loops.",  numRefine );
+    cmd.addInt( "i", "numRefineIni", "Number initial of refinements.",  numRefineIni );
 
     // Flags related to the approximate C1 method
     cmd.addInt( "P", "gluingDataDegree","Set the polynomial degree for the gluing data", gluingDataDegree );
@@ -347,6 +369,12 @@ int main(int argc, char *argv[])
     cmd.addSwitch("interpolation", "Compute the basis constructions with interpolation", interpolation);
     cmd.addSwitch("info", "Getting the information inside of Approximate C1 basis functions", info);
     cmd.addSwitch("plotApproxC1", "Plot the approximate C1 basis functions", plotApproxC1);
+
+    cmd.addReal( "S", "scaling", "2D geometry scaling",  scaling);
+    cmd.addReal( "L", "lambda", "Lambda for BC projection",  lambda);
+
+    cmd.addReal( "B", "beta", "Beta for D-Patch", beta);
+
 
     // Flags related to Nitsche's method
     cmd.addReal( "y", "penalty", "Fixed Penalty value for Nitsche's method",  penalty_init);
@@ -362,6 +390,7 @@ int main(int argc, char *argv[])
     cmd.addString("w", "write", "Write to csv", write);
 
     cmd.addSwitch("writeMat", "Write projection matrix",writeMatrix);
+    cmd.addSwitch( "project", "Project the geometry on the initial basis (D-Patch and almost-C1)", project );
 
     try { cmd.getValues(argc,argv); } catch (int rv) { return rv; }
     //! [Parse command line]
@@ -388,11 +417,13 @@ int main(int argc, char *argv[])
         mp.fixOrientation();
         mp.computeTopology();
 
-        gsFunctionExpr<>source("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
+        // gsFunctionExpr<>source("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
+        gsFunctionExpr<>source("1*pi*pi*pi*pi*(4*cos(1*pi*x)*cos(1*pi*y) - cos(1*pi*x) - cos(1*pi*y))",2);
         f.swap(source);
         gsInfo << "Source function " << f << "\n";
 
-        gsFunctionExpr<> solution("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",2);
+        // gsFunctionExpr<> solution("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",2);
+        gsFunctionExpr<> solution("(cos(1*pi*x) - 1) * (cos(1*pi*y) - 1)",2);
         ms.swap(solution);
         gsInfo << "Exact function " << ms << "\n";
 
@@ -400,11 +431,15 @@ int main(int argc, char *argv[])
         for (gsMultiPatch<>::const_biterator bit = mp.bBegin(); bit != mp.bEnd(); ++bit)
         {
             // Laplace
-            gsFunctionExpr<> laplace ("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
+            // gsFunctionExpr<> laplace ("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
+            gsFunctionExpr<> laplace ("-1*pi*pi*(2*cos(1*pi*x)*cos(1*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
 
             // Neumann
-            gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
-                                     "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)", 2);
+            // gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
+            //                          "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)", 2);
+            gsFunctionExpr<> sol1der("-1*pi*(cos(1*pi*y) - 1)*sin(1*pi*x)",
+                                     "-1*pi*(cos(1*pi*x) - 1)*sin(1*pi*y)", 2);
+
 
             bc.addCondition(*bit, condition_type::dirichlet, ms);
             if (second)
@@ -510,6 +545,16 @@ int main(int argc, char *argv[])
         numRefine = 0;
     }
 
+    for (int r =0; r < numRefineIni; ++r)
+    {
+        dbasis.uniformRefine(1, degree-smoothness);
+        if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1 || method == MethodFlags::SURFASG1)
+            mp.uniformRefine(1, degree-smoothness);
+
+        beta /= 2;
+    }
+    // numRefine -= numRefineIni;
+
     // Assume that the condition holds for each patch TODO
     // Refine once
     if (dbasis.basis(0).numElements() < 4)
@@ -517,38 +562,18 @@ int main(int argc, char *argv[])
         dbasis.uniformRefine(1, degree-smoothness);
         if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1 || method == MethodFlags::SURFASG1)
             mp.uniformRefine(1, degree-smoothness);
+        beta /= 2;
     }
 
-    if (geometry == "g1012")
-    {
-        gsInfo << "ATTENTION: Patch 0 is one time uniform refined \n";
-        dbasis.basis(0).component(1).uniformRefine(1);
-    }
+    for (size_t p=0; p!=mp.nPatches(); p++)
+        for (index_t d=0; d!=2; d++)
+            mp.patch(p).coefs().col(d) *= scaling;
 
-    gsMultiPatch<> geom = mp;
-    gsMultiPatch<> geom0 = mp;
-
-//    gsWriteParaview(mp, "geom", 2000);
-//
-//    gsVector<> vec;
-//    vec.setLinSpaced(5,0,1);
-//    gsMatrix<> points;
-//    points.setZero(2,5);
-//    points.row(1) = vec;
-//    gsInfo << mp.patch(0).eval(points) << "\n";
-//
-//    points.setOnes(2,5);
-//    points.row(1) = vec;
-//    gsInfo << mp.patch(1).eval(points) << "\n";
-//
-//    mp.patch(0).degreeElevate(2);
-//    mp.patch(1).degreeElevate(1);
-//    //mp.patch(0).uniformRefine(1);
-//
-//    gsFileData<> fd;
-//    fd << mp;
-//    fd.save("geometry");
-    //! [Refinement]
+    // Set the discretization space
+    gsMappedBasis<2,real_t> bb2;
+    // gsMappedSpline<2,real_t> geom;
+    gsMultiPatch<> geom0, geom;
+    geom = geom0 = mp;
 
     //! [Problem setup]
     gsExprAssembler<real_t> A(1,1);
@@ -560,13 +585,11 @@ int main(int argc, char *argv[])
     gsExprEvaluator<real_t> ev(A);
 
     // Set the geometry map
-    auto G = A.getMap(geom);
+    auto G = A.getMap(geom0);
 
     // Set the source term
     auto ff = A.getCoeff(f, G); // Laplace example
 
-    // Set the discretization space
-    gsMappedBasis<2,real_t> bb2;
     auto u = method == MethodFlags::NITSCHE ? A.getSpace(dbasis) : A.getSpace(bb2);
 
     // Solution vector and solution variable
@@ -613,56 +636,170 @@ int main(int argc, char *argv[])
         }
         else if (method == MethodFlags::DPATCH)
         {
-            if (nested) mp = geom;
             mp.uniformRefine(1,degree-smoothness);
-
-            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&mp.basis(0)))
+            dbasis = gsMultiBasis<>(mp);
+            // dbasis.uniformRefine(1,degree-smoothness);
+            // geom.uniformRefine(1,degree-smoothness);
+            // dbasis = gsMultiBasis<>(geom);
+            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&dbasis.basis(0)))
                 meshsize[r] = test->tensorLevel(0).getMinCellLength();
-            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&mp.basis(0)))
+            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&dbasis.basis(0)))
                 meshsize[r] = test->getMinCellLength();
 
             // Construct the D-Patch on mp
             gsSparseMatrix<real_t> global2local;
 
-            dbasis = gsMultiBasis<>(mp);
             gsDPatch<2,real_t> dpatch(dbasis);
-            // gsDPatch<2,real_t> dpatch(mp);
-            if (nested) dpatch.options().setInt("RefLevel",r);
+            // gsDPatch<2,real_t> dpatch(geom);
+            dpatch.options().setInt("RefLevel",r);
+            dpatch.options().setReal("Beta",beta);
             dpatch.options().setInt("Pi",0);
             dpatch.options().setSwitch("SharpCorners",false);
             dpatch.compute();
-            dpatch.matrix_into(global2local);
-            global2local = global2local.transpose();
-            geom = dpatch.exportToPatches(mp);
-            dbasis = dpatch.localBasis();
-            bb2.init(dbasis,global2local);
+            dpatch.update(bb2);
 
-            if (writeMatrix)
+
+            if (r==0)
+                geom0 = geom = dpatch.exportToPatches(mp);
+            else
             {
-                gsWrite(global2local,"mat");
-                //gsWrite(geom,"geom");
-                //gsWrite(dbasis,"dbasis");
+                gsDofMapper mapper(dbasis);
+                mapper.finalize();
+                gsMatrix<> coefs;
+                gsL2Projection<real_t>::projectGeometry(dbasis,geom0,coefs);
+                coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
+
+                gsDebugVar(coefs.rows());
+                gsDebugVar(dbasis.totalSize());
+
+                index_t offset = 0;
+                for (index_t p = 0; p != geom.nPatches(); p++)
+                {
+                    geom.patch(p) = give(*dbasis.basis(p).makeGeometry((coefs.block(offset,0,mapper.patchSize(p),mp.geoDim()))));
+                    offset += mapper.patchSize(p);
+                }
+
             }
+
+            if (plot) gsWriteParaview( geom, "geom",1000,true,false);
+
+            gsMappedSpline<2,real_t> mspline = dpatch.globalGeometry(mp);
+            if (plot) gsWriteParaview( mspline, "mspline");
+
+            // gsMatrix<> coefs;
+            // gsL2Projection<real_t>::projectGeometry(dbasis,bb2,geom0,coefs);
         }
         else if (method == MethodFlags::ALMOSTC1)
         {
-            if (nested) mp = geom;
-            mp.uniformRefine(1,degree-smoothness);
+            gsMultiPatch<> tmp;
+            for (size_t p=0; p!=geom.nPatches(); p++)
+            {
+                gsTHBSpline<2,real_t> * thbspline;
+                gsTHBSpline<2,real_t> * thbspline2;
+                gsTensorBSpline<2,real_t> * tbspline;
+                if ((thbspline = dynamic_cast<gsTHBSpline<2,real_t> *>(&geom.patch(p)) ))
+                {
+                    gsTensorBSpline<2,real_t> flat;
+                    thbspline->convertToBSpline(flat);
+                    tmp.addPatch(flat);
+                }
+                else if ((tbspline = dynamic_cast<gsTensorBSpline<2,real_t> *>(&geom.patch(p)) ))
+                {
+                    geom.patch(p).uniformRefine(1,degree-smoothness);
+                    tmp.addPatch(geom.patch(p));
+                }
+            }
+            tmp.computeTopology();
+            geom = tmp;
+            if (plot) gsWriteParaview( geom, "geom_ini",1000,true,false);
 
-            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&mp.basis(0)))
+            if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&geom.basis(0)))
                 meshsize[r] = test->tensorLevel(0).getMinCellLength();
-            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&mp.basis(0)))
+            else if (gsTensorBasis<2,real_t> * test = dynamic_cast<gsTensorBasis<2,real_t>*>(&geom.basis(0)))
                 meshsize[r] = test->getMinCellLength();
 
             // Construct the D-Patch on mp
             gsSparseMatrix<real_t> global2local;
-            gsAlmostC1<2,real_t> almostC1(mp);
+            gsAlmostC1<2,real_t> almostC1(geom);
             almostC1.compute();
             almostC1.matrix_into(global2local);
             global2local = global2local.transpose();
-            geom = almostC1.exportToPatches();
             dbasis = almostC1.localBasis();
             bb2.init(dbasis,global2local);
+
+            gsDebugVar(global2local.rows());
+            gsDebugVar(global2local.cols());
+            gsDebugVar(dbasis.totalSize());
+            if (r==0)
+            {
+                geom0 = geom = almostC1.exportToPatches();
+            }
+            else
+            {
+                gsMatrix<> targetCoefs, sourceCoefs;
+                gsL2Projection<real_t>::projectGeometry(dbasis,bb2,geom0,targetCoefs);
+                targetCoefs.resize(targetCoefs.rows()/2,2);
+            gsDebugVar(targetCoefs.rows());
+            gsDebugVar(targetCoefs.cols());
+            gsDebugVar(sourceCoefs.rows());
+            gsDebugVar(sourceCoefs.cols());
+
+                bb2.getMapper().mapToSourceCoefs(targetCoefs,sourceCoefs);
+                gsDofMapper mapper(dbasis);
+                index_t offset = 0;
+                for (index_t p = 0; p != geom0.nPatches(); p++)
+                {
+                    geom0.patch(p) = give(*dbasis.basis(p).makeGeometry((sourceCoefs.block(offset,0,mapper.patchSize(p),mp.geoDim()))));
+                    offset += mapper.patchSize(p);
+                }
+            }
+
+            // gsMatrix<> coefs;
+            // gsDofMapper mapper(dbasis);
+            // mapper.finalize();
+            // gsL2Projection<real_t>::projectGeometry(dbasis,geom0,coefs);
+            // coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
+            // index_t offset = 0;
+            // for (index_t p = 0; p != geom.nPatches(); p++)
+            // {
+            //     geom.patch(p) = give(*dbasis.basis(p).makeGeometry((coefs.block(offset,0,mapper.patchSize(p),mp.geoDim()))));
+            //     offset += mapper.patchSize(p);
+            // }
+
+            //     // geom = geom0;
+            // geom0 = geom;
+            // // }
+
+
+            // dbasis = almostC1.localBasis();
+            // bb2.init(dbasis,global2local);
+            // gsWriteParaview( geom, "geom",1000,true,false);
+
+            // gsMatrix<> coefs = geom.coefs();
+            // gsMatrix<> targetCoefs;
+            // bb2.getMapper().mapToTargetCoefs(coefs,targetCoefs);
+            // targetCoefs.transposeInPlace();
+            // coefs.transposeInPlace();
+
+            // if (r>0)
+            // {
+            //     gsDofMapper mapper(dbasis);
+            //     mapper.finalize();
+            //     gsMatrix<> coefs;
+            //     gsL2Projection<real_t>::projectGeometry(dbasis,geom,coefs);
+            //     coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
+
+            //     for (index_t p = 0; p != geom.nPatches(); p++)
+            //         for (index_t k=0; k!=mapper.patchSize(p); k++)
+            //             geom.patch(p).coefs().row(k) = coefs.row(mapper.index(k,p));
+
+            //     coefs.transposeInPlace();
+            //     // gsWriteParaview( geom, "geom",1000,true,false);
+
+            // }
+
+            // gsWriteParaview( geom, "geom",1000,false,true);
+
         }
         else if (method == MethodFlags::SURFASG1) // Andrea
         {
@@ -684,6 +821,14 @@ int main(int argc, char *argv[])
         }
         gsInfo<< "." <<std::flush; // Approx C1 construction done
 
+        // gsMatrix<> coefs;
+        // if (r==0)
+        // {
+        //     gsL2Projection<real_t>::projectGeometry(dbasis,bb2,mp,coefs);
+        //     coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
+        //     geom.init(bb2,coefs);
+        // }
+
         // Setup the mapper
         if (method != MethodFlags::NITSCHE) // MappedBasis
         {
@@ -692,7 +837,7 @@ int main(int argc, char *argv[])
 
             // Setup the system
             u.setupMapper(map);
-            gsDirichletNeumannValuesL2Projection(geom, dbasis, bc, bb2, u);
+            gsDirichletNeumannValuesL2Projection(geom0, dbasis, bc, bb2, u, lambda);
         }
         else if (method == MethodFlags::NITSCHE) // Nitsche
         {
@@ -701,7 +846,7 @@ int main(int argc, char *argv[])
 
             // Setup the system
             u.setupMapper(map);
-            gsDirichletNeumannValuesL2Projection(geom, dbasis, bc, u);
+            gsDirichletNeumannValuesL2Projection(geom0, dbasis, bc, u, lambda);
         }
 
         // Initialize the system
@@ -724,10 +869,10 @@ int main(int argc, char *argv[])
         {
             if (penalty_init == -1.0)
                 if (r < 3) // From level 3 and more, the previous EW is used and devided by ḿesh-size (save computation time)
-                    computeStabilityParameter(geom, dbasis, mu_interfaces);
+                    computeStabilityParameter(mp, dbasis, mu_interfaces);
 
             index_t i = 0;
-            for ( typename gsMultiPatch<real_t>::const_iiterator it = geom.iBegin(); it != geom.iEnd(); ++it, ++i)
+            for ( typename gsMultiPatch<real_t>::const_iiterator it = mp.iBegin(); it != mp.iEnd(); ++it, ++i)
             {
                 real_t stab     = 4 * ( dbasis.maxCwiseDegree() + dbasis.dim() ) * ( dbasis.maxCwiseDegree() + 1 );
                 real_t m_h      = dbasis.basis(0).getMinCellLength(); // dbasis.basis(0).getMinCellLength();
@@ -813,6 +958,41 @@ int main(int argc, char *argv[])
             IFaceErr[r] = math::sqrt(ev.integralInterface(((igrad(ms_sol.left(), G.left()) -
                                                             igrad(ms_sol.right(), G.right())) *
                                                            nv(G).normalized()).sqNorm() * meas(G)));
+
+
+            // std::vector<real_t> BFIFaceErr(bb2.size());
+            // for (index_t k=0; k!=bb2.size(); k++)
+            // {
+            //     gsMatrix<> e(bb2.size(),1);
+            //     e.setZero();
+            //     e(k,0) = 1;
+            //     gsMappedSpline<2, real_t> mappedSpline2(bb2, e);
+            //     auto sol_tmp = A.getCoeff(mappedSpline2);
+            //     // auto sol_tmp = A.getSolution(u,e);
+            //     BFIFaceErr[k] = math::sqrt(ev.integralInterface(((igrad(sol_tmp.left(), G.left()) -
+            //                                                     igrad(sol_tmp.right(), G.right())) *
+            //                                                    nv(G).normalized()).sqNorm() * meas(G)));
+            // }
+            // gsDebugVar(gsAsVector<real_t>(BFIFaceErr));
+
+            // A.initVector();
+            // A.assembleIfc(mp.interfaces(),u *((igrad(ms_sol.left(), G.left()) - igrad(ms_sol.right(), G.right())) * nv(G).normalized()).sqNorm() * meas(G));
+            // gsDebugVar(A.rhs());
+
+            // A.initVector();
+            // A.assembleIfc(mp.interfaces(),(nv(G).normalized().tr() * (igrad(u.left(), G.left()).tr() - igrad(u.right(), G.right()).tr())).sqNorm() * meas(G));
+            // gsDebugVar(A.rhs());
+
+
+            // A.initVector();
+            // A.assembleIfc(mp.interfaces(),u.tr() * (ms_sol.left() - ms_sol.right()) * meas(G));
+            // gsDebugVar(A.rhs());
+
+
+
+            // IFaceErr[r] = math::sqrt(ev.integralInterface(((igrad(u_sol.left(), G.left()) -
+            //                                                 igrad(u_sol.right(), G.right())) *
+            //                                                nv(G).normalized()).sqNorm() * meas(G)));
         }
         else if (method == MethodFlags::NITSCHE)
         {
@@ -871,14 +1051,14 @@ int main(int argc, char *argv[])
             gsDebug << "Cond Number: " <<maxev/minev<< "\n";
             cond_num[r] = maxev/minev;
 #else
-            //Eigen::MatrixXd mat = A.matrix().toDense().cast<double>()
-            //Eigen::SparseMatrix<double> mat = A.matrix().cast<double>();
+            //gsEigen::MatrixXd mat = A.matrix().toDense().cast<double>()
+            //gsEigen::SparseMatrix<double> mat = A.matrix().cast<double>();
 
-            //Eigen::EigenSolver<Eigen::MatrixXd> es;
+            //gsEigen::EigenSolver<gsEigen::MatrixXd> es;
             //es.compute(mat,  computeEigenvectors =  false);
             //cond_num[r] = es.eigenvalues().real().maxCoeff() / es.eigenvalues().real().minCoeff();
 
-            //Eigen::JacobiSVD<Eigen::SparseMatrix<double>> svd(mat);
+            //gsEigen::JacobiSVD<gsEigen::SparseMatrix<double>> svd(mat);
             //cond_num[r] = svd.singularValues()(0) / svd.singularValues()(svd.singularValues().size()-1);
 
             gsConjugateGradient<> cg(A.matrix());
@@ -1046,7 +1226,6 @@ int main(int argc, char *argv[])
         }
         file.close();
     }
-
 
     return EXIT_SUCCESS;
 }// end main

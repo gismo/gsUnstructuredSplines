@@ -15,7 +15,11 @@
 
 #include <gsCore/gsBoxTopology.h>
 #include <gsCore/gsMultiPatch.h>
+
 #include <gsIO/gsOptionList.h>
+
+#include <gsMSplines/gsMappedBasis.h>
+#include <gsMSplines/gsMappedSpline.h>
 
 // #include <gsUnstructuredSplines/src/gsDPatchBase.hpp>
 
@@ -103,13 +107,59 @@ public:
      * @brief       Returns the basis that is used for the D-Patch. Could be THB refined.
      *
      */
-    virtual gsMultiBasis<T> localBasis() const {return m_bases;}
+    virtual const gsMultiBasis<T> & localBasis() const {return m_bases;}
+
+    /**
+     * @brief       Returns the modified geometry  corresponding to the local basis
+     *
+     */
+    virtual gsMultiPatch<T> localGeometry()
+    {
+        return exportToPatches(m_patches);
+    }
 
     /**
      * @brief       Returns the multipatch that is used for the D-Patch
      *
      */
-    virtual gsMultiPatch<T> getGeometry() const {return m_patches;}
+    virtual const gsMultiPatch<T> & getGeometry() const
+    {
+        return m_patches;
+    }
+
+    /**
+     * @brief       Returns the basis that is used for the D-Patch. Could be THB refined.
+     *
+     */
+    virtual gsMappedBasis<d,T> globalBasis() const
+    {
+        GISMO_ASSERT(m_computed,"The method has not been computed! Call compute().");
+        gsMappedBasis<d,T> mbasis(m_bases,m_matrix.transpose());
+        return mbasis;
+    }
+
+    /**
+     * @brief       Returns the multipatch that is used for the D-Patch
+     *
+     */
+    virtual gsMappedSpline<d,T> globalGeometry(const gsMultiPatch<T> & patches)
+    {
+        GISMO_ASSERT(!patches.empty() && patches.nPatches()==m_bases.nBases(),"The reference multipatch is empty!");
+        gsMappedBasis<d,T> mbasis = this->globalBasis();
+        gsMatrix<T> localCoefs = this->_preCoefficients(patches);
+        gsMappedSpline<d,T> mspline(mbasis,localCoefs);
+        return mspline;
+    }
+
+    virtual gsMappedSpline<d,T> globalGeometry()
+    {
+        return this->globalGeometry(m_patches);
+    }
+
+    virtual void update( gsMappedBasis<d,T> & mbasis ) const
+    {
+        mbasis.init(m_bases,m_matrix.transpose());
+    }
 
     /**
      * @brief       Exports a single modified patch with index \a patch
@@ -153,8 +203,12 @@ public:
      */
     virtual const void matrix_into(gsSparseMatrix<T> & matrix) const
     {
-        GISMO_ASSERT(m_computed,"The method has not been computed! Call compute().");
-        matrix = m_matrix;
+        matrix = this->matrix();
+    }
+
+    virtual const gsSparseMatrix<T> & Tmatrix() const
+    {
+        return m_tMatrix;
     }
 
     /**
@@ -166,11 +220,10 @@ public:
      *
      * @return     A matrix \a result to transfer local to global coefficients
      */
-    virtual const gsSparseMatrix<T> matrix() const
+    virtual const gsSparseMatrix<T> & matrix() const
     {
         GISMO_ASSERT(m_computed,"The method has not been computed! Call compute().");
-        gsSparseMatrix<T> result; matrix_into(result);
-        return result;
+        return m_matrix;
     }
 
 //----------------------------------------------------------------------------------------------------------------------------
@@ -434,58 +487,26 @@ protected:
     /**
      * @brief      Computes the index of a basis function taking one corner and one side as reference
      *
-     * @param[in]  index   Offset of the basis function parallel to the side \a side, measured from \a corner
-     * @param[in]  corner  The corner to be measured from
-     * @param[in]  side    The side which contains \a corner
-     * @param[in]  offset  The offset from the side (orthogonal to the side)
-     *
-     * @return     Index of \a index places from \a corner along \a side, with offset \a offset
-     */
-    virtual const gsVector<index_t> _indicesFromVert(index_t index, const patchCorner corner, const patchSide side, index_t offset = 0);
-
-
-    /**
-     * @brief      Computes the index of a basis function taking one corner and one side as reference
-     *
      * @param[in]  bases   (optional) Multibasis to evaluate the index on
      * @param[in]  index   Offset of the basis function parallel to the side \a side, measured from \a corner
      * @param[in]  corner  The corner to be measured from
      * @param[in]  side    The side which contains \a corner
      * @param[in]  offset  The offset from the side (orthogonal to the side)
-     * @param[in]  levelOffset  The level to be computed from. \a levelOffset = 0 returns the deepest THB level, and any positive number will give one level coarser
      *
      * @return     Index of \a index places from \a corner along \a side, with offset \a offset and with offset \a levelOffset from the deepest level
      */
-    virtual const index_t _indexFromVert(index_t index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
-    virtual const index_t _indexFromVert(const gsMultiBasis<T> & bases, index_t index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
-    virtual const index_t _indexFromVert(const gsBasis<T> * basis, index_t index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
+    virtual const index_t _indexFromVert(const index_t index, const patchCorner corner, const patchSide side, const index_t offsets = 0) const;
+    virtual const index_t _indexFromVert(const gsMultiBasis<T> & bases, const index_t index, const patchCorner corner, const patchSide side, const index_t offsets = 0) const;
+    virtual const index_t _indexFromVert(const gsBasis<T> * basis, const index_t index, const patchCorner corner, const patchSide side, const index_t offsets = 0) const;
 private:
     template<class U>
     typename util::enable_if<util::is_same<U, const gsHTensorBasis<d,T> *>::value,const index_t>::type
-    _indexFromVert_impl(U basis, index_t index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
+    _indexFromVert_impl(U basis, const index_t index, const patchCorner corner, const patchSide side, const index_t offsets = 0) const;
 
     template<class U>
     typename util::enable_if<util::is_same<U, const gsTensorBSplineBasis<d,T> *>::value,const index_t>::type
-    _indexFromVert_impl(U basis, index_t index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
+    _indexFromVert_impl(U basis, const index_t index, const patchCorner corner, const patchSide side, const index_t offsets = 0) const;
 protected:
-    virtual const std::vector<index_t> _indexFromVert(const gsHTensorBasis<d,T> * basis, const std::vector<index_t> & index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
-    virtual const std::vector<index_t> _indexFromVert(const gsTensorBSplineBasis<d,T> * tbasis, const std::vector<index_t> & index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
-
-
-    /**
-     * @brief      Computes the index of a basis function taking one corner and one side as reference (multiple indices)
-     *
-     * @param[in]  bases   (optional) Multibasis to evaluate the index on
-     * @param[in]  index        Vector with offsets of the basis function parallel to the side \a side, measured from \a corner
-     * @param[in]  corner       The corner
-     * @param[in]  side         The side
-     * @param[in]  offset       The offset
-     * @param[in]  levelOffset  The level offset
-     *
-     * @return     { description_of_the_return_value }
-     */
-    virtual const std::vector<index_t> _indexFromVert(const gsMultiBasis<T> & bases, const std::vector<index_t> & index, const patchCorner corner, const patchSide side, index_t offset = 0, index_t levelOffset = 0) const;
-    virtual const std::vector<index_t> _indexFromVert(const std::vector<index_t> & index, const patchCorner corner, const patchSide side, index_t offset, index_t levelOffset) const;
 
     /**
      * @brief      Returns the valence and whether a corner is interior or boundary
@@ -687,7 +708,7 @@ protected:
 
 protected:
     const gsMultiPatch<T> & m_patches;
-    const gsMultiBasis<T> m_Bbases;
+    const gsMultiBasis<T> m_Bbases; // reference?
     bool m_computed;
     
     gsMultiBasis<T> m_bases;

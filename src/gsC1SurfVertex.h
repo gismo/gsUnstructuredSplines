@@ -127,7 +127,7 @@ public:
         gsMatrix<T> zero;
         zero.setZero(2,1);
         for (index_t i = 0; i < val; i++)
-            sigma += auxGeom[i].getPatch().deriv(zero).template lpNorm<Eigen::Infinity>();
+            sigma += auxGeom[i].getPatch().deriv(zero).template lpNorm<gsEigen::Infinity>();
         sigma *= h_geo/(val*p);
         sigma = 1 / sigma;
     }
@@ -379,7 +379,7 @@ public:
             basisV.conservativeResize(basisV.rows(), basisV.cols() + 1);
             basisV.col(basisV.cols() - 1) = vertBas.col(count);
 
-            Eigen::FullPivLU<gsMatrix<T>> ker(basisV);
+            gsEigen::FullPivLU<gsMatrix<T>> ker(basisV);
             ker.setThreshold(1e-10);
             if (ker.dimensionOfKernel() != 0)
             {
@@ -396,7 +396,7 @@ public:
             basisV.conservativeResize(basisV.rows(), basisV.cols() + 1);
             basisV.col(basisV.cols()-1) = smallK.col(i);
 
-            Eigen::FullPivLU<gsMatrix<T>> ker(basisV);
+            gsEigen::FullPivLU<gsMatrix<T>> ker(basisV);
             ker.setThreshold(1e-10);
             if(ker.dimensionOfKernel() != 0)
             {
@@ -618,16 +618,16 @@ public:
                     .deriv2(zero); // Second derivative of the geometric mapping with respect to the parameter coordinates
 
             //Computing the normal vector to the tangent plane along the boundary curve
-//            Eigen::Vector3d t1 = Jk.col(0);
-//            Eigen::Vector3d t2 = Jk.col(1);
+//            gsVector<T,3> t1 = Jk.col(0);
+//            gsVector<T,3> t2 = Jk.col(1);
 //
-//            Eigen::Vector3d n = t1.cross(t2);
+//            gsVector<T,3> n = t1.cross(t2);
 //
 //            gsVector<T> normal = n.normalized();
 //            n = n.normalized();
-//            Eigen::Vector3d z(0, 0, 1);
+//            gsVector<T,3> z(0, 0, 1);
 //
-//            Eigen::Vector3d rotVec = n.cross(z);
+//            gsVector<T,3> rotVec = n.cross(z);
 //            rotVec = rotVec.normalized();
 //
 //            T cos_t = n.dot(z) / (n.norm() * z.norm());
@@ -740,8 +740,8 @@ public:
 //                smallMatrix.block(row_smallMatrix, 0, tmp.second.rows(), 6) = tmp.second;
 //            }
 //
-//            Eigen::FullPivLU<gsMatrix<T>> BigLU(bigMatrix);
-//            Eigen::FullPivLU<gsMatrix<T>> SmallLU(smallMatrix);
+//            gsEigen::FullPivLU<gsMatrix<T>> BigLU(bigMatrix);
+//            gsEigen::FullPivLU<gsMatrix<T>> SmallLU(smallMatrix);
 //            SmallLU.setThreshold(1e-10);
 //            BigLU.setThreshold(1e-10);
 //
@@ -755,8 +755,8 @@ public:
 //        }
 //        else if(this->kindOfVertex() == -1) // Boundary vertex
 //        {
-//            Eigen::FullPivLU<gsMatrix<T>> BigLU(computeBigSystemMatrix(0));
-//            Eigen::FullPivLU<gsMatrix<T>> SmallLU(computeSmallSystemMatrix(0));
+//            gsEigen::FullPivLU<gsMatrix<T>> BigLU(computeBigSystemMatrix(0));
+//            gsEigen::FullPivLU<gsMatrix<T>> SmallLU(computeSmallSystemMatrix(0));
 //            SmallLU.setThreshold(1e-10);
 //            BigLU.setThreshold(1e-10);
 //
@@ -993,7 +993,7 @@ public:
         if (dofsCorner > 0)
         {
             T threshold = 1e-10;
-            Eigen::FullPivLU<gsMatrix<T>> KernelCorner(coefs_corner);
+            gsEigen::FullPivLU<gsMatrix<T>> KernelCorner(coefs_corner);
             KernelCorner.setThreshold(threshold);
             //gsDebug << "Coefs: " << coefs_corner << "\n";
             while (KernelCorner.dimensionOfKernel() < dofsCorner) {
@@ -1012,7 +1012,7 @@ public:
                 kernel.conservativeResize(kernel.rows(), kernel.cols() + 1);
                 kernel.col(kernel.cols() - 1) = vertBas.col(count);
 
-                Eigen::FullPivLU<gsMatrix<T>> ker_temp(kernel);
+                gsEigen::FullPivLU<gsMatrix<T>> ker_temp(kernel);
                 ker_temp.setThreshold(1e-6);
                 if (ker_temp.dimensionOfKernel() != 0) {
                     kernel = kernel.block(0, 0, kernel.rows(), kernel.cols() - 1);

@@ -156,7 +156,6 @@ protected:
     gsMatrix<T,3,3> _getRotationMatrix(const gsVector<T,3> & a, const gsVector<T,3> & b) const;
 
     using Base::_indexFromSides;
-    using Base::_indicesFromVert;
     using Base::_indexFromVert;
     using Base::_vertexData;
     using Base::_sideIndex;
