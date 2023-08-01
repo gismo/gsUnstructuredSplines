@@ -12,6 +12,7 @@
 */
 
 #include <gsIO/gsWriteParaview.h>
+#include <gsNurbs/gsTensorNurbsBasis.h>
 #include <gsHSplines/gsHTensorBasis.h>
 #include <gsHSplines/gsTHBSpline.h>
 
@@ -695,9 +696,12 @@ namespace gismo
     const index_t gsDPatchBase<d,T>::_indexFromVert(const gsBasis<T> * basis, index_t index, const patchCorner corner, const patchSide side, index_t offset, index_t levelOffset) const
     {
         const gsTensorBSplineBasis<d,T> * tbbasis;
+        const gsTensorNurbsBasis<d,T> * tnbasis;
         const gsHTensorBasis<d,T> * thbasis;
         if ((tbbasis = dynamic_cast<const gsTensorBSplineBasis<d,T> * >(basis)))
             return _indexFromVert_impl(tbbasis,index,corner,side,offset,levelOffset);
+        else if ((tnbasis = dynamic_cast<const gsTensorNurbsBasis<d,T> * >(basis)))
+            return _indexFromVert_impl(&tnbasis->source(),index,corner,side,offset,levelOffset);
         else if ((thbasis = dynamic_cast<const gsHTensorBasis<d,T> * >(basis)))
             return _indexFromVert_impl(thbasis,index,corner,side,offset,levelOffset);
         else
@@ -974,7 +978,8 @@ namespace gismo
             for (typename gsSparseMatrix<T>::iterator it = matrix.begin(i); it; ++it)
                 colSums.at(i) += it.value();
 
-        return (colSums.array() < 1+1e-8).all() && (colSums.array() > 1-1e-8).all(); // Lower?
+        colSums.array() -= 1;
+        return (colSums.array() < 1e-8).all() && (colSums.array() > -1e-8).all(); // Lower?
     }
 
 //     /*=====================================================================================
