@@ -215,7 +215,7 @@ namespace gismo
         }
 
         if (m_RefPatches.targetDim()==2)
-            Cg.conservativeResize(2,Eigen::NoChange);
+            Cg.conservativeResize(2,gsEigen::NoChange);
 
         return std::make_tuple(Cg,ub,uind);
     }
@@ -447,7 +447,7 @@ namespace gismo
 
             gsSparseMatrix<T> tmp;
             index_t rows = 0, cols = 0;
-            std::vector<Eigen::Triplet<T,index_t>> tripletList;
+            std::vector<gsEigen::Triplet<T,index_t>> tripletList;
             for (size_t p=0; p!=m_RefPatches.nPatches(); p++)
             {
                 gsHTensorBasis<2,T> *basis = dynamic_cast<gsHTensorBasis<2,T>*>(&m_RefPatches.basis(p));
@@ -459,7 +459,7 @@ namespace gismo
 
                 for (index_t i = 0; i<tmp.outerSize(); ++i)
                     for (typename gsSparseMatrix<T>::iterator it(tmp,i); it; ++it)
-                        tripletList.push_back(Eigen::Triplet<T,index_t>(it.row()+rows,it.col()+cols,it.value()));
+                        tripletList.push_back(gsEigen::Triplet<T,index_t>(it.row()+rows,it.col()+cols,it.value()));
 
                 rows += tmp.rows();
                 cols += tmp.cols();

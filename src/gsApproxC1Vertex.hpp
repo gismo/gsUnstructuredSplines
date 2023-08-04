@@ -95,7 +95,7 @@ T gsApproxC1Vertex<d, T>::computeSigma(const std::vector<size_t> &vertexIndices)
     for (size_t i = 0; i < m_auxPatches.size(); i++)
     {
         deriv = m_auxPatches[i].getPatchRotated().deriv(zero);
-        sigma += deriv.template lpNorm<Eigen::Infinity>();
+        sigma += deriv.template lpNorm<gsEigen::Infinity>();
     }
     sigma *= h_geo/(m_auxPatches.size()*p);
 
@@ -289,7 +289,7 @@ void gsApproxC1Vertex<d, T>::computeKernel()
     if (dofsCorner > 0)
     {
         T threshold = 1e-10;
-        Eigen::FullPivLU<gsMatrix<T>> KernelCorner(coefs_corner);
+        gsEigen::FullPivLU<gsMatrix<T>> KernelCorner(coefs_corner);
         KernelCorner.setThreshold(threshold);
         //gsInfo << "Coefs: " << coefs_corner << "\n";
         while (KernelCorner.dimensionOfKernel() < dofsCorner) {
@@ -309,7 +309,7 @@ void gsApproxC1Vertex<d, T>::computeKernel()
             kernel.conservativeResize(kernel.rows(), kernel.cols() + 1);
             kernel.col(kernel.cols() - 1) = vertBas.col(count);
 
-            Eigen::FullPivLU<gsMatrix<T>> ker_temp(kernel);
+            gsEigen::FullPivLU<gsMatrix<T>> ker_temp(kernel);
             ker_temp.setThreshold(1e-6);
             if (ker_temp.dimensionOfKernel() != 0) {
                 kernel = kernel.block(0, 0, kernel.rows(), kernel.cols() - 1);
