@@ -127,7 +127,7 @@ public:
         gsMatrix<T> zero;
         zero.setZero(2,1);
         for (index_t i = 0; i < val; i++)
-            sigma += auxGeom[i].getPatch().deriv(zero).template lpNorm<Eigen::Infinity>();
+            sigma += auxGeom[i].getPatch().deriv(zero).template lpNorm<gsEigen::Infinity>();
         sigma *= h_geo/(val*p);
         sigma = 1 / sigma;
     }
@@ -379,7 +379,7 @@ public:
             basisV.conservativeResize(basisV.rows(), basisV.cols() + 1);
             basisV.col(basisV.cols() - 1) = vertBas.col(count);
 
-            Eigen::FullPivLU<gsMatrix<T>> ker(basisV);
+            gsEigen::FullPivLU<gsMatrix<T>> ker(basisV);
             ker.setThreshold(1e-10);
             if (ker.dimensionOfKernel() != 0)
             {
@@ -396,7 +396,7 @@ public:
             basisV.conservativeResize(basisV.rows(), basisV.cols() + 1);
             basisV.col(basisV.cols()-1) = smallK.col(i);
 
-            Eigen::FullPivLU<gsMatrix<T>> ker(basisV);
+            gsEigen::FullPivLU<gsMatrix<T>> ker(basisV);
             ker.setThreshold(1e-10);
             if(ker.dimensionOfKernel() != 0)
             {
@@ -993,7 +993,7 @@ public:
         if (dofsCorner > 0)
         {
             T threshold = 1e-10;
-            Eigen::FullPivLU<gsMatrix<T>> KernelCorner(coefs_corner);
+            gsEigen::FullPivLU<gsMatrix<T>> KernelCorner(coefs_corner);
             KernelCorner.setThreshold(threshold);
             //gsDebug << "Coefs: " << coefs_corner << "\n";
             while (KernelCorner.dimensionOfKernel() < dofsCorner) {
@@ -1012,7 +1012,7 @@ public:
                 kernel.conservativeResize(kernel.rows(), kernel.cols() + 1);
                 kernel.col(kernel.cols() - 1) = vertBas.col(count);
 
-                Eigen::FullPivLU<gsMatrix<T>> ker_temp(kernel);
+                gsEigen::FullPivLU<gsMatrix<T>> ker_temp(kernel);
                 ker_temp.setThreshold(1e-6);
                 if (ker_temp.dimensionOfKernel() != 0) {
                     kernel = kernel.block(0, 0, kernel.rows(), kernel.cols() - 1);
