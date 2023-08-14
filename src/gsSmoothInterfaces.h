@@ -101,13 +101,13 @@ protected:
 
 protected:
 
-    void _countDoFs();
+    void _countDoFs() override;
 
-    void _makeTHB();
+    void _makeTHB() override;
 
-    void _initTHB();
+    void _initTHB() override;
 
-    void _computeEVs();
+    void _computeEVs() override;
 
     /**
      * @brief      Makes the Pi matrix
