@@ -16,7 +16,6 @@
 #include <gsHSplines/gsTHBSpline.h>
 #include <gsSolver/gsBlockOp.h>
 #include <gsSolver/gsMatrixOp.h>
-#include <typeinfo>
 
 #include <gsIO/gsWriteParaview.h>
 
@@ -70,7 +69,12 @@ namespace gismo
         index_t size;
         for (size_t p=0; p!=m_bases0.nBases(); p++) // patches
         {
-            gsMatrix<T> tmpCoefs = m_tMatrices[p]*patches.patch(p).coefs();
+            gsMatrix<T> tmpCoefs;
+            if (m_tMatrices[p].rows()!=0 && m_tMatrices[p].cols()!=0)
+                tmpCoefs = m_tMatrices[p]*patches.patch(p).coefs();
+            else
+                tmpCoefs = patches.patch(p).coefs();
+
             size = m_mapModified.patchSize(p);
             for (index_t k=0; k!=size; k++)
             {
@@ -190,6 +194,7 @@ namespace gismo
         patchCorner corner;
         std::vector<std::vector<patchCorner> > cornerLists;
         m_topology.getEVs(cornerLists);
+        m_tMatrices.resize(m_bases0.nBases());
         if (cornerLists.size()!=0)
         {// If any EVs
             std::vector< std::vector<index_t> > elVec(m_bases0.nBases());
@@ -228,7 +233,7 @@ namespace gismo
             {
                 gsHTensorBasis<d,T> *basis = dynamic_cast<gsHTensorBasis<d,T>*>(&m_bases0.basis(p));
                 std::vector< gsSortedVector< index_t > > xmat = basis->getXmatrix();
-                basis->refineElements_withTransfer2(elVec[p],m_tMatrices[p]);
+                basis->refineElements_withTransfer(elVec[p],m_tMatrices[p]);
             }
         }// If any EVs
         m_bases = m_bases0;
@@ -287,7 +292,7 @@ namespace gismo
             {
                 gsHTensorBasis<d,T> *basis = dynamic_cast<gsHTensorBasis<d,T>*>(&refBases.basis(p));
                 std::vector< gsSortedVector< index_t > > xmat = basis->getXmatrix();
-                basis->refineElements_withTransfer2(elVec[p],tmp);
+                basis->refineElements_withTransfer(elVec[p],tmp);
                 for (index_t i = 0; i<tmp.outerSize(); ++i)
                     for (typename gsSparseMatrix<T>::iterator it(tmp,i); it; ++it)
                         tripletList.push_back(gsEigen::Triplet<T,index_t>(it.row()+rows,it.col()+cols,it.value()));
@@ -1158,14 +1163,9 @@ namespace gismo
             m_mapModified.eliminateDof(this->_indexFromVert(1,pcorners[c],psides[1]),pcorners[c].patch);
 
             // And match the 0,0 vertex (i.e. the corner) to the corner that is first in the list pcorners.
+            patchSide pseudo; // this side does not contribute since we use index = 0 in this->_indexFromVert
             if (c!=0)
-            {
-                patchSide pseudo = patchSide(pcorner.patch,1); // this side does not contribute since we use index = 0 in this->_indexFromVert
-                // m_mapModified.eliminateDof(this->_indexFromVert(0,pcorners[c],pseudo),pcorners[c].patch);
-                m_mapModified.matchDof(pcorners[0].patch,this->_indexFromVert(0,pcorners[0],pseudo),pcorners[c].patch,this->_indexFromVert(0,pcorners[c],pseudo));
-                // gsDebug<<"Matched "<<this->_indexFromVert(0,pcorners[0],pseudo)<<" of basis "<<pcorners[0].patch<<" with "<<this->_indexFromVert(0,pcorners[c],pseudo)<<" of basis "<<pcorners[c].patch<<"\n";
-
-            }
+                m_mapModified.matchDof(pcorners[0].patch,this->_indexFromVert(0,pcorners[0],pseudo,0),pcorners[c].patch,this->_indexFromVert(0,pcorners[c],pseudo,0));
             // mark the vertex as passed
             m_vertCheck[ this->_vertIndex(pcorners[c].patch, pcorners[c].corner()) ] = true;
         }

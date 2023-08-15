@@ -297,12 +297,21 @@ namespace gismo
     {
         const gsTensorBSplineBasis<d,T> * tbbasis;
         const gsHTensorBasis<d,T> * thbasis;
-        if ((tbbasis = dynamic_cast<const gsTensorBSplineBasis<d,T> * >(basis)))
-            return _indexFromVert_impl(tbbasis,index,corner,side,offset);
-        else if ((thbasis = dynamic_cast<const gsHTensorBasis<d,T> * >(basis)))
-            return _indexFromVert_impl(thbasis,index,corner,side,offset);
+        if ((index==0) && (offset==0))
+        {
+            // gsHTensorBasis<d,T> *basis = dynamic_cast<gsHTensorBasis<d,T>*>(&bases.basis(corner.patch));
+            index_t idx = basis->functionAtCorner(corner.corner());
+            return idx;
+        }
         else
-            GISMO_ERROR("Basis type unknown");
+        {
+            if ((tbbasis = dynamic_cast<const gsTensorBSplineBasis<d,T> * >(basis)))
+                return _indexFromVert_impl(tbbasis,index,corner,side,offset);
+            else if ((thbasis = dynamic_cast<const gsHTensorBasis<d,T> * >(basis)))
+                return _indexFromVert_impl(thbasis,index,corner,side,offset);
+            else
+                GISMO_ERROR("Basis type unknown");
+        }
     }
     template<short_t d,class T>
     template<class U>
