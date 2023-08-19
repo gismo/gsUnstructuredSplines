@@ -330,6 +330,8 @@ int main(int argc, char *argv[])
 
     bool project    = false;
 
+    index_t PiMat = 0;
+
     real_t penalty_init = -1.0;
     std::string xml;
     std::string output;
@@ -362,6 +364,7 @@ int main(int argc, char *argv[])
     cmd.addInt( "s", "smoothness", "Set the smoothness of the basis.",  smoothness );
     cmd.addInt( "r", "numRefine", "Number of refinement-loops.",  numRefine );
     cmd.addInt( "i", "numRefineIni", "Number initial of refinements.",  numRefineIni );
+    cmd.addInt( "", "PiMat", "Pi matrix to use (0: Idempotent, 1: Non-negative",  PiMat );
 
     // Flags related to the approximate C1 method
     cmd.addInt( "P", "gluingDataDegree","Set the polynomial degree for the gluing data", gluingDataDegree );
@@ -448,7 +451,6 @@ int main(int argc, char *argv[])
                 bc.addCondition(*bit, condition_type::neumann, sol1der);
 
         }
-        bc.setGeoMap(mp);
         gsInfo << "Boundary conditions:\n" << bc << "\n";
         //! [Boundary condition]
 
@@ -457,6 +459,8 @@ int main(int argc, char *argv[])
 
         gsFileData<> fd(assemberOptionsFile); // "planar/biharmonic_pde/bvp1.xml"
         fd.getAnyFirst(Aopt);
+
+        gsInfo<<"Assembler options:\n"<< Aopt <<"\n";
 
         gsInfo << "Finished\n";
     }
@@ -486,7 +490,6 @@ int main(int argc, char *argv[])
 
         // Boundary condition
         fd.getId(0, bc); // id=2: boundary conditions
-        bc.setGeoMap(mp);
         gsInfo << "Boundary conditions:\n" << bc << "\n";
 
         // Option list
@@ -557,13 +560,13 @@ int main(int argc, char *argv[])
 
     // Assume that the condition holds for each patch TODO
     // Refine once
-    if (dbasis.basis(0).numElements() < 4)
-    {
-        dbasis.uniformRefine(1, degree-smoothness);
-        if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1 || method == MethodFlags::SURFASG1)
-            mp.uniformRefine(1, degree-smoothness);
-        beta /= 2;
-    }
+    // if (dbasis.basis(0).numElements() < 4)
+    // {
+    //     dbasis.uniformRefine(1, degree-smoothness);
+    //     if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1 || method == MethodFlags::SURFASG1)
+    //         mp.uniformRefine(1, degree-smoothness);
+    //     beta /= 2;
+    // }
 
     for (size_t p=0; p!=mp.nPatches(); p++)
         for (index_t d=0; d!=2; d++)
@@ -574,31 +577,6 @@ int main(int argc, char *argv[])
     // gsMappedSpline<2,real_t> geom;
     gsMultiPatch<> geom0, geom;
     geom = geom0 = mp;
-
-    //! [Problem setup]
-    gsExprAssembler<real_t> A(1,1);
-    A.setOptions(Aopt);
-    gsInfo<<"Active options:\n"<< A.options() <<"\n";
-
-    // Elements used for numerical integration
-    A.setIntegrationElements(dbasis);
-    gsExprEvaluator<real_t> ev(A);
-
-    // Set the geometry map
-    auto G = A.getMap(geom0);
-
-    // Set the source term
-    auto ff = A.getCoeff(f, G); // Laplace example
-
-    auto u = method == MethodFlags::NITSCHE ? A.getSpace(dbasis) : A.getSpace(bb2);
-
-    // Solution vector and solution variable
-    gsMatrix<real_t> solVector;
-    auto u_sol = A.getSolution(u, solVector);
-
-    // Recover manufactured solution
-    auto u_ex = ev.getVariable(ms, G);
-    //! [Problem setup]
 
     // For Nitsche
     gsMatrix<real_t> mu_interfaces(mp.nInterfaces(),1);
@@ -647,44 +625,49 @@ int main(int argc, char *argv[])
                 meshsize[r] = test->getMinCellLength();
 
             // Construct the D-Patch on mp
-            gsSparseMatrix<real_t> global2local;
+            // gsSparseMatrix<real_t> global2local;
 
             gsDPatch<2,real_t> dpatch(dbasis);
             // gsDPatch<2,real_t> dpatch(geom);
             dpatch.options().setInt("RefLevel",r);
             dpatch.options().setReal("Beta",beta);
-            dpatch.options().setInt("Pi",0);
+            dpatch.options().setInt("Pi",PiMat);
             dpatch.options().setSwitch("SharpCorners",false);
             dpatch.compute();
             dpatch.update(bb2);
 
+            // dpatch.matrix_into(global2local);
+            // global2local = global2local.transpose();
+            gsMultiBasis<> localbasis = dpatch.localBasis();
+            // bb2.init(dbasis,global2local);
 
             if (r==0)
                 geom0 = geom = dpatch.exportToPatches(mp);
             else
             {
-                gsDofMapper mapper(dbasis);
+                gsDofMapper mapper(localbasis);
                 mapper.finalize();
                 gsMatrix<> coefs;
-                gsL2Projection<real_t>::projectGeometry(dbasis,geom0,coefs);
-                coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
+                // First project the geometry geom0 onto bb2 and make a mapped spline
+                gsInfo<<"L2-Projection error of geom0 on bb2 = "<<gsL2Projection<real_t>::projectGeometry(localbasis,bb2,geom0,coefs)<<"\n";
+                coefs.resize(coefs.rows()/geom0.geoDim(),geom0.geoDim());
+                gsMappedSpline<2,real_t> mspline;
+                mspline.init(bb2,coefs);
+                if (plot) gsWriteParaview( mspline, "mspline");
 
-                gsDebugVar(coefs.rows());
-                gsDebugVar(dbasis.totalSize());
+                // Then project onto localbasis so that geom represents the mapped geometry
+                gsInfo<<"L2-Projection error of geom0 on dbasis = "<<gsL2Projection<real_t>::projectGeometry(localbasis,mspline,coefs)<<"\n";
+                coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
 
                 index_t offset = 0;
                 for (index_t p = 0; p != geom.nPatches(); p++)
                 {
-                    geom.patch(p) = give(*dbasis.basis(p).makeGeometry((coefs.block(offset,0,mapper.patchSize(p),mp.geoDim()))));
+                    geom.patch(p) = give(*localbasis.basis(p).makeGeometry((coefs.block(offset,0,mapper.patchSize(p),mp.geoDim()))));
                     offset += mapper.patchSize(p);
                 }
 
             }
-
             if (plot) gsWriteParaview( geom, "geom",1000,true,false);
-
-            gsMappedSpline<2,real_t> mspline = dpatch.globalGeometry(mp);
-            if (plot) gsWriteParaview( mspline, "mspline");
 
             // gsMatrix<> coefs;
             // gsL2Projection<real_t>::projectGeometry(dbasis,bb2,geom0,coefs);
@@ -727,23 +710,17 @@ int main(int argc, char *argv[])
             dbasis = almostC1.localBasis();
             bb2.init(dbasis,global2local);
 
-            gsDebugVar(global2local.rows());
-            gsDebugVar(global2local.cols());
-            gsDebugVar(dbasis.totalSize());
             if (r==0)
             {
                 geom0 = geom = almostC1.exportToPatches();
             }
             else
             {
+            //     geom = almostC1.exportToPatches();
+            // }
                 gsMatrix<> targetCoefs, sourceCoefs;
                 gsL2Projection<real_t>::projectGeometry(dbasis,bb2,geom0,targetCoefs);
                 targetCoefs.resize(targetCoefs.rows()/2,2);
-            gsDebugVar(targetCoefs.rows());
-            gsDebugVar(targetCoefs.cols());
-            gsDebugVar(sourceCoefs.rows());
-            gsDebugVar(sourceCoefs.cols());
-
                 bb2.getMapper().mapToSourceCoefs(targetCoefs,sourceCoefs);
                 gsDofMapper mapper(dbasis);
                 index_t offset = 0;
@@ -753,58 +730,11 @@ int main(int argc, char *argv[])
                     offset += mapper.patchSize(p);
                 }
             }
-
-            // gsMatrix<> coefs;
-            // gsDofMapper mapper(dbasis);
-            // mapper.finalize();
-            // gsL2Projection<real_t>::projectGeometry(dbasis,geom0,coefs);
-            // coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
-            // index_t offset = 0;
-            // for (index_t p = 0; p != geom.nPatches(); p++)
-            // {
-            //     geom.patch(p) = give(*dbasis.basis(p).makeGeometry((coefs.block(offset,0,mapper.patchSize(p),mp.geoDim()))));
-            //     offset += mapper.patchSize(p);
-            // }
-
-            //     // geom = geom0;
-            // geom0 = geom;
-            // // }
-
-
-            // dbasis = almostC1.localBasis();
-            // bb2.init(dbasis,global2local);
-            // gsWriteParaview( geom, "geom",1000,true,false);
-
-            // gsMatrix<> coefs = geom.coefs();
-            // gsMatrix<> targetCoefs;
-            // bb2.getMapper().mapToTargetCoefs(coefs,targetCoefs);
-            // targetCoefs.transposeInPlace();
-            // coefs.transposeInPlace();
-
-            // if (r>0)
-            // {
-            //     gsDofMapper mapper(dbasis);
-            //     mapper.finalize();
-            //     gsMatrix<> coefs;
-            //     gsL2Projection<real_t>::projectGeometry(dbasis,geom,coefs);
-            //     coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
-
-            //     for (index_t p = 0; p != geom.nPatches(); p++)
-            //         for (index_t k=0; k!=mapper.patchSize(p); k++)
-            //             geom.patch(p).coefs().row(k) = coefs.row(mapper.index(k,p));
-
-            //     coefs.transposeInPlace();
-            //     // gsWriteParaview( geom, "geom",1000,true,false);
-
-            // }
-
-            // gsWriteParaview( geom, "geom",1000,false,true);
-
         }
         else if (method == MethodFlags::SURFASG1) // Andrea
         {
             mp.uniformRefine(1,degree-smoothness);
-            dbasis.uniformRefine(1,degree-smoothness);
+            dbasis = gsMultiBasis<>(mp);
 
             meshsize[r] = dbasis.basis(0).getMinCellLength();
 
@@ -829,6 +759,40 @@ int main(int argc, char *argv[])
         //     geom.init(bb2,coefs);
         // }
 
+
+        //! [Problem setup]
+        gsExprAssembler<real_t> A(1,1);
+        A.setOptions(Aopt);
+
+        // Elements used for numerical integration
+        std::vector<gsBasis<real_t> *> bases = bb2.getBasesCopy();
+        gsMultiBasis<> intBasis;
+        if (method != MethodFlags::NITSCHE)
+            intBasis = gsMultiBasis<>(bases,mp.topology());
+        else
+            intBasis = dbasis;
+
+        A.setIntegrationElements(intBasis);
+        gsExprEvaluator<real_t> ev(A);
+
+        // Set the geometry map
+        auto G = A.getMap(geom);
+
+        // Set the source term
+        auto ff = A.getCoeff(f, G); // Laplace example
+
+        auto u = method == MethodFlags::NITSCHE ? A.getSpace(dbasis) : A.getSpace(bb2);
+
+        // Solution vector and solution variable
+        gsMatrix<real_t> solVector;
+        auto u_sol = A.getSolution(u, solVector);
+
+        // Recover manufactured solution
+        auto u_ex = ev.getVariable(ms, G);
+        //! [Problem setup]
+
+        bc.setGeoMap(geom);
+
         // Setup the mapper
         if (method != MethodFlags::NITSCHE) // MappedBasis
         {
@@ -837,7 +801,7 @@ int main(int argc, char *argv[])
 
             // Setup the system
             u.setupMapper(map);
-            gsDirichletNeumannValuesL2Projection(geom0, dbasis, bc, bb2, u, lambda);
+            gsDirichletNeumannValuesL2Projection(geom, dbasis, bc, bb2, u, lambda);
         }
         else if (method == MethodFlags::NITSCHE) // Nitsche
         {
@@ -846,7 +810,7 @@ int main(int argc, char *argv[])
 
             // Setup the system
             u.setupMapper(map);
-            gsDirichletNeumannValuesL2Projection(geom0, dbasis, bc, u, lambda);
+            gsDirichletNeumannValuesL2Projection(geom, dbasis, bc, u, lambda);
         }
 
         // Initialize the system
@@ -869,10 +833,10 @@ int main(int argc, char *argv[])
         {
             if (penalty_init == -1.0)
                 if (r < 3) // From level 3 and more, the previous EW is used and devided by ḿesh-size (save computation time)
-                    computeStabilityParameter(mp, dbasis, mu_interfaces);
+                    computeStabilityParameter(geom, dbasis, mu_interfaces);
 
             index_t i = 0;
-            for ( typename gsMultiPatch<real_t>::const_iiterator it = mp.iBegin(); it != mp.iEnd(); ++it, ++i)
+            for ( typename gsMultiPatch<real_t>::const_iiterator it = geom.iBegin(); it != geom.iEnd(); ++it, ++i)
             {
                 real_t stab     = 4 * ( dbasis.maxCwiseDegree() + dbasis.dim() ) * ( dbasis.maxCwiseDegree() + 1 );
                 real_t m_h      = dbasis.basis(0).getMinCellLength(); // dbasis.basis(0).getMinCellLength();
@@ -934,6 +898,10 @@ int main(int argc, char *argv[])
         gsSparseSolver<real_t>::SimplicialLDLT solver;
         solver.compute( A.matrix() );
         solVector = solver.solve(A.rhs());
+
+        // gsDebugVar(A.matrix().toDense());
+        // gsDebugVar(A.rhs().transpose());
+        // gsDebugVar(solVector.transpose());
 
         slv_time += timer.stop();
         gsInfo<< "." <<std::flush; // Linear solving done
@@ -1168,22 +1136,22 @@ int main(int argc, char *argv[])
     }
     //! [Error and convergence rates]
 
-    //! [Export visualization in ParaView]
-    if (plot)
-    {
-        gsInfo<<"Plotting in Paraview...\n";
-        gsWriteParaview( geom, "geom",1000,true);
-        ev.options().setSwitch("plot.elements", mesh);
-        ev.options().setInt   ("plot.npts"    , 1000);
-        ev.writeParaview( u_sol   , G, "solution");
-        //ev.writeParaview( u_ex    , G, "solution_ex");
-        //ev.writeParaview( grad(s), G, "solution_grad");
-        //ev.writeParaview( grad(f), G, "solution_ex_grad");
-        ev.writeParaview( (u_ex-u_sol), G, "error_pointwise");
-    }
-    else
-        gsInfo << "Done. No output created, re-run with --plot to get a ParaView "
-                  "file containing the solution.\n";
+    // //! [Export visualization in ParaView]
+    // if (plot)
+    // {
+    //     gsInfo<<"Plotting in Paraview...\n";
+    //     gsWriteParaview( geom, "geom",1000,true);
+    //     ev.options().setSwitch("plot.elements", mesh);
+    //     ev.options().setInt   ("plot.npts"    , 1000);
+    //     ev.writeParaview( u_sol   , G, "solution");
+    //     //ev.writeParaview( u_ex    , G, "solution_ex");
+    //     //ev.writeParaview( grad(s), G, "solution_grad");
+    //     //ev.writeParaview( grad(f), G, "solution_ex_grad");
+    //     ev.writeParaview( (u_ex-u_sol), G, "error_pointwise");
+    // }
+    // else
+    //     gsInfo << "Done. No output created, re-run with --plot to get a ParaView "
+    //               "file containing the solution.\n";
     //! [Export visualization in ParaView]
 
 

@@ -709,11 +709,13 @@ protected:
 protected:
     const gsMultiPatch<T> & m_patches;
     const gsMultiBasis<T> m_Bbases; // reference?
-    bool m_computed;
     
     gsMultiBasis<T> m_bases;
 
     gsBoxTopology m_topology;
+
+    bool m_computed;
+
     mutable gsSparseMatrix<T> m_tMatrix;
     mutable std::vector<bool> m_sideCheck;
     mutable std::vector<bool> m_vertCheck;

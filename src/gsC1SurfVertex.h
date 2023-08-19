@@ -922,7 +922,7 @@ public:
             dofsCorner = 0;  // With Neumann
         }
 
-        gsDebug << "Det: " << matrix_det.determinant() << "\n";
+        // gsDebug << "Det: " << matrix_det.determinant() << "\n";
 
         gsMatrix<T> coefs_corner(dim_mat, 6);
         coefs_corner.setZero();
@@ -1000,7 +1000,7 @@ public:
                 threshold += 1e-8;
                 KernelCorner.setThreshold(threshold);
             }
-            gsDebug << "Dimension of Kernel: " << KernelCorner.dimensionOfKernel() << " With " << threshold << "\n";
+            // gsDebug << "Dimension of Kernel: " << KernelCorner.dimensionOfKernel() << " With " << threshold << "\n";
 
             gsMatrix<T> vertBas;
             vertBas.setIdentity(6, 6);
@@ -1023,7 +1023,7 @@ public:
         else
             kernel.setIdentity(6, 6);
 
-        gsDebug << "NumDofs: " << dofsCorner << " with Kernel: \n" << kernel << "\n";
+        // gsDebug << "NumDofs: " << dofsCorner << " with Kernel: \n" << kernel << "\n";
 
         for(size_t  np = 0; np < auxGeom.size(); np++)
         {
