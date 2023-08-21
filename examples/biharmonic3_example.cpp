@@ -253,7 +253,7 @@ void computeStabilityParameter(const gsMultiPatch<> & mp, const gsMultiBasis<> &
         // TODO INSTABLE && SLOW
         gsMatrix<real_t> AA = A2.matrix().toDense().cast<real_t>();
         gsMatrix<real_t> BB = B2.matrix().toDense().cast<real_t>();
-        gsEigen:gsEigen::GeneralizedSelfAdjointEigenSolver<gsEigen::MatrixXd> ges(AA, BB);
+        gsEigen::GeneralizedSelfAdjointEigenSolver<gsEigen::MatrixXd> ges(AA, BB);
 
         real_t m_h      = dbasis_temp.basis(0).getMinCellLength(); // dbasis.basis(0).getMinCellLength();
         mu_interfaces(i,0) = 16.0 * m_h * ges.eigenvalues().array().maxCoeff();
@@ -420,13 +420,13 @@ int main(int argc, char *argv[])
         mp.fixOrientation();
         mp.computeTopology();
 
-        // gsFunctionExpr<>source("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
-        gsFunctionExpr<>source("1*pi*pi*pi*pi*(4*cos(1*pi*x)*cos(1*pi*y) - cos(1*pi*x) - cos(1*pi*y))",2);
+        gsFunctionExpr<>source("256*pi*pi*pi*pi*(4*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
+        // gsFunctionExpr<>source("1*pi*pi*pi*pi*(4*cos(1*pi*x)*cos(1*pi*y) - cos(1*pi*x) - cos(1*pi*y))",2);
         f.swap(source);
         gsInfo << "Source function " << f << "\n";
 
-        // gsFunctionExpr<> solution("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",2);
-        gsFunctionExpr<> solution("(cos(1*pi*x) - 1) * (cos(1*pi*y) - 1)",2);
+        gsFunctionExpr<> solution("(cos(4*pi*x) - 1) * (cos(4*pi*y) - 1)",2);
+        // gsFunctionExpr<> solution("(cos(1*pi*x) - 1) * (cos(1*pi*y) - 1)",2);
         ms.swap(solution);
         gsInfo << "Exact function " << ms << "\n";
 
@@ -434,14 +434,14 @@ int main(int argc, char *argv[])
         for (gsMultiPatch<>::const_biterator bit = mp.bBegin(); bit != mp.bEnd(); ++bit)
         {
             // Laplace
-            // gsFunctionExpr<> laplace ("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
-            gsFunctionExpr<> laplace ("-1*pi*pi*(2*cos(1*pi*x)*cos(1*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
+            gsFunctionExpr<> laplace ("-16*pi*pi*(2*cos(4*pi*x)*cos(4*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
+            // gsFunctionExpr<> laplace ("-1*pi*pi*(2*cos(1*pi*x)*cos(1*pi*y) - cos(4*pi*x) - cos(4*pi*y))",2);
 
             // Neumann
-            // gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
-            //                          "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)", 2);
-            gsFunctionExpr<> sol1der("-1*pi*(cos(1*pi*y) - 1)*sin(1*pi*x)",
-                                     "-1*pi*(cos(1*pi*x) - 1)*sin(1*pi*y)", 2);
+            gsFunctionExpr<> sol1der("-4*pi*(cos(4*pi*y) - 1)*sin(4*pi*x)",
+                                     "-4*pi*(cos(4*pi*x) - 1)*sin(4*pi*y)", 2);
+            // gsFunctionExpr<> sol1der("-1*pi*(cos(1*pi*y) - 1)*sin(1*pi*x)",
+                                     // "-1*pi*(cos(1*pi*x) - 1)*sin(1*pi*y)", 2);
 
 
             bc.addCondition(*bit, condition_type::dirichlet, ms);
@@ -675,26 +675,33 @@ int main(int argc, char *argv[])
         else if (method == MethodFlags::ALMOSTC1)
         {
             gsMultiPatch<> tmp;
+            // Project the previous geometry on the finest tensor level:
             for (size_t p=0; p!=geom.nPatches(); p++)
             {
-                gsTHBSpline<2,real_t> * thbspline;
-                gsTHBSpline<2,real_t> * thbspline2;
-                gsTensorBSpline<2,real_t> * tbspline;
-                if ((thbspline = dynamic_cast<gsTHBSpline<2,real_t> *>(&geom.patch(p)) ))
+                gsTHBSplineBasis<2,real_t> * thbsplineBasis;
+                gsTensorBSplineBasis<2,real_t> * tbsplineBasis;
+                if ((thbsplineBasis = dynamic_cast<gsTHBSplineBasis<2,real_t> *>(&geom.basis(p)) ))
                 {
-                    gsTensorBSpline<2,real_t> flat;
-                    thbspline->convertToBSpline(flat);
-                    tmp.addPatch(flat);
+                    gsMatrix<> coefs;
+                    // First project the geometry geom0 onto bb2 and make a mapped spline
+                    gsTHBSplineBasis<2,real_t> tbasis = thbsplineBasis->tensorLevel(thbsplineBasis->maxLevel());
+                    gsInfo<<"L2-Projection error of geom patch"<<p<<" on bb2 = "<<gsL2Projection<real_t>::projectGeometry(tbasis,geom.patch(p),coefs)<<"\n";
+                    coefs.resize(coefs.rows()/geom0.geoDim(),geom0.geoDim());
+                    tmp.addPatch(tbasis.makeGeometry(coefs));
                 }
-                else if ((tbspline = dynamic_cast<gsTensorBSpline<2,real_t> *>(&geom.patch(p)) ))
+                else if ((tbsplineBasis = dynamic_cast<gsTensorBSplineBasis<2,real_t> *>(&geom.basis(p)) ))
                 {
                     geom.patch(p).uniformRefine(1,degree-smoothness);
                     tmp.addPatch(geom.patch(p));
                 }
+                else
+                    GISMO_ERROR("Geometry type not understood");
             }
             tmp.computeTopology();
-            geom = tmp;
-            if (plot) gsWriteParaview( geom, "geom_ini",1000,true,false);
+            geom.swap(tmp);
+            dbasis = gsMultiBasis<>(geom);
+
+            if (plot) gsWriteParaview( tmp, "geom_ini",1000,true,false);
 
             if (gsHTensorBasis<2,real_t> * test = dynamic_cast<gsHTensorBasis<2,real_t>*>(&geom.basis(0)))
                 meshsize[r] = test->tensorLevel(0).getMinCellLength();
@@ -726,7 +733,7 @@ int main(int argc, char *argv[])
                 index_t offset = 0;
                 for (index_t p = 0; p != geom0.nPatches(); p++)
                 {
-                    geom0.patch(p) = give(*dbasis.basis(p).makeGeometry((sourceCoefs.block(offset,0,mapper.patchSize(p),mp.geoDim()))));
+                    geom.patch(p) = give(*dbasis.basis(p).makeGeometry((sourceCoefs.block(offset,0,mapper.patchSize(p),mp.geoDim()))));
                     offset += mapper.patchSize(p);
                 }
             }
