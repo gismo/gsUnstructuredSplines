@@ -201,6 +201,8 @@ protected:
 
     void _initTHB();
 
+    void _refBoxes(std::vector<std::vector<index_t>> & patchBoxes);
+
     /**
      * @brief      Prepares the THB basis if needed.
      *

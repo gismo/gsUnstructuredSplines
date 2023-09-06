@@ -126,6 +126,8 @@ protected:
 
     void _initTHB() override;
 
+    void _refBoxes(std::vector<std::vector<index_t>> & patchBoxes);
+
     void _initBasis() override;
 
     void _makeTHB() override;

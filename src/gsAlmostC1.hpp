@@ -199,7 +199,7 @@ namespace gismo
         for (index_t k = 0; k!=ub.cols(); k++)
         {
             ub.col(k) = A.colPivHouseholderQr().solve(up.col(k));
-            GISMO_ASSERT((Cp * ub.col(k)-up.col(k).head(2)).norm()<1e-14,"Something went wrong with the computation of the barycentric coordinates. (Cp * ub.col(k)-up.col(k).head(2)).norm() = "<<(Cp * ub.col(k)-up.col(k).head(2)).norm()<<"; Cp * ub.col(k) = "<<Cp * ub.col(k)<<"; up.col(k).head(2) = "<<up.col(k).head(2));
+            GISMO_ASSERT((Cp * ub.col(k)-up.col(k).head(2)).norm()<1e-12,"Something went wrong with the computation of the barycentric coordinates. (Cp * ub.col(k)-up.col(k).head(2)).norm() = "<<(Cp * ub.col(k)-up.col(k).head(2)).norm()<<"; Cp * ub.col(k) = "<<Cp * ub.col(k)<<"; up.col(k).head(2) = "<<up.col(k).head(2));
         }
 
         // 9. Move the corners of the triangle back to physical coordinates
@@ -430,6 +430,84 @@ namespace gismo
     }
 
 
+    template <short_t d, class T>
+    void gsAlmostC1<d,T>::_refBoxes(std::vector<std::vector<index_t>> & patchBoxes)
+    {
+        patchBoxes.clear();
+        patchBoxes.resize(m_RefPatches.nPatches());
+
+        // prepare the geometry
+        gsMatrix<index_t> box(d,2);
+        std::vector<index_t> boxes;
+        gsVector<bool> pars;
+        index_t nelements;
+        index_t degree;
+        patchCorner corner;
+        std::vector<patchCorner> cornerList;
+        std::vector<std::vector<patchCorner> > cornerLists = _getSpecialCornerLists(m_RefPatches);
+
+        index_t N = cornerLists.size();
+
+        // Make a mask of corners per patch to track which ones have been handled
+        gsMatrix<bool> mask(m_RefPatches.nPatches(),math::pow(2,d));
+        mask.setConstant(false);
+
+        for (size_t v =0; v<N; v++)
+        {// Loop over EVs
+            for (size_t c = 0; c<cornerLists[v].size(); c++)
+            {// Loop over corners per EV
+                corner = cornerLists[v].at(c);
+                gsHTensorBasis<d,T> * basis = dynamic_cast<gsHTensorBasis<d,T>*>(&m_RefPatches.basis(corner.patch));
+
+                if (mask(corner.patch,corner.corner()-1))
+                    continue;
+
+                corner.parameters_into(d,pars);
+                box.setZero();
+                for (short_t dim = 0; dim!=d; dim++)
+                {
+                    const gsKnotVector<T> & KV = basis->tensorLevel(0).knots(dim);
+                    nelements = 1;
+                    box.row(dim).setConstant(pars(dim)*(KV.uSize()-1));
+                    box(dim,!pars(dim)) += ( 1 - 2*pars(dim) ) * nelements; // subtracts from box(d,0) if pars(d)==1, adds to box(d,1) if pars(d)==0
+
+                    gsDebug<<"v/N = "<<v<<"/"<<N<<"\n";
+                    // If all elements in this direction are refined, we need to add the other corner of this side to the list of corners to be refined
+                    if (KV.numElements()==nelements)
+                    {
+                        // Get the patch side in the direction of the knot vector KV
+                        GISMO_ASSERT(d==2,"This does not work for d!=2!");
+                        boxCorner otherCorner;
+                        if      ((corner.m_index==1 && dim==0) || (corner.m_index==4 && dim==1)) // the other corner is south east
+                            otherCorner = 2;
+                        else if ((corner.m_index==1 && dim==1) || (corner.m_index==4 && dim==0)) // the other corner is north west
+                            otherCorner = 3;
+                        else if ((corner.m_index==2 && dim==0) || (corner.m_index==3 && dim==1)) // the other corner is south west
+                            otherCorner = 1;
+                        else if ((corner.m_index==2 && dim==1) || (corner.m_index==3 && dim==0)) // the other corner is north east
+                            otherCorner = 4;
+                        else
+                            GISMO_ERROR("Combination unknown...");
+
+                        patchCorner otherPCorner(corner.patch,otherCorner.m_index);
+
+                        cornerList.clear();
+                        m_topology.getCornerList(otherPCorner,cornerList);
+                        cornerLists.push_back(cornerList);
+                        N++;
+                    }
+                }
+                boxes.clear();
+                // Assign boxes. This is the box on the current level, level 0.
+                boxes.push_back(0);
+                boxes.insert(boxes.end(), box.data(), box.data()+box.size());
+                patchBoxes.at(corner.patch).insert(patchBoxes.at(corner.patch).end(), boxes.begin(), boxes.end());
+
+                mask(corner.patch,corner.corner()-1) = true;
+            }// Loop over corners per EV
+        }// Loop over EVs
+    }
+
     template<short_t d,class T>
     void gsAlmostC1<d,T>::_makeTHB()
     {
@@ -445,44 +523,25 @@ namespace gismo
             this->setCoefficients(coefs,m_RefPatches);
 
             /// Handle the EVs
-            std::vector< std::vector<index_t> > elVec(m_RefPatches.nPatches());
-            for (size_t v =0; v!=cornerLists.size(); v++)
-                for (size_t c = 0; c!=cornerLists[v].size(); c++)
-                {
-                    patchCorner corner = cornerLists[v].at(c);
-                    gsVector<bool> pars;
-                    corner.corner().parameters_into(m_RefPatches.parDim(),pars); // get the parametric coordinates of the corner
-                    gsMatrix<T> supp = m_RefPatches.basis(corner.patch).support();
-                    gsVector<T> vec(supp.rows());
-                    for (index_t r = 0; r!=supp.rows(); r++)
-                        vec(r) = supp(r,pars(r));
-
-                    gsMatrix<T> boxes(m_RefPatches.parDim(),2);
-                    boxes.col(0) << vec;
-                    boxes.col(1) << vec;
-
-                    gsHTensorBasis<2,T> * basis = dynamic_cast<gsHTensorBasis<2,T>*>(&m_RefPatches.basis(corner.patch));
-                    std::vector<index_t> elements = basis->asElements(boxes,0); // 0-ring
-
-                    elVec.at(corner.patch).insert(elVec.at(corner.patch).end(), elements.begin(), elements.end());
-
-                    // gsHTensorBasis<2,T> *basis = dynamic_cast<gsHTensorBasis<2,T>*>(&m_RefPatches.basis(corner.patch));
-
-                    // basis->refineElements(elements, m_tMatrix);
-                }
+            std::vector< std::vector<index_t> > elVec;
+            this->_refBoxes(elVec);
 
             gsSparseMatrix<T> tmp;
             index_t rows = 0, cols = 0;
             std::vector<gsEigen::Triplet<T,index_t>> tripletList;
             for (size_t p=0; p!=m_RefPatches.nPatches(); p++)
             {
+                // Transform using gsAsMatrix
+                gsAsMatrix<index_t> boxMat(elVec[p],2*d+1,elVec[p].size()/(2*d+1));
+                boxMat.row(0).array() += 1;
+                boxMat.block(1,0,boxMat.rows()-1,boxMat.cols()).array() *= 2;
+
                 gsHTensorBasis<2,T> *basis = dynamic_cast<gsHTensorBasis<2,T>*>(&m_RefPatches.basis(p));
                 std::vector< gsSortedVector< index_t > > xmat = basis->getXmatrix();
 
                 m_RefPatches.patch(p).refineElements(elVec[p]);
 
                 basis->transfer(xmat,tmp);
-
                 for (index_t i = 0; i<tmp.outerSize(); ++i)
                     for (typename gsSparseMatrix<T>::iterator it(tmp,i); it; ++it)
                         tripletList.push_back(gsEigen::Triplet<T,index_t>(it.row()+rows,it.col()+cols,it.value()));

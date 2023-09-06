@@ -183,66 +183,12 @@ namespace gismo
         m_bases = m_bases0;
     }
 
-    template<short_t d,class T>
-    void gsDPatch<d,T>::_initBasis()
+    template <short_t d, class T>
+    void gsDPatch<d,T>::_refBoxes(std::vector<std::vector<index_t>> & patchBoxes)
     {
-        gsMatrix<index_t> box(d,2);
-        std::vector<index_t> boxes;
-        gsVector<bool> pars;
-        index_t nelements;
-        index_t degree;
-        patchCorner corner;
-        std::vector<std::vector<patchCorner> > cornerLists;
-        m_topology.getEVs(cornerLists);
-        m_tMatrices.resize(m_bases0.nBases());
-        if (cornerLists.size()!=0)
-        {// If any EVs
-            std::vector< std::vector<index_t> > elVec(m_bases0.nBases());
-            for (size_t v =0; v!=cornerLists.size(); v++)
-            {// Loop over EVs
-                for (size_t c = 0; c!=cornerLists[v].size(); c++)
-                {// Loop over corners per EV
-                    corner = cornerLists[v].at(c);
-                    gsHTensorBasis<d,T> * basis = dynamic_cast<gsHTensorBasis<d,T>*>(&m_bases0.basis(corner.patch));
-                    corner.parameters_into(d,pars);
-                    box.setZero();
-                    for (short_t dim = 0; dim!=d; dim++)
-                    {
-                        const gsKnotVector<T> & KV = basis->tensorLevel(0).knots(dim);
-                        degree = KV.degree();
-                        nelements = (degree < 4) ? 2 : 1;
-                        nelements *= std::pow(2,m_options.getInt("RefLevel"));
-                        box.row(dim).setConstant(pars(dim)*(KV.uSize()-1));
-                        box(dim,!pars(dim)) += ( 1 - 2*pars(dim) ) * nelements; // subtracts from box(d,0) if pars(d)==1, adds to box(d,1) if pars(d)==0
-                    }
-                    boxes.clear();
-                    // Assign boxes. This is the box on the current level, level 0.
-                    boxes.push_back(0);
-                    boxes.insert(boxes.end(), box.data(), box.data()+box.size());
+        patchBoxes.clear();
+        patchBoxes.resize(m_bases0.size());
 
-                    // Move to one level lower (diadic indexing)
-                    boxes[0] +=1 ;
-                    std::transform(std::next(boxes.begin()),boxes.end(),std::next(boxes.begin()),[](index_t i){return 2*i; });
-                    elVec.at(corner.patch).insert(elVec.at(corner.patch).end(), boxes.begin(), boxes.end());
-                }// Loop over corners per EV
-            }// Loop over EVs
-
-            // Refine and store t-matrices
-            m_tMatrices.resize(m_bases0.nBases());
-            for (size_t p=0; p!=m_bases0.nBases(); p++)
-            {
-                gsHTensorBasis<d,T> *basis = dynamic_cast<gsHTensorBasis<d,T>*>(&m_bases0.basis(p));
-                std::vector< gsSortedVector< index_t > > xmat = basis->getXmatrix();
-                basis->refineElements_withTransfer(elVec[p],m_tMatrices[p]);
-            }
-        }// If any EVs
-        m_bases = m_bases0;
-    }
-
-    template<short_t d,class T>
-    void gsDPatch<d,T>::_makeTHB() //IMPLEMENT THIS
-    {
-        gsMultiBasis<> refBases = m_bases;
         // prepare the geometry
         gsMatrix<index_t> box(d,2);
         std::vector<index_t> boxes;
@@ -250,63 +196,131 @@ namespace gismo
         index_t nelements;
         index_t degree;
         patchCorner corner;
+        std::vector<patchCorner> cornerList;
         std::vector<std::vector<patchCorner> > cornerLists;
+
         m_topology.getEVs(cornerLists);
 
-        if (cornerLists.size()!=0)
-        {// If any EVs
-            std::vector< std::vector<index_t> > elVec(refBases.nBases());
-            for (size_t v =0; v!=cornerLists.size(); v++)
-            {// Loop over EVs
-                for (size_t c = 0; c!=cornerLists[v].size(); c++)
-                {// Loop over corners per EV
-                    corner = cornerLists[v].at(c);
-                    gsHTensorBasis<d,T> * basis = dynamic_cast<gsHTensorBasis<d,T>*>(&m_bases.basis(corner.patch));
-                    corner.parameters_into(d,pars);
-                    box.setZero();
-                    for (short_t dim = 0; dim!=d; dim++)
+        index_t N = cornerLists.size();
+
+        // Make a mask of corners per patch to track which ones have been handled
+        gsMatrix<bool> mask(m_bases0.nBases(),math::pow(2,d));
+        mask.setConstant(false);
+
+        for (size_t v =0; v<N; v++)
+        {// Loop over EVs
+            for (size_t c = 0; c<cornerLists[v].size(); c++)
+            {// Loop over corners per EV
+                corner = cornerLists[v].at(c);
+                gsHTensorBasis<d,T> * basis = dynamic_cast<gsHTensorBasis<d,T>*>(&m_bases0.basis(corner.patch));
+
+                if (mask(corner.patch,corner.corner()-1))
+                    continue;
+
+                corner.parameters_into(d,pars);
+                box.setZero();
+                for (short_t dim = 0; dim!=d; dim++)
+                {
+                    const gsKnotVector<T> & KV = basis->tensorLevel(0).knots(dim);
+                    degree = KV.degree();
+                    nelements = (degree < 4) ? 2 : 1;
+                    nelements *= std::pow(2,m_options.getInt("RefLevel"));
+
+                    GISMO_ASSERT(nelements<=KV.numElements(),"Need more elements than available for refinement around corner "<<corner.corner()<<" of patch "<<corner.patch<<".\n"<<"nelements = "<<nelements<<"; KV.numElements() = "<<KV.numElements()<<"\n");
+
+                    box.row(dim).setConstant(pars(dim)*(KV.uSize()-1));
+                    box(dim,!pars(dim)) += ( 1 - 2*pars(dim) ) * nelements; // subtracts from box(d,0) if pars(d)==1, adds to box(d,1) if pars(d)==0
+
+                    // If all elements in this direction are refined, we need to add the other corner of this side to the list of corners to be refined
+                    if (KV.numElements()==nelements)
                     {
-                        const gsKnotVector<T> & KV = basis->tensorLevel(0).knots(dim);
-                        degree = KV.degree();
-                        nelements = (degree < 4) ? 2 : 1;
-                        box.row(dim).setConstant(pars(dim)*(KV.uSize()-1));
-                        box(dim,!pars(dim)) += ( 1 - 2*pars(dim) ) * nelements; // subtracts from box(d,0) if pars(d)==1, adds to box(d,1) if pars(d)==0
+                        // Get the patch side in the direction of the knot vector KV
+                        GISMO_ASSERT(d==2,"This does not work for d!=2!");
+                        boxCorner otherCorner;
+                        if      ((corner.m_index==1 && dim==0) || (corner.m_index==4 && dim==1)) // the other corner is south east
+                            otherCorner = 2;
+                        else if ((corner.m_index==1 && dim==1) || (corner.m_index==4 && dim==0)) // the other corner is north west
+                            otherCorner = 3;
+                        else if ((corner.m_index==2 && dim==0) || (corner.m_index==3 && dim==1)) // the other corner is south west
+                            otherCorner = 1;
+                        else if ((corner.m_index==2 && dim==1) || (corner.m_index==3 && dim==0)) // the other corner is north east
+                            otherCorner = 4;
+                        else
+                            GISMO_ERROR("Combination unknown...");
+
+                        patchCorner otherPCorner(corner.patch,otherCorner.m_index);
+
+                        cornerList.clear();
+                        m_topology.getCornerList(otherPCorner,cornerList);
+                        cornerLists.push_back(cornerList);
+                        N++;
                     }
-                    boxes.clear();
-                    // Assign boxes. This is the box on the current level, level 0.
-                    boxes.push_back(0);
-                    boxes.insert(boxes.end(), box.data(), box.data()+box.size());
+                }
+                boxes.clear();
+                // Assign boxes. This is the box on the current level, level 0.
+                boxes.push_back(0);
+                boxes.insert(boxes.end(), box.data(), box.data()+box.size());
+                patchBoxes.at(corner.patch).insert(patchBoxes.at(corner.patch).end(), boxes.begin(), boxes.end());
 
-                    // Move to two levels lower (diadic indexing)
-                    boxes[0] +=2;
-                    std::transform(std::next(boxes.begin()),boxes.end(),std::next(boxes.begin()),[](index_t i){return 4*i; });
-                    elVec.at(corner.patch).insert(elVec.at(corner.patch).end(), boxes.begin(), boxes.end());
-                }// Loop over corners per EV
-            }// Loop over EVs
+                mask(corner.patch,corner.corner()-1) = true;
+            }// Loop over corners per EV
+        }// Loop over EVs
+    }
 
+    template<short_t d,class T>
+    void gsDPatch<d,T>::_initBasis()
+    {
+        std::vector< std::vector<index_t> > elVec;
+        this->_refBoxes(elVec);
+        m_tMatrices.resize(m_bases0.nBases());
+        for (size_t p=0; p!=m_bases0.nBases(); p++)
+        {
+            // Transform using gsAsMatrix
+            gsAsMatrix<index_t> boxMat(elVec[p],2*d+1,elVec[p].size()/(2*d+1));
+            boxMat.row(0).array() += 1;
+            boxMat.block(1,0,boxMat.rows()-1,boxMat.cols()).array() *= 2;
 
-            gsSparseMatrix<T> tmp;
-            index_t rows = 0, cols = 0;
-            std::vector<gsEigen::Triplet<T,index_t>> tripletList;
-            for (size_t p=0; p!=refBases.nBases(); p++)
-            {
-                gsHTensorBasis<d,T> *basis = dynamic_cast<gsHTensorBasis<d,T>*>(&refBases.basis(p));
-                std::vector< gsSortedVector< index_t > > xmat = basis->getXmatrix();
-                basis->refineElements_withTransfer(elVec[p],tmp);
-                for (index_t i = 0; i<tmp.outerSize(); ++i)
-                    for (typename gsSparseMatrix<T>::iterator it(tmp,i); it; ++it)
-                        tripletList.push_back(gsEigen::Triplet<T,index_t>(it.row()+rows,it.col()+cols,it.value()));
+            // Refine elements
+            gsHTensorBasis<d,T> *basis = dynamic_cast<gsHTensorBasis<d,T>*>(&m_bases0.basis(p));
+            std::vector< gsSortedVector< index_t > > xmat = basis->getXmatrix();
+            basis->refineElements_withTransfer(elVec[p],m_tMatrices[p]);
+        }
+        m_bases = m_bases0;
+    }
 
-                rows += tmp.rows();
-                cols += tmp.cols();
-            }
+    template<short_t d,class T>
+    void gsDPatch<d,T>::_makeTHB() //IMPLEMENT THIS
+    {
+        gsMultiBasis<> refBases = m_bases;
+        std::vector< std::vector<index_t> > elVec;
+        this->_refBoxes(elVec);
 
-            m_tMatrix.resize(rows,cols);
-            m_tMatrix.setFromTriplets(tripletList.begin(), tripletList.end());
+        gsSparseMatrix<T> tmp;
+        index_t rows = 0, cols = 0;
+        std::vector<gsEigen::Triplet<T,index_t>> tripletList;
+        for (size_t p=0; p!=m_bases0.nBases(); p++)
+        {
+            // Transform using gsAsMatrix
+            gsAsMatrix<index_t> boxMat(elVec[p],2*d+1,elVec[p].size()/(2*d+1));
+            boxMat.row(0).array() += 2;
+            boxMat.block(1,0,boxMat.rows()-1,boxMat.cols()).array() *= 4;
 
-            m_tMatrix.makeCompressed();
-            m_bases = refBases;
-        }// If any EVs
+            gsHTensorBasis<d,T> *basis = dynamic_cast<gsHTensorBasis<d,T>*>(&refBases.basis(p));
+            std::vector< gsSortedVector< index_t > > xmat = basis->getXmatrix();
+            basis->refineElements_withTransfer(elVec[p],tmp);
+            for (index_t i = 0; i<tmp.outerSize(); ++i)
+                for (typename gsSparseMatrix<T>::iterator it(tmp,i); it; ++it)
+                    tripletList.push_back(gsEigen::Triplet<T,index_t>(it.row()+rows,it.col()+cols,it.value()));
+
+            rows += tmp.rows();
+            cols += tmp.cols();
+        }
+
+        m_tMatrix.resize(rows,cols);
+        m_tMatrix.setFromTriplets(tripletList.begin(), tripletList.end());
+
+        m_tMatrix.makeCompressed();
+        m_bases = refBases;
 
         // redefine the mappers
         // m_mapModified = gsDofMapper(m_bases);
