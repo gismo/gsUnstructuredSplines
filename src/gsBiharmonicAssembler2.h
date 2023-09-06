@@ -21,7 +21,6 @@ namespace gismo
 template <class T>
   class gsBiharmonicAssembler2
   {
-
   public:
 
     /// Default empty constructor

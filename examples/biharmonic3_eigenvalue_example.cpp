@@ -104,9 +104,9 @@ void computeStabilityParameter(gsMultiPatch<> mp, gsMultiBasis<> dbasis, gsMatri
         B2.assemble(ilapl(uB, GB) * ilapl(uB, GB).tr() * meas(GB));
 
         // TODO INSTABLE && SLOW
-        Eigen::MatrixXd AA = A2.matrix().toDense().cast<double>();
-        Eigen::MatrixXd BB = B2.matrix().toDense().cast<double>();
-        Eigen::GeneralizedSelfAdjointEigenSolver<Eigen::MatrixXd> ges(AA, BB);
+        gsEigen::MatrixXd AA = A2.matrix().toDense().cast<double>();
+        gsEigen::MatrixXd BB = B2.matrix().toDense().cast<double>();
+        gsEigen::GeneralizedSelfAdjointEigenSolver<gsEigen::MatrixXd> ges(AA, BB);
 
         real_t m_h      = dbasis_temp.basis(0).getMinCellLength(); //*dbasis.basis(0).getMinCellLength();
         mu_interfaces(i,0) = 16.0 * m_h * ges.eigenvalues().array().maxCoeff();
@@ -534,7 +534,7 @@ int main(int argc, char *argv[])
 
     gsInfo<< "." <<std::flush;// Assemblying done
 
-    Eigen::GeneralizedSelfAdjointEigenSolver< gsMatrix<real_t>::Base >  eigSolver;
+    gsEigen::GeneralizedSelfAdjointEigenSolver< gsMatrix<real_t>::Base >  eigSolver;
     eigSolver.compute(K,M);
     gsMatrix<> values  = eigSolver.eigenvalues();
     gsMatrix<> vectors = eigSolver.eigenvectors();

@@ -21,22 +21,6 @@
 namespace gismo
 {
 
-    // void writeToCSVfile(std::string name, gsMatrix<> matrix)
-    // {
-    //   std::ofstream file(name.c_str());
-
-    //   for(int  i = 0; i < matrix.rows(); i++){
-    //       for(int j = 0; j < matrix.cols(); j++){
-    //          if(j+1 == matrix.cols()){
-    //              file<<std::to_string(matrix(i,j));
-    //          }else{
-    //              file<<std::to_string(matrix(i,j))<<',';
-    //          }
-    //       }
-    //       file<<'\n';
-    //   }
-    // }
-
     template<short_t d,class T>
     void gsDPatchBase<d,T>::compute()
     {
@@ -296,6 +280,7 @@ namespace gismo
     const index_t gsDPatchBase<d,T>::_indexFromVert(const gsBasis<T> * basis, const index_t index, const patchCorner corner, const patchSide side, const index_t offset) const
     {
         const gsTensorBSplineBasis<d,T> * tbbasis;
+        const gsTensorNurbsBasis<d,T> * tnbasis;
         const gsHTensorBasis<d,T> * thbasis;
         if ((index==0) && (offset==0))
         {
@@ -569,8 +554,9 @@ namespace gismo
             for (typename gsSparseMatrix<T>::iterator it = matrix.begin(i); it; ++it)
                 colSums.at(i) += it.value();
 
-        // gsWarn<<"Make tolerance depending on real_t\n";
-        return (colSums.array() < 1+1e-8).all() && (colSums.array() > 1-1e-8).all(); // Lower?
+        // TODO: Make tolerance depending on real_t
+        colSums.array() -= 1;
+        return (colSums.array() < 1e-8).all() && (colSums.array() > -1e-8).all(); // Lower?
     }
 
 //     /*=====================================================================================

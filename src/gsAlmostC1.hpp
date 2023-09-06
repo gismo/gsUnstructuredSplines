@@ -223,8 +223,8 @@ namespace gismo
     template<short_t d,class T>
     gsMatrix<T,3,3> gsAlmostC1<d,T>::_getRotationMatrix(const gsVector<T,3> & a, const gsVector<T,3> & b) const
     {
-        GISMO_ASSERT(std::abs(a.norm()-1)<1e-14,"A must be a unit vector, a.norm() = "<<std::abs(a.norm()-1));
-        GISMO_ASSERT(std::abs(b.norm()-1)<1e-14,"A must be a unit vector, b.norm() = "<<std::abs(b.norm()-1));
+        GISMO_ASSERT(std::abs(a.norm()-1)<1e-14,"A must be a unit vector, a.norm() = "<<a.norm());
+        GISMO_ASSERT(std::abs(b.norm()-1)<1e-14,"B must be a unit vector, b.norm() = "<<b.norm());
 
         gsVector<T,3> v = a.cross(b);
         v.normalize();
