@@ -441,7 +441,6 @@ namespace gismo
         std::vector<index_t> boxes;
         gsVector<bool> pars;
         index_t nelements;
-        index_t degree;
         patchCorner corner;
         std::vector<patchCorner> cornerList;
         std::vector<std::vector<patchCorner> > cornerLists = _getSpecialCornerLists(m_RefPatches);
@@ -452,7 +451,7 @@ namespace gismo
         gsMatrix<bool> mask(m_RefPatches.nPatches(),math::pow(2,d));
         mask.setConstant(false);
 
-        for (size_t v =0; v<N; v++)
+        for (index_t v =0; v<N; v++)
         {// Loop over EVs
             for (size_t c = 0; c<cornerLists[v].size(); c++)
             {// Loop over corners per EV
@@ -473,7 +472,7 @@ namespace gismo
 
                     gsDebug<<"v/N = "<<v<<"/"<<N<<"\n";
                     // If all elements in this direction are refined, we need to add the other corner of this side to the list of corners to be refined
-                    if (KV.numElements()==nelements)
+                    if ((index_t)KV.numElements()==nelements)
                     {
                         // Get the patch side in the direction of the knot vector KV
                         GISMO_ASSERT(d==2,"This does not work for d!=2!");

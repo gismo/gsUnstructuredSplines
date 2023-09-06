@@ -151,6 +151,13 @@ int main(int argc, char *argv[])
             }
 
             gsDebugVar(geom);
+            std::vector<std::vector<patchCorner> > corners;
+            geom.getEVs(corners);
+            for (std::vector<std::vector<patchCorner> >::iterator it = corners.begin(); it!=corners.end(); it++)
+                gsDebug<<it[0][0].patch<<","<<it[0][0].corner()<<":\t"<<"valence: "<<it->size()<<"\n";
+            geom.getEVs(corners,true);
+            for (std::vector<std::vector<patchCorner> >::iterator it = corners.begin(); it!=corners.end(); it++)
+                gsDebug<<it[0][0].patch<<","<<it[0][0].corner()<<":\t"<<"valence: "<<it->size()<<"\n";
 
             gsInfo<<"Refining and elevating geometry..."<<std::flush;
             geom.degreeIncrease(degree-geom.patch(0).degree(0));
@@ -231,6 +238,9 @@ int main(int argc, char *argv[])
         }
         gsInfo<<"Finished"<<std::flush;
 
+
+        gsMappedBasis<2,real_t> mbasis(dbasis,global2local);
+        gsDebugVar(mbasis.globalSize());
 
         if (!basisOutput.empty())
         {

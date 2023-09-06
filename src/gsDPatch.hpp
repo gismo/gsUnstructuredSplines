@@ -207,7 +207,7 @@ namespace gismo
         gsMatrix<bool> mask(m_bases0.nBases(),math::pow(2,d));
         mask.setConstant(false);
 
-        for (size_t v =0; v<N; v++)
+        for (index_t v =0; v<N; v++)
         {// Loop over EVs
             for (size_t c = 0; c<cornerLists[v].size(); c++)
             {// Loop over corners per EV
@@ -226,13 +226,13 @@ namespace gismo
                     nelements = (degree < 4) ? 2 : 1;
                     nelements *= std::pow(2,m_options.getInt("RefLevel"));
 
-                    GISMO_ASSERT(nelements<=KV.numElements(),"Need more elements than available for refinement around corner "<<corner.corner()<<" of patch "<<corner.patch<<".\n"<<"nelements = "<<nelements<<"; KV.numElements() = "<<KV.numElements()<<"\n");
+                    GISMO_ASSERT(nelements<=(index_t)KV.numElements(),"Need more elements than available for refinement around corner "<<corner.corner()<<" of patch "<<corner.patch<<".\n"<<"nelements = "<<nelements<<"; KV.numElements() = "<<KV.numElements()<<"\n");
 
                     box.row(dim).setConstant(pars(dim)*(KV.uSize()-1));
                     box(dim,!pars(dim)) += ( 1 - 2*pars(dim) ) * nelements; // subtracts from box(d,0) if pars(d)==1, adds to box(d,1) if pars(d)==0
 
                     // If all elements in this direction are refined, we need to add the other corner of this side to the list of corners to be refined
-                    if (KV.numElements()==nelements)
+                    if ((index_t)KV.numElements()==nelements)
                     {
                         // Get the patch side in the direction of the knot vector KV
                         GISMO_ASSERT(d==2,"This does not work for d!=2!");

@@ -280,7 +280,6 @@ namespace gismo
     const index_t gsDPatchBase<d,T>::_indexFromVert(const gsBasis<T> * basis, const index_t index, const patchCorner corner, const patchSide side, const index_t offset) const
     {
         const gsTensorBSplineBasis<d,T> * tbbasis;
-        const gsTensorNurbsBasis<d,T> * tnbasis;
         const gsHTensorBasis<d,T> * thbasis;
         if ((index==0) && (offset==0))
         {
