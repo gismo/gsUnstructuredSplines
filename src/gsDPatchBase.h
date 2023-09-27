@@ -107,15 +107,23 @@ public:
      * @brief       Returns the basis that is used for the D-Patch. Could be THB refined.
      *
      */
-    virtual const gsMultiBasis<T> & localBasis() const {return m_bases;}
+    virtual const gsMultiBasis<T> & localBasis() const
+    {
+        return m_bases;
+    }
+
+    virtual void localBasis_into(gsMultiBasis<T> & localBasis) const
+    {
+        localBasis = m_bases;
+    }
 
     /**
      * @brief       Returns the modified geometry  corresponding to the local basis
      *
      */
-    virtual gsMultiPatch<T> localGeometry()
+    virtual void localGeometry_into(gsMultiPatch<T> & localGeometry)
     {
-        return exportToPatches(m_patches);
+        localGeometry = exportToPatches(m_patches);
     }
 
     /**
@@ -131,29 +139,30 @@ public:
      * @brief       Returns the basis that is used for the D-Patch. Could be THB refined.
      *
      */
-    virtual gsMappedBasis<d,T> globalBasis() const
+    virtual void globalBasis_into(gsMappedBasis<d,T> & mbasis) const
     {
         GISMO_ASSERT(m_computed,"The method has not been computed! Call compute().");
-        gsMappedBasis<d,T> mbasis(m_bases,m_matrix.transpose());
-        return mbasis;
+        gsSparseMatrix<T> matrix = m_matrix.transpose();
+        mbasis.init(m_bases,matrix);
+        gsDebugVar("hi");
     }
 
     /**
      * @brief       Returns the multipatch that is used for the D-Patch
      *
      */
-    virtual gsMappedSpline<d,T> globalGeometry(const gsMultiPatch<T> & patches)
+    virtual void globalGeometry_into(const gsMultiPatch<T> & patches, gsMappedSpline<d,T> & mspline)
     {
         GISMO_ASSERT(!patches.empty() && patches.nPatches()==m_bases.nBases(),"The reference multipatch is empty!");
-        gsMappedBasis<d,T> mbasis = this->globalBasis();
+        gsMappedBasis<d,T> mbasis;
+        this->globalBasis_into(mbasis);
         gsMatrix<T> localCoefs = this->_preCoefficients(patches);
-        gsMappedSpline<d,T> mspline(mbasis,localCoefs);
-        return mspline;
+        mspline.init(mbasis,localCoefs);
     }
 
-    virtual gsMappedSpline<d,T> globalGeometry()
+    virtual void globalGeometry_into(gsMappedSpline<d,T> & mspline)
     {
-        return this->globalGeometry(m_patches);
+        this->globalGeometry_into(m_patches,mspline);
     }
 
     virtual void update( gsMappedBasis<d,T> & mbasis ) const
