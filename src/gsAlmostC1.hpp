@@ -143,7 +143,8 @@ namespace gismo
         {
             // Get the average normal at the corner
             gsVector<T> avgnormal = _getNormals(corners).rowwise().mean();
-
+            // If the norm is zero, the normals are likely to be opposite
+            if (avgnormal.norm()==0) avgnormal = _getNormals(corners).col(0);
             // Find the rotation matrix that maps the average normal to the z axis
             gsVector<T,3> ez;
             ez<<0,0,1;
@@ -470,7 +471,6 @@ namespace gismo
                     box.row(dim).setConstant(pars(dim)*(KV.uSize()-1));
                     box(dim,!pars(dim)) += ( 1 - 2*pars(dim) ) * nelements; // subtracts from box(d,0) if pars(d)==1, adds to box(d,1) if pars(d)==0
 
-                    gsDebug<<"v/N = "<<v<<"/"<<N<<"\n";
                     // If all elements in this direction are refined, we need to add the other corner of this side to the list of corners to be refined
                     if ((index_t)KV.numElements()==nelements)
                     {

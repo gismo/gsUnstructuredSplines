@@ -57,7 +57,7 @@ namespace gismo
         std::fill(result.begin(), result.end(), false);
         index_t cidx;
         patchCorner pcorner;
-        for (size_t p=0; p<m_bases.nBases(); p++)
+        for (size_t p=0; p<m_Bbases.nBases(); p++)
         {
             for (index_t c=1; c<5; c++)
             {
@@ -100,8 +100,8 @@ namespace gismo
 
                         // Get the coordinates of the corner
                         gsVector<bool> pars;
-                        it->first.parameters_into(m_bases.domainDim(),pars); // get the parametric coordinates of the corner
-                        gsMatrix<T> supp = m_bases.basis(it->first.patch).support();
+                        it->first.parameters_into(m_Bbases.domainDim(),pars); // get the parametric coordinates of the corner
+                        gsMatrix<T> supp = m_Bbases.basis(it->first.patch).support();
                         gsVector<T> vec(supp.rows());
                         for (index_t r = 0; r!=supp.rows(); r++)
                             vec(r) = supp(r,pars(r));
@@ -789,7 +789,10 @@ namespace gismo
 
         m_C0s.resize(m_nVerts);
         if (m_options.getSwitch("SharpCorners"))
+        {
             m_C0s = getSharpCorners(m_options.getReal("SharpCornerTolerance"));
+            gsDebug<<"Found "<<std::accumulate(m_C0s.begin(), m_C0s.end(), 0)<<" sharp corners, using a tolerance of "<<m_options.getReal("SharpCornerTolerance")<<"\n";
+        }
         else
             std::fill(m_C0s.begin(), m_C0s.end(), false);
 

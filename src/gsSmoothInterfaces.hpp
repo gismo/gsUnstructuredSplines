@@ -85,6 +85,12 @@ namespace gismo
     // }
 
     template<short_t d,class T>
+    void gsSmoothInterfaces<d,T>::_initBasis()
+    {
+        m_bases = m_Bbases;
+    }
+
+    template<short_t d,class T>
     void gsSmoothInterfaces<d,T>::_makeTHB()
     {
     }

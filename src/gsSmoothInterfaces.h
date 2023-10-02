@@ -103,6 +103,8 @@ protected:
 
     void _countDoFs() override;
 
+    void _initBasis() override;
+
     void _makeTHB() override;
 
     void _initTHB() override;
