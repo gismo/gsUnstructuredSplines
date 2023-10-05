@@ -789,10 +789,7 @@ namespace gismo
 
         m_C0s.resize(m_nVerts);
         if (m_options.getSwitch("SharpCorners"))
-        {
             m_C0s = getSharpCorners(m_options.getReal("SharpCornerTolerance"));
-            gsDebug<<"Found "<<std::accumulate(m_C0s.begin(), m_C0s.end(), 0)<<" sharp corners, using a tolerance of "<<m_options.getReal("SharpCornerTolerance")<<"\n";
-        }
         else
             std::fill(m_C0s.begin(), m_C0s.end(), false);
 
