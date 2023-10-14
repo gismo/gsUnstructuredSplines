@@ -263,6 +263,7 @@ void gsApproxC1Spline<d,T>::init()
 template<short_t d,class T>
 void gsApproxC1Spline<d,T>::compute()
 {
+    std::vector<gsEigen::Triplet<T,index_t>> tripletList;
     // Compute Inner Basis functions
     index_t shift_row = 0, shift_col = 0;
     for(size_t np = 0; np < m_patches.nPatches(); ++np)
@@ -274,7 +275,7 @@ void gsApproxC1Spline<d,T>::compute()
         for (index_t j = 2; j < dim_v-2; ++j)
             for (index_t i = 2; i < dim_u-2; ++i)
             {
-                m_matrix.insert(shift_row + row_i, shift_col + j*dim_u+i) = 1.0;
+                tripletList.push_back(gsEigen::Triplet<T,index_t>(shift_row + row_i, shift_col + j*dim_u+i,1.0));
                 ++row_i;
             }
 
@@ -307,10 +308,9 @@ void gsApproxC1Spline<d,T>::compute()
         for (size_t ii = 0; ii < basisEdge[0].nPatches(); ++ii)
         {
             index_t jj = 0;
-            for (index_t j = begin_col; j < end_col; ++j, ++jj) {
+            for (index_t j = begin_col; j < end_col; ++j, ++jj)
                 if (basisEdge[0].patch(ii).coef(jj, 0) * basisEdge[0].patch(ii).coef(jj, 0) > 1e-25)
-                    m_matrix.insert(shift_row + ii, shift_col + j) = basisEdge[0].patch(ii).coef(jj, 0);
-            }
+                    tripletList.push_back(gsEigen::Triplet<T,index_t>(shift_row + ii, shift_col + j,basisEdge[0].patch(ii).coef(jj, 0)));
         }
 
         begin_col = 0, end_col = 0, shift_col = 0;
@@ -325,10 +325,9 @@ void gsApproxC1Spline<d,T>::compute()
         for (size_t ii = 0; ii < basisEdge[1].nPatches(); ++ii)
         {
             index_t jj = 0;
-            for (index_t j = begin_col; j < end_col; ++j, ++jj) {
+            for (index_t j = begin_col; j < end_col; ++j, ++jj)
                 if (basisEdge[1].patch(ii).coef(jj, 0) * basisEdge[1].patch(ii).coef(jj, 0) > 1e-25)
-                    m_matrix.insert(shift_row + ii, shift_col + j) = basisEdge[1].patch(ii).coef(jj, 0);
-            }
+                    tripletList.push_back(gsEigen::Triplet<T,index_t>(shift_row + ii, shift_col + j,basisEdge[1].patch(ii).coef(jj, 0)));
         }
 
         shift_row += basisEdge[0].nPatches();
@@ -356,10 +355,9 @@ void gsApproxC1Spline<d,T>::compute()
         for (size_t ii = 0; ii < basisEdge[0].nPatches(); ++ii)
         {
             index_t jj = 0;
-            for (index_t j = begin_col; j < end_col; ++j, ++jj) {
+            for (index_t j = begin_col; j < end_col; ++j, ++jj)
                 if (basisEdge[0].patch(ii).coef(jj, 0) * basisEdge[0].patch(ii).coef(jj, 0) > 1e-20)
-                    m_matrix.insert(shift_row + ii, shift_col + j) = basisEdge[0].patch(ii).coef(jj, 0);
-            }
+                    tripletList.push_back(gsEigen::Triplet<T,index_t>(shift_row + ii, shift_col + j,basisEdge[0].patch(ii).coef(jj, 0)));
         }
         shift_row += basisEdge[0].nPatches();
     }
@@ -396,17 +394,15 @@ void gsApproxC1Spline<d,T>::compute()
             for (size_t ii = 0; ii < basisVertex[np].nPatches(); ++ii)
             {
                 index_t jj = 0;
-                for (index_t j = begin_col; j < end_col; ++j, ++jj) {
+                for (index_t j = begin_col; j < end_col; ++j, ++jj)
                     if (basisVertex[np].patch(ii).coef(jj, 0) * basisVertex[np].patch(ii).coef(jj, 0) > 1e-20)
-                    {
-                        m_matrix.insert(shift_row + ii, shift_col + j) = basisVertex[np].patch(ii).coef(jj, 0);
-                    }
-                }
+                        tripletList.push_back(gsEigen::Triplet<T,index_t>(shift_row + ii, shift_col + j,basisVertex[np].patch(ii).coef(jj, 0)));
             }
         }
         shift_row += basisVertex[0].nPatches(); // + 6
 
     }
+    m_matrix.setFromTriplets(tripletList.begin(),tripletList.end());
     m_matrix.makeCompressed();
 }
 
