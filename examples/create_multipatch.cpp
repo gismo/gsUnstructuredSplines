@@ -21,9 +21,6 @@
 #include <gsUnstructuredSplines/src/gsDPatch.h>
 #include <gsUnstructuredSplines/src/gsAlmostC1.h>
 #include <gsUnstructuredSplines/src/gsC1SurfSpline.h>
-#ifdef GISMO_WITH_SPECTRA
-#include <gsSpectra/gsSpectra.h>
-#endif
 #include <gsUtils/gsL2Projection.h>
 using namespace gismo;
 //! [Include namespace]
@@ -50,8 +47,6 @@ int main(int argc, char *argv[])
     //! [Parse command line]
     bool plot  = false;
     bool mesh  = false;
-    bool noTHB  = false;
-
     index_t method = 0;
 
     index_t numRefine  = 3;
@@ -79,9 +74,6 @@ int main(int argc, char *argv[])
     cmd.addString("S", "basisOutput", "Output in xml", basisOutput);
     cmd.addString("G", "geoOutput", "Output in xml", geoOutput);
 
-    cmd.addSwitch("noTHB", "No THB in export", noTHB);
-
-
     // cmd.addString("w", "write", "Write to csv", write);
     try { cmd.getValues(argc,argv); } catch (int rv) { return rv; }
     //! [Parse command line]
@@ -107,7 +99,7 @@ int main(int argc, char *argv[])
         // Take a multipatch, elevate and refine to preferred p and s and construct new matrix and basis
         if (fd.getAnyFirst<gsMultiPatch<>>(mp))
         {
-            gsWriteParaview(mp,"mp",400,true);
+            if (plot) gsWriteParaview(mp,"mp",400,true);
 
             // Check if any of the patches is a THB patch. If so, we transfer to tensor-bspline on the finest level
             // Also get the max level
@@ -152,6 +144,20 @@ int main(int argc, char *argv[])
                 }
                 geom.computeTopology();
             }
+            else
+            {
+                geom = mp;
+                geom.computeTopology();
+            }
+
+            gsDebugVar(geom);
+            std::vector<std::vector<patchCorner> > corners;
+            geom.getEVs(corners);
+            for (std::vector<std::vector<patchCorner> >::iterator it = corners.begin(); it!=corners.end(); it++)
+                gsDebug<<it[0][0].patch<<","<<it[0][0].corner()<<":\t"<<"valence: "<<it->size()<<"\n";
+            geom.getEVs(corners,true);
+            for (std::vector<std::vector<patchCorner> >::iterator it = corners.begin(); it!=corners.end(); it++)
+                gsDebug<<it[0][0].patch<<","<<it[0][0].corner()<<":\t"<<"valence: "<<it->size()<<"\n";
 
             gsInfo<<"Refining and elevating geometry..."<<std::flush;
             geom.degreeIncrease(degree-geom.patch(0).degree(0));
@@ -159,6 +165,9 @@ int main(int argc, char *argv[])
                 geom.uniformRefine(1, degree-smoothness);
             gsInfo<<"Finished.\n";
 
+            dbasis = gsMultiBasis<>(geom);
+
+            gsInfo<<"Constructing spline ..."<<std::flush;
             if (method==-1)
             {
                 // identity map
@@ -179,12 +188,12 @@ int main(int argc, char *argv[])
             }
             else if (method==1)
             {
-                gsDPatch<2,real_t> dpatch(geom);
+                gsDPatch<2,real_t> dpatch(dbasis);
                 dpatch.compute();
                 dpatch.matrix_into(global2local);
 
                 global2local = global2local.transpose();
-                geom = dpatch.exportToPatches();
+                geom = dpatch.exportToPatches(geom);
                 dbasis = dpatch.localBasis();
             }
             else if (method==2) // Pascal
@@ -221,12 +230,17 @@ int main(int argc, char *argv[])
                 dbasis = almostC1.localBasis();
             }
 
-            gsWriteParaview(geom,"geom",400,true);
+            if (plot) gsWriteParaview(geom,"geom",400,true);
         }
         else if (fd.has<gsMultiBasis<>>() && fd.has<gsSparseMatrix<>>())
         {
 
         }
+        gsInfo<<"Finished"<<std::flush;
+
+
+        gsMappedBasis<2,real_t> mbasis(dbasis,global2local);
+        gsDebugVar(mbasis.globalSize());
 
         if (!basisOutput.empty())
         {

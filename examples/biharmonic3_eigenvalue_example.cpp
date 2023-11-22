@@ -104,8 +104,8 @@ void computeStabilityParameter(gsMultiPatch<> mp, gsMultiBasis<> dbasis, gsMatri
         B2.assemble(ilapl(uB, GB) * ilapl(uB, GB).tr() * meas(GB));
 
         // TODO INSTABLE && SLOW
-        gsEigen::MatrixXd AA = A2.matrix().toDense().cast<double>();
-        gsEigen::MatrixXd BB = B2.matrix().toDense().cast<double>();
+        gsMatrix<> AA = A2.matrix().toDense().cast<real_t>();
+        gsMatrix<> BB = B2.matrix().toDense().cast<real_t>();
         gsEigen::GeneralizedSelfAdjointEigenSolver<gsEigen::MatrixXd> ges(AA, BB);
 
         real_t m_h      = dbasis_temp.basis(0).getMinCellLength(); //*dbasis.basis(0).getMinCellLength();
@@ -337,6 +337,8 @@ int main(int argc, char *argv[])
     {
         gsSparseMatrix<real_t> global2local;
         gsDPatch<2,real_t> dpatch(mp);
+        dpatch.options().setInt("Pi",0);
+        dpatch.options().setSwitch("SharpCorners",false);
         dpatch.compute();
         dpatch.matrix_into(global2local);
         global2local = global2local.transpose();

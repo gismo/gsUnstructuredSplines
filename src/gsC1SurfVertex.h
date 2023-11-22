@@ -618,16 +618,16 @@ public:
                     .deriv2(zero); // Second derivative of the geometric mapping with respect to the parameter coordinates
 
             //Computing the normal vector to the tangent plane along the boundary curve
-//            Eigen::Vector3d t1 = Jk.col(0);
-//            Eigen::Vector3d t2 = Jk.col(1);
+//            gsVector<T,3> t1 = Jk.col(0);
+//            gsVector<T,3> t2 = Jk.col(1);
 //
-//            Eigen::Vector3d n = t1.cross(t2);
+//            gsVector<T,3> n = t1.cross(t2);
 //
 //            gsVector<T> normal = n.normalized();
 //            n = n.normalized();
-//            Eigen::Vector3d z(0, 0, 1);
+//            gsVector<T,3> z(0, 0, 1);
 //
-//            Eigen::Vector3d rotVec = n.cross(z);
+//            gsVector<T,3> rotVec = n.cross(z);
 //            rotVec = rotVec.normalized();
 //
 //            T cos_t = n.dot(z) / (n.norm() * z.norm());
@@ -740,8 +740,8 @@ public:
 //                smallMatrix.block(row_smallMatrix, 0, tmp.second.rows(), 6) = tmp.second;
 //            }
 //
-//            Eigen::FullPivLU<gsMatrix<T>> BigLU(bigMatrix);
-//            Eigen::FullPivLU<gsMatrix<T>> SmallLU(smallMatrix);
+//            gsEigen::FullPivLU<gsMatrix<T>> BigLU(bigMatrix);
+//            gsEigen::FullPivLU<gsMatrix<T>> SmallLU(smallMatrix);
 //            SmallLU.setThreshold(1e-10);
 //            BigLU.setThreshold(1e-10);
 //
@@ -755,8 +755,8 @@ public:
 //        }
 //        else if(this->kindOfVertex() == -1) // Boundary vertex
 //        {
-//            Eigen::FullPivLU<gsMatrix<T>> BigLU(computeBigSystemMatrix(0));
-//            Eigen::FullPivLU<gsMatrix<T>> SmallLU(computeSmallSystemMatrix(0));
+//            gsEigen::FullPivLU<gsMatrix<T>> BigLU(computeBigSystemMatrix(0));
+//            gsEigen::FullPivLU<gsMatrix<T>> SmallLU(computeSmallSystemMatrix(0));
 //            SmallLU.setThreshold(1e-10);
 //            BigLU.setThreshold(1e-10);
 //
@@ -922,7 +922,7 @@ public:
             dofsCorner = 0;  // With Neumann
         }
 
-        gsDebug << "Det: " << matrix_det.determinant() << "\n";
+        // gsDebug << "Det: " << matrix_det.determinant() << "\n";
 
         gsMatrix<T> coefs_corner(dim_mat, 6);
         coefs_corner.setZero();
@@ -1000,7 +1000,7 @@ public:
                 threshold += 1e-8;
                 KernelCorner.setThreshold(threshold);
             }
-            gsDebug << "Dimension of Kernel: " << KernelCorner.dimensionOfKernel() << " With " << threshold << "\n";
+            // gsDebug << "Dimension of Kernel: " << KernelCorner.dimensionOfKernel() << " With " << threshold << "\n";
 
             gsMatrix<T> vertBas;
             vertBas.setIdentity(6, 6);
@@ -1023,7 +1023,7 @@ public:
         else
             kernel.setIdentity(6, 6);
 
-        gsDebug << "NumDofs: " << dofsCorner << " with Kernel: \n" << kernel << "\n";
+        // gsDebug << "NumDofs: " << dofsCorner << " with Kernel: \n" << kernel << "\n";
 
         for(size_t  np = 0; np < auxGeom.size(); np++)
         {

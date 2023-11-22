@@ -80,6 +80,11 @@ protected:
      *
      */
     gsMatrix<T> _preCoefficients();
+    gsMatrix<T> _preCoefficients(const gsMultiPatch<T> & patches)
+    {
+        GISMO_UNUSED(patches);
+        return _preCoefficients();
+    }
 
     /**
      * @brief       Computes the C1 coefficients for pre-multiplication to make the multipatch
@@ -88,12 +93,6 @@ protected:
      *
      */
     gsMatrix<T> freeCoefficients();
-
-    /**
-     * @brief       Computes the local coefficients and puts them in one big matrix
-     */
-   // gsMatrix<T> allCoefficients() const;
-    using Base::allCoefficients;
 
     /**
      * @brief      Set the coefficients of mp to \a coefs
@@ -157,7 +156,6 @@ protected:
     gsMatrix<T,3,3> _getRotationMatrix(const gsVector<T,3> & a, const gsVector<T,3> & b) const;
 
     using Base::_indexFromSides;
-    using Base::_indicesFromVert;
     using Base::_indexFromVert;
     using Base::_vertexData;
     using Base::_sideIndex;
@@ -198,6 +196,12 @@ protected:
      */
     // void _computeSmoothMatrix();
     using Base::_computeSmoothMatrix;
+
+    void _initBasis();
+
+    void _initTHB();
+
+    void _refBoxes(std::vector<std::vector<index_t>> & patchBoxes);
 
     /**
      * @brief      Prepares the THB basis if needed.
@@ -367,8 +371,10 @@ protected:
 
 protected:
     using Base::m_patches;
-    using Base::m_RefPatches;
+    gsMultiPatch<T> m_RefPatches;
     using Base::m_bases;
+    using Base::m_topology;
+
     using Base::m_Bbases;
     using Base::m_tMatrix;
     using Base::m_sideCheck;
