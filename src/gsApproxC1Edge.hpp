@@ -50,7 +50,8 @@ namespace gismo
 
         //! [Problem setup]
         basisEdgeResult.clear();
-        for (size_t patchID = 0; patchID < sidesContainer.size(); patchID++) {
+        for (size_t patchID = 0; patchID < sidesContainer.size(); patchID++)
+        {
             gsMultiPatch<T> result;
 
             index_t dir = patchID == 0 ? 1 : 0;

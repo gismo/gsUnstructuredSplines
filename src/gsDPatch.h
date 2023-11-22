@@ -55,6 +55,14 @@ public:
      *
      * @param      mp    Multipatch of the geometry
      */
+    gsDPatch(const gsMultiBasis<T> & mb) ;
+
+
+    /**
+     * @brief      Default constructor
+     *
+     * @param      mp    Multipatch of the geometry
+     */
     gsDPatch(const gsMultiPatch<T> & mp) ;
 
     GISMO_CLONE_FUNCTION(gsDPatch)
@@ -65,7 +73,6 @@ public:
 
     // using Base::exportToPatches;
 
-
 protected:
     /**
      * @brief       Computes the C1 coefficients for pre-multiplication to make the multipatch
@@ -73,9 +80,8 @@ protected:
      * Takes the coefficients which are tagged as "free" in the modified DoFMapper (m_mapModified) and when a boundary vertex with valence=3 is present, this one is shifted.
      *
      */
-    gsMatrix<T> _preCoefficients();
-
-    // using Base::allCoefficients;
+    gsMatrix<T> _preCoefficients(const gsMultiPatch<T> & patches) override;
+    using Base::_preCoefficients;
 
     // using Base::exportPatch;
 
@@ -118,9 +124,15 @@ protected:
     // void _computeSmoothMatrix();
     using Base::_computeSmoothMatrix;
 
-    void _makeTHB();
+    void _initTHB() override;
 
-    void _computeEVs();
+    void _refBoxes(std::vector<std::vector<index_t>> & patchBoxes);
+
+    void _initBasis() override;
+
+    void _makeTHB() override;
+
+    void _computeEVs() override;
 
     /**
      * @brief      Makes the Pi matrix
@@ -135,7 +147,6 @@ protected:
 
     using Base::getSharpCorners;
     using Base::_indexFromSides;
-    using Base::_indicesFromVert;
     using Base::_indexFromVert;
     using Base::_vertexData;
     using Base::_sideIndex;
@@ -144,8 +155,6 @@ protected:
     using Base::_removeLowestCorners;
     using Base::_getLowestIndices;
     using Base::_removeLowestIndices;
-    using Base::_getInterfaceIndices;
-    using Base::_getAllInterfaceIndices;
 
     using Base::_push;
     using Base::_pushAndCheck;
@@ -311,13 +320,14 @@ protected:
     using Base::_whichHandled;
 
 protected:
-    using Base::m_patches;
     using Base::m_computed;
+    using Base::m_topology;
 
-    using Base::m_RefPatches;
     using Base::m_bases;
+    gsMultiBasis<T> m_bases0;
     using Base::m_Bbases;
     using Base::m_tMatrix;
+    std::vector<gsSparseMatrix<T>> m_tMatrices;
     using Base::m_sideCheck;
     using Base::m_vertCheck;
     using Base::m_basisCheck;
