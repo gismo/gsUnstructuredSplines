@@ -13,13 +13,6 @@
 
 #include <gismo.h>
 
-#include <gsUnstructuredSplines/src/gsMPBESBasis.h>
-#include <gsUnstructuredSplines/src/gsMPBESSpline.h>
-#include <gsUnstructuredSplines/src/gsDPatch.h>
-#include <gsUnstructuredSplines/src/gsAlmostC1.h>
-#include <gsUnstructuredSplines/src/gsApproxC1Spline.h>
-#include <gsUnstructuredSplines/src/gsC1SurfSpline.h>
-
 #include <gsKLShell/src/gsThinShellAssembler.h>
 #include <gsKLShell/src/gsMaterialMatrixLinear.h>
 #include <gsKLShell/src/gsFunctionSum.h>
@@ -38,7 +31,6 @@ int main(int argc, char *argv[])
     bool first      = false;
     bool write      = false;
     bool dense      = false;
-    index_t method = 0;
     index_t nmodes = 10;
     index_t mode   = 0;
     std::string input;
@@ -70,9 +62,6 @@ int main(int argc, char *argv[])
     cmd.addSwitch("write", "write",write);
     cmd.addSwitch("dense", "Dense eigenvalue computation",dense);
 
-    // to do:
-    // smoothing method add nitsche @Pascal
-
     try { cmd.getValues(argc,argv); } catch (int rv) { return rv; }
 
     GISMO_ENSURE(!(geomFileName.empty()) && !(basisFileName.empty()) && !(bvpFileName.empty()),"Not all filenames have been provided.\n"
@@ -96,29 +85,30 @@ int main(int argc, char *argv[])
     // STEP 1: Get curve network with merged linear interfaces
     gsInfo<<"Loading curve network..."<<std::flush;
     geom.computeTopology();
-    geom.constructInterfaceRep();
-    geom.constructBoundaryRep();
-    auto & irep = geom.interfaceRep();
-    auto & brep = geom.boundaryRep();
-    // gsDebug <<" irep "<< irep.size() <<" \n" ;
-    gsDebug <<" brep "<< brep.size() <<" \n" ;
+    geom.embed(3);
+    // geom.constructInterfaceRep();
+    // geom.constructBoundaryRep();
+    // auto & irep = geom.interfaceRep();
+    // auto & brep = geom.boundaryRep();
+    // // gsDebug <<" irep "<< irep.size() <<" \n" ;
+    // gsDebug <<" brep "<< brep.size() <<" \n" ;
 
-    // outputing...
-    gsMultiPatch<> crv_net, iface_net, bnd_net;
-    for (auto it = irep.begin(); it!=irep.end(); ++it)
-    {
-        iface_net.addPatch((*it->second));
-        crv_net.addPatch((*it->second));
-    }
-    for (auto it = brep.begin(); it!=brep.end(); ++it)
-    {
-        bnd_net.addPatch((*it->second));
-        crv_net.addPatch((*it->second));
-    }
+    // // outputing...
+    // gsMultiPatch<> crv_net, iface_net, bnd_net;
+    // for (auto it = irep.begin(); it!=irep.end(); ++it)
+    // {
+    //     iface_net.addPatch((*it->second));
+    //     crv_net.addPatch((*it->second));
+    // }
+    // for (auto it = brep.begin(); it!=brep.end(); ++it)
+    // {
+    //     bnd_net.addPatch((*it->second));
+    //     crv_net.addPatch((*it->second));
+    // }
 
-    if (plot) gsWriteParaview(iface_net,"iface_net",100);
-    if (plot) gsWriteParaview(bnd_net,"bnd_net",100);
-    // if (plot) gsWriteParaview(crv_net,"crv_net",100);
+    // if (plot) gsWriteParaview(iface_net,"iface_net",100);
+    // if (plot) gsWriteParaview(bnd_net,"bnd_net",100);
+    // // if (plot) gsWriteParaview(crv_net,"crv_net",100);
 
     gsInfo<<"Reading mapped basis from "<<basisFileName<<"..."<<std::flush;
     fd.read(basisFileName);
@@ -190,16 +180,16 @@ int main(int argc, char *argv[])
 
     // Initialize the system
 
-    gsInfo<<"Assembling stiffness matrix..."<<std::flush;
+    gsInfo<<"Assembling mass matrix..."<<assembler.numDofs()<<" x "<<assembler.numDofs()<<")"<<std::flush;
+    assembler.assembleMass();
+    gsSparseMatrix<> mass   = assembler.massMatrix();
+    gsInfo<<"Finished\n";
+    gsInfo<<"Assembling stiffness matrix... ("<<assembler.numDofs()<<" x "<<assembler.numDofs()<<")"<<std::flush;
     assembler.assemble();
     gsSparseMatrix<> matrix = assembler.matrix();
     gsInfo<<"Finished\n";
     // gsDebugVar(matrix.toDense());
     gsVector<> vector = assembler.rhs();
-    gsInfo<<"Assembling mass matrix..."<<std::flush;
-    assembler.assembleMass();
-    gsSparseMatrix<> mass   = assembler.massMatrix();
-    gsInfo<<"Finished\n";
     // gsDebugVar(mass.toDense());
 
     gsVector<> values;
@@ -215,13 +205,13 @@ int main(int argc, char *argv[])
     }
     else
     {
-#ifdef GISMO_WITH_SPECTRA
+#ifdef gsSpectra_ENABLED
         Spectra::SortRule selectionRule = Spectra::SortRule::LargestMagn;
         Spectra::SortRule sortRule = Spectra::SortRule::SmallestMagn;
 
         index_t ncvFac = 10;
         index_t number = nmodes;
-        gsSpectraGenSymShiftSolver<gsSparseMatrix<>,Spectra::GEigsMode::ShiftInvert> solver(matrix-shift*mass,mass,number,ncvFac*number, shift);
+        gsSpectraGenSymShiftSolver<gsSparseMatrix<>,Spectra::GEigsMode::ShiftInvert> solver(matrix,mass,number,ncvFac*number, shift);
         // gsSpectraGenSymShiftSolver<gsSparseMatrix<>,Spectra::GEigsMode::ShiftInvert> solver(matrix,mass,number,ncvFac*number, shift);
         solver.init();
         solver.compute(selectionRule,1000,1e-6,sortRule);
@@ -262,7 +252,7 @@ int main(int argc, char *argv[])
 
         int N = 1;
         if (!first)
-	      N = nmodes;
+          N = nmodes;
         //    N = vectors.cols();
         for (index_t m=0; m<N; m++)
         {

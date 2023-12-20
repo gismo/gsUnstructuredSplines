@@ -1,6 +1,6 @@
-/** @file gsCompositeBasis_test.h
+/** @file TODO
 
-    @brief File testing the gsCompositeBasis class.
+    @brief TODO
 
     This file is part of the G+Smo library.
 
@@ -8,7 +8,7 @@
     License, v. 2.0. If a copy of the MPL was not distributed with this
     file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-    Author(s): F. Buchegger
+    Author(s): TODO
 */
 
 #include <gismo.h>
@@ -20,16 +20,19 @@
 #include <gsUnstructuredSplines/src/gsApproxC1Spline.h>
 #include <gsUnstructuredSplines/src/gsC1SurfSpline.h>
 
+#ifdef gsKLShell_ENABLED
 #include <gsKLShell/src/gsThinShellAssembler.h>
 #include <gsKLShell/src/gsMaterialMatrixLinear.h>
 #include <gsKLShell/src/gsFunctionSum.h>
+#endif
 
-#ifdef GISMO_WITH_SPECTRA
+#ifdef gsSpectra_ENABLED
 #include <gsSpectra/gsSpectra.h>
 #endif
 
 using namespace gismo;
 
+#ifdef gsKLShell_ENABLED
 int main(int argc, char *argv[])
 {
     bool plot       = false;
@@ -387,7 +390,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-#ifdef GISMO_WITH_SPECTRA
+#ifdef gsSpectra_ENABLED
         Spectra::SortRule selectionRule = Spectra::SortRule::LargestMagn;
         Spectra::SortRule sortRule = Spectra::SortRule::SmallestMagn;
 
@@ -408,7 +411,7 @@ int main(int argc, char *argv[])
         values.array() += shift;
         vectors = solver.eigenvectors();
 #else
-        Eigen::GeneralizedSelfAdjointEigenSolver< typename gsMatrix<>::Base >  eigSolver;
+        gsEigen::GeneralizedSelfAdjointEigenSolver< typename gsMatrix<>::Base >  eigSolver;
         eigSolver.compute(K_L,dK);
         values = eigSolver.eigenvalues();
         vectors = eigSolver.eigenvectors();
@@ -483,3 +486,10 @@ int main(int argc, char *argv[])
 
 
 }
+#else
+int main(int argc, char *argv[])
+{
+    gsWarn<<"This example should be compiled with gsKLShell enabled\n";
+    return EXIT_FAILURE;
+}
+#endif

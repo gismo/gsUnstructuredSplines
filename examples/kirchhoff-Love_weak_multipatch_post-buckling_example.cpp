@@ -13,13 +13,6 @@
 
 #include <gismo.h>
 
-#include <gsUnstructuredSplines/src/gsMPBESBasis.h>
-#include <gsUnstructuredSplines/src/gsMPBESSpline.h>
-#include <gsUnstructuredSplines/src/gsDPatch.h>
-#include <gsUnstructuredSplines/src/gsAlmostC1.h>
-#include <gsUnstructuredSplines/src/gsApproxC1Spline.h>
-#include <gsUnstructuredSplines/src/gsC1SurfSpline.h>
-
 #include <gsKLShell/src/gsThinShellAssembler.h>
 #include <gsKLShell/src/gsMaterialMatrixLinear.h>
 #include <gsKLShell/src/gsFunctionSum.h>
@@ -31,6 +24,10 @@
 #include <gsStructuralAnalysis/src/gsALMSolvers/gsALMConsistentCrisfield.h>
 
 #include <gsStructuralAnalysis/src/gsStructuralAnalysisTools/gsStructuralAnalysisUtils.h>
+
+#ifdef gsSpectra_ENABLED
+#include <gsSpectra/gsSpectra.h>
+#endif
 
 using namespace gismo;
 
@@ -178,15 +175,15 @@ int main(int argc, char *argv[])
 
     if (points.cols()>0)
     {
-	    gsMatrix<> pointLoadPoints(3,points.cols());
-	    for (index_t k =0; k!=points.cols(); k++)
-	        pointLoadPoints.col(k) = mp.patch(pid_ploads.at(k)).eval(points.col(k));
-	    gsWriteParaviewPoints(pointLoadPoints,"pointLoadPoints");
+        gsMatrix<> pointLoadPoints(3,points.cols());
+        for (index_t k =0; k!=points.cols(); k++)
+            pointLoadPoints.col(k) = mp.patch(pid_ploads.at(k)).eval(points.col(k));
+        gsWriteParaviewPoints(pointLoadPoints,"pointLoadPoints");
 
-	    for (index_t k =0; k!=points.cols(); k++)
-        	pLoads.addLoad(points.col(k), loads.col(k), pid_ploads.at(k) ); // in parametric domain!
+        for (index_t k =0; k!=points.cols(); k++)
+            pLoads.addLoad(points.col(k), loads.col(k), pid_ploads.at(k) ); // in parametric domain!
 
-	    gsInfo<<pLoads;
+        gsInfo<<pLoads;
     }
     // // Loads
     // gsPointLoads<real_t> pLoads = gsPointLoads<real_t>();
@@ -331,7 +328,7 @@ int main(int argc, char *argv[])
         gsMatrix<> vectors;
 
         gsInfo<<"Computing Eigenmodes..."<<std::flush;
-#ifdef GISMO_WITH_SPECTRA
+#ifdef gsSpectra_ENABLED
         Spectra::SortRule selectionRule = Spectra::SortRule::LargestMagn;
         Spectra::SortRule sortRule = Spectra::SortRule::SmallestMagn;
 
@@ -354,7 +351,7 @@ int main(int argc, char *argv[])
         gsInfo<<"Eigenvalues:\n"<<values<<"\n";
         vectors = eigSolver.eigenvectors();
 #else
-        Eigen::GeneralizedSelfAdjointEigenSolver< typename gsMatrix<>::Base >  eigSolver;
+        gsEigen::GeneralizedSelfAdjointEigenSolver< typename gsMatrix<>::Base >  eigSolver;
         eigSolver.compute(K_L,dK);
         values = eigSolver.eigenvalues();
         vectors = eigSolver.eigenvectors();

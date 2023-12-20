@@ -1,4 +1,4 @@
-/** @file gsCompositeBasis_test.h
+/** @file TODO
 
     @brief File testing the gsCompositeBasis class.
 
@@ -24,7 +24,7 @@
 #include <gsKLShell/src/gsMaterialMatrixLinear.h>
 #include <gsKLShell/src/gsFunctionSum.h>
 
-#ifdef GISMO_WITH_SPECTRA
+#ifdef gsSpectra_ENABLED
 #include <gsSpectra/gsSpectra.h>
 #endif
 
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 
     real_t shift = 0.01;
 
-    std::string fn1,fn2,fn3;
+    std::string fn1,fn2,fn3,fn4;
     fn1 = "pde/2p_square_geom.xml";
     fn2 = "pde/2p_square_bvp.xml";
     fn3 = "options/solver_options.xml";
@@ -82,6 +82,7 @@ int main(int argc, char *argv[])
     cmd.addSwitch("writeMat", "Write projection matrix",writeMatrix);
     cmd.addSwitch( "info", "Print information", info );
     cmd.addSwitch("dense", "Dense eigenvalue computation",dense);
+    cmd.addString( "","fullbasis", "File containing all basis details: 1) a multi-patch containing the geometry, 2) a multi-basis containing the local basis, and 3) a sparse matrix being a basis mapper",  fn4 );
 
     // to do:
     // smoothing method add nitsche @Pascal
@@ -104,23 +105,31 @@ int main(int argc, char *argv[])
      */
 
     gsFileData<> fd;
-    gsInfo<<"Reading geometry from "<<fn1<<"..."<<std::flush;
-    gsReadFile<>(fn1, mp);
+    if (!fn4.empty())
+    {
+        gsInfo<<"Reading geometry from "<<fn4<<"..."<<std::flush;
+        gsReadFile<>(fn4, mp);
+    }
+    else
+    {
+        gsInfo<<"Reading geometry from "<<fn1<<"..."<<std::flush;
+        gsReadFile<>(fn1, mp);
+        if (mp.geoDim()==2)
+            mp.embed(3);
+
+        if (method==2 && mp.patch(0).degree(0)<3)
+        {
+            gsWarn<<"Degree must be larger than 2 for the approx C1 method. Performing degree elevation on the geometry..."<<std::flush;
+            mp.degreeIncrease(degree-mp.patch(0).degree(0));
+            gsInfo<<"Finished.\n";
+        }
+    }
     if (mp.nInterfaces()==0 && mp.nBoundary()==0)
     {
         gsInfo<<"No topology found. Computing it..."<<std::flush;
         mp.computeTopology();
     }
     gsInfo<<"Finished\n";
-
-    if (mp.geoDim()==2)
-        mp.embed(3);
-    if (method==2 && mp.patch(0).degree(0)<3)
-    {
-        gsWarn<<"Degree must be larger than 2 for the approx C1 method. Performing degree elevation on the geometry..."<<std::flush;
-        mp.degreeIncrease(degree-mp.patch(0).degree(0));
-        gsInfo<<"Finished.\n";
-    }
 
     fd.read(fn2);
     index_t num = 0;
@@ -150,24 +159,27 @@ int main(int argc, char *argv[])
     fd.getId(13,rho);
     gsInfo<<"Finished\n";
 
-    gsMultiPatch<> geom = mp;
-    gsInfo<<"Making gsMultiBasis..."<<std::flush;
-    gsMultiBasis<> dbasis(mp);
-    gsInfo<<"Finished\n";
-
-    gsInfo<<"Setting degree and refinement..."<<std::flush;
-    if (method != -1 && method != 2)// && method != 3)
-        mp.degreeIncrease(degree-mp.patch(0).degree(0));
-    else
-        dbasis.setDegree( degree); // preserve smoothness
-
-    // h-refine each basis
-    for (int r =0; r < numRefine; ++r)
+    gsMultiBasis<> dbasis;
+    if (fn4.empty())
     {
+        gsInfo<<"Making gsMultiBasis..."<<std::flush;
+        dbasis = gsMultiBasis<> (mp);
+        gsInfo<<"Finished\n";
+
+        gsInfo<<"Setting degree and refinement..."<<std::flush;
         if (method != -1 && method != 2)// && method != 3)
-            mp.uniformRefine(1,degree-smoothness);
+            mp.degreeIncrease(degree-mp.patch(0).degree(0));
         else
-            dbasis.uniformRefine(1,degree-smoothness);
+            dbasis.setDegree( degree); // preserve smoothness
+
+        // h-refine each basis
+        for (int r =0; r < numRefine; ++r)
+        {
+            if (method != -1 && method != 2)// && method != 3)
+                mp.uniformRefine(1,degree-smoothness);
+            else
+                dbasis.uniformRefine(1,degree-smoothness);
+        }
     }
 
     if (plot || write)
@@ -182,95 +194,96 @@ int main(int argc, char *argv[])
     // for (size_t p = 0; p!=mp.nPatches(); ++p)
     //     gsDebugVar(mp.patch(p));
 
-    std::vector<gsFunctionSet<>*> parameters(2);
-    parameters[0] = &E;
-    parameters[1] = &nu;
-
-    gsMaterialMatrixLinear<3,real_t> materialMatrix(mp,t,parameters,rho);
-
-    gsThinShellAssembler<3, real_t, true> assembler;
-
-    //! [Solver loop]
-    gsVector<> solVector;
-
     gsMappedBasis<2,real_t> bb2;
 
     gsSparseMatrix<> global2local;
     gsMatrix<> coefs;
-
-    gsInfo<<"Constructing Map..."<<std::flush;
-    if (method==-1)
+    gsMultiPatch<> geom = mp;
+    if (!fn4.empty())
     {
-        // identity map
-        global2local.resize(dbasis.totalSize(),dbasis.totalSize());
-        for (size_t k=0; k!=dbasis.totalSize(); ++k)
-            global2local.coeffRef(k,k) = 1;
-        geom = mp;
-        gsInfo << "Basis Patch: " << dbasis.basis(0).component(0) << "\n";
-        bb2.init(dbasis,global2local);
-    }
-    else if (method==0)
-    {
-        gsMPBESSpline<2,real_t> cgeom(mp,3);
-        gsMappedBasis<2,real_t> basis = cgeom.getMappedBasis();
-
-        global2local = basis.getMapper().asMatrix();
-        geom = cgeom.exportToPatches();
-        auto container = basis.getBasesCopy();
-        dbasis = gsMultiBasis<>(container,mp.topology());
-        bb2.init(dbasis,global2local);
-    }
-    else if (method==1)
-    {
-        geom = mp;
-        gsDPatch<2,real_t> dpatch(geom);
-        dpatch.compute();
-        dpatch.matrix_into(global2local);
-
-        global2local = global2local.transpose();
-        geom = dpatch.exportToPatches();
-        dbasis = dpatch.localBasis();
-        bb2.init(dbasis,global2local);
-    }
-    else if (method==2) // Pascal
-    {
-        // The approx. C1 space
-        gsApproxC1Spline<2,real_t> approxC1(mp,dbasis);
-        approxC1.options().setSwitch("info",info);
-        // approxC1.options().setSwitch("plot",plot);
-        approxC1.options().setSwitch("interpolation",true);
-        approxC1.options().setInt("gluingDataDegree",-1);
-        approxC1.options().setInt("gluingDataSmoothness",-1);
-        approxC1.update(bb2);
-    }
-    else if (method==3) // Andrea
-    {
-        gsC1SurfSpline<2,real_t> smoothC1(mp,dbasis);
-        smoothC1.init();
-        smoothC1.compute();
-
-        global2local = smoothC1.getSystem();
-        global2local = global2local.transpose();
-        smoothC1.getMultiBasis(dbasis);
-        bb2.init(dbasis,global2local);
-    }
-    else if (method==4)
-    {
-        geom = mp;
-        gsAlmostC1<2,real_t> almostC1(geom);
-        almostC1.options().setSwitch("SharpCorners",false);
-        almostC1.compute();
-        almostC1.matrix_into(global2local);
-
-        global2local = global2local.transpose();
-        geom = almostC1.exportToPatches();
-        dbasis = almostC1.localBasis();
+        gsInfo<<"Loading the basis data from file: "<<fn4<<"\n";
+        fd.read(fn4); //filename: "square_knt"
+        fd.getFirst(dbasis);
+        fd.getFirst(global2local);//mb.setTopology(mp);
         bb2.init(dbasis,global2local);
     }
     else
-        GISMO_ERROR("Option "<<method<<" for method does not exist");
+    {
+        gsInfo<<"Constructing Map..."<<std::flush;
+        if (method==-1)
+        {
+            // identity map
+            global2local.resize(dbasis.totalSize(),dbasis.totalSize());
+            for (size_t k=0; k!=dbasis.totalSize(); ++k)
+                global2local.coeffRef(k,k) = 1;
+            geom = mp;
+            gsInfo << "Basis Patch: " << dbasis.basis(0).component(0) << "\n";
+            bb2.init(dbasis,global2local);
+        }
+        else if (method==0)
+        {
+            gsMPBESSpline<2,real_t> cgeom(mp,3);
+            gsMappedBasis<2,real_t> basis = cgeom.getMappedBasis();
 
-    gsInfo<<"Finished\n";
+            global2local = basis.getMapper().asMatrix();
+            geom = cgeom.exportToPatches();
+            auto container = basis.getBasesCopy();
+            dbasis = gsMultiBasis<>(container,mp.topology());
+            bb2.init(dbasis,global2local);
+        }
+        else if (method==1)
+        {
+            geom = mp;
+            gsDPatch<2,real_t> dpatch(geom);
+            dpatch.compute();
+            dpatch.matrix_into(global2local);
+
+            global2local = global2local.transpose();
+            geom = dpatch.exportToPatches();
+            dbasis = dpatch.localBasis();
+            bb2.init(dbasis,global2local);
+        }
+        else if (method==2) // Pascal
+        {
+            // The approx. C1 space
+            gsApproxC1Spline<2,real_t> approxC1(mp,dbasis);
+            approxC1.options().setSwitch("info",info);
+            // approxC1.options().setSwitch("plot",plot);
+            approxC1.options().setSwitch("interpolation",true);
+            approxC1.options().setInt("gluingDataDegree",-1);
+            approxC1.options().setInt("gluingDataSmoothness",-1);
+            approxC1.update(bb2);
+        }
+        else if (method==3) // Andrea
+        {
+            gsC1SurfSpline<2,real_t> smoothC1(mp,dbasis);
+            smoothC1.init();
+            smoothC1.compute();
+
+            global2local = smoothC1.getSystem();
+            global2local = global2local.transpose();
+            smoothC1.getMultiBasis(dbasis);
+            bb2.init(dbasis,global2local);
+        }
+        else if (method==4)
+        {
+            geom = mp;
+            gsAlmostC1<2,real_t> almostC1(geom);
+            almostC1.options().setSwitch("SharpCorners",false);
+            almostC1.compute();
+            almostC1.matrix_into(global2local);
+
+            global2local = global2local.transpose();
+            geom = almostC1.exportToPatches();
+            dbasis = almostC1.localBasis();
+            bb2.init(dbasis,global2local);
+        }
+        else
+            GISMO_ERROR("Option "<<method<<" for method does not exist");
+
+        gsInfo<<"Finished\n";
+
+    }
 
     if (writeMatrix)
     {
@@ -285,12 +298,20 @@ int main(int argc, char *argv[])
     if (plot)
         gsWriteParaview(geom,out + "/" + "geom",200,true);
 
+    std::vector<gsFunctionSet<>*> parameters(2);
+    parameters[0] = &E;
+    parameters[1] = &nu;
+
+    gsMaterialMatrixLinear<3,real_t> materialMatrix(geom,t,parameters,rho);
+
+    gsThinShellAssembler<3, real_t, true> assembler;
+
+    //! [Solver loop]
+    gsVector<> solVector;
+
     gsFunctionExpr<> force("0","0","0",3);
     assembler = gsThinShellAssembler<3, real_t, true>(geom,dbasis,bc,force,&materialMatrix);
-    // if (method==1)
     assembler.options().setInt("Continuity",-1);
-    // else if (method==2)
-    //     assembler.options().setInt("Continuity",-1);
     assembler.options().setReal("WeakDirichlet",bcDirichlet);
     assembler.options().setReal("WeakClamped",bcClamped);
     assembler.setSpaceBasis(bb2);
@@ -300,17 +321,15 @@ int main(int argc, char *argv[])
 
     // Initialize the system
 
-    gsInfo<<"Assembling stiffness matrix..."<<std::flush;
+    gsInfo<<"Assembling mass matrix..."<<assembler.numDofs()<<" x "<<assembler.numDofs()<<")"<<std::flush;
+    assembler.assembleMass(false);
+    gsSparseMatrix<> mass   = assembler.massMatrix();
+    gsInfo<<"Finished\n";
+    gsInfo<<"Assembling stiffness matrix... ("<<assembler.numDofs()<<" x "<<assembler.numDofs()<<")"<<std::flush;
     assembler.assemble();
     gsSparseMatrix<> matrix = assembler.matrix();
     gsInfo<<"Finished\n";
-    // gsDebugVar(matrix.toDense());
-    gsVector<> vector = assembler.rhs();
-    gsInfo<<"Assembling mass matrix..."<<std::flush;
-    assembler.assembleMass();
-    gsSparseMatrix<> mass   = assembler.massMatrix();
-    gsInfo<<"Finished\n";
-    // gsDebugVar(mass.toDense());
+
 
     gsVector<> values;
     gsMatrix<> vectors;
@@ -325,7 +344,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-#ifdef GISMO_WITH_SPECTRA
+#ifdef gsSpectra_ENABLED
         Spectra::SortRule selectionRule = Spectra::SortRule::LargestMagn;
         Spectra::SortRule sortRule = Spectra::SortRule::SmallestMagn;
 
@@ -372,7 +391,7 @@ int main(int argc, char *argv[])
 
         int N = 1;
         if (!first)
-	      N = nmodes;
+          N = nmodes;
         //    N = vectors.cols();
         for (index_t m=0; m<N; m++)
         {
@@ -396,12 +415,12 @@ int main(int argc, char *argv[])
 
             std::string fileName = dirname + "/" + output + util::to_string(m) + "_";
             gsWriteParaview<>(solField, fileName, 1000,mesh);
-            for (index_t p = 0; p!=mp.nPatches(); p++)
+            for (index_t p = 0; p!=geom.nPatches(); p++)
             {
-                fileName = output + util::to_string(m) + "_";
-                collection.addTimestep(fileName,p,m,".vts");
+                fileName = output + util::to_string(m) + "_" + std::to_string(p);
+                collection.addPart(fileName + ".vts",m,"solution",p);
                 if (mesh)
-                    collection.addTimestep(fileName,p,m,"_mesh.vtp");
+                    collection.addPart(fileName + "_mesh.vtp",m,"mesh",p);
             }
         }
         collection.save();

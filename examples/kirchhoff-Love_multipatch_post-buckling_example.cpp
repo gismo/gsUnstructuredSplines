@@ -357,7 +357,6 @@ int main(int argc, char *argv[])
     else if (method==4)
     {
         gsAlmostC1<2,real_t> almostC1(mp);
-        almostC1.options().setSwitch("SharpCorners",true);
         almostC1.compute();
         almostC1.matrix_into(global2local);
 
@@ -418,6 +417,7 @@ int main(int argc, char *argv[])
       size_t d = geom.targetDim();
       GISMO_ASSERT(solFull.rows() % d==0,"Rows of the solution vector does not match the number of control points");
       solFull.resize(solFull.rows()/d,d);
+
       gsMappedSpline<2,real_t> mspline(bb2,solFull);
       gsFunctionSum<real_t> def(&geom,&mspline);
       assembler.assembleMatrix(def);
@@ -481,7 +481,7 @@ int main(int argc, char *argv[])
         gsMatrix<> vectors;
 
         gsInfo<<"Computing Eigenmodes..."<<std::flush;
-#ifdef GISMO_WITH_SPECTRA
+#ifdef gsSpectra_ENABLED
         Spectra::SortRule selectionRule = Spectra::SortRule::LargestMagn;
         Spectra::SortRule sortRule = Spectra::SortRule::SmallestMagn;
 
@@ -504,7 +504,7 @@ int main(int argc, char *argv[])
         gsInfo<<"Eigenvalues:\n"<<values<<"\n";
         vectors = eigSolver.eigenvectors();
 #else
-        Eigen::GeneralizedSelfAdjointEigenSolver< typename gsMatrix<>::Base >  eigSolver;
+        gsEigen::GeneralizedSelfAdjointEigenSolver< typename gsMatrix<>::Base >  eigSolver;
         eigSolver.compute(K_L,dK);
         values = eigSolver.eigenvalues();
         vectors = eigSolver.eigenvectors();
@@ -632,7 +632,11 @@ int main(int argc, char *argv[])
       arcLength->options().setInt("QuasiIterations",quasiNewtonInt);
     }
     arcLength->options().setSwitch("Quasi",quasiNewton);
-    // arcLength->options().setReal("Shift",shift);
+
+    arcLength->options().setReal("SingularPointTestTol",1e-4);
+    arcLength->options().setInt("SingularPointTestIt",5);
+    arcLength->options().setReal("SingularPointComputeTolB",0);
+    arcLength->options().setReal("SingularPointComputeTolE",1e-4);
 
     gsInfo<<arcLength->options();
     arcLength->applyOptions();
@@ -655,16 +659,15 @@ int main(int argc, char *argv[])
 
     gsStructuralAnalysisOutput<real_t> numWriter(dirname + "/pointdata.csv",refPoints);
     std::vector<std::string> headers = {"u_x","u_y","u_z"};
-    std::vector<std::string> otherheaders = {"lambda"};
     if (write)
-        numWriter.init(headers,otherheaders);
+        numWriter.init(headers);
 
     index_t k=0;
     real_t L=0;
     while (k < step && L < Lmax)
     {
         gsInfo<<"Load step "<< k<<"; Lold = "<<L<<"\n";
-        // assembler.constructSolution(solVector,solution);
+        // assembler->constructSolution(solVector,solution);
         arcLength->step();
 
         // gsInfo<<"m_U = "<<arcLength->solutionU()<<"\n";
@@ -683,7 +686,7 @@ int main(int argc, char *argv[])
         if (arcLength->stabilityChange() && SingularPoint)
         {
             gsInfo<<"Bifurcation spotted!"<<"\n";
-            arcLength->computeSingularPoint(Uold, Lold,false);
+            arcLength->computeSingularPoint(Uold,Lold,false);
             arcLength->switchBranch();
             dLb0 = dLb = dL;
             arcLength->setLength(dLb);
@@ -738,8 +741,8 @@ int main(int argc, char *argv[])
                     gsMatrix<> pointResults(mp.geoDim(),refPoints.cols());
                     for (index_t p=0; p!=refPoints.cols(); p++)
                         pointResults.col(p) = solField.value(refPoints.col(p),refPatches(0,p));
-                    gsVector<> lambda(1); lambda<<arcLength->solutionL();
-                    numWriter.add(pointResults,lambda);
+                    gsVector<> otherData{arcLength->solutionL()};
+                    numWriter.add(pointResults,otherData);
                 }
             }
 

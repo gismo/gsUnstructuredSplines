@@ -17,7 +17,9 @@
 #include <gsKLShell/src/gsMaterialMatrixLinear.h>
 #include <gsKLShell/src/gsThinShellUtils.h>
 
+#ifdef gsSpectra_ENABLED
 #include <gsSpectra/gsSpectra.h>
+#endif
 
 using namespace gismo;
 
@@ -26,7 +28,6 @@ int main(int argc, char *argv[])
 {
     //! [Parse command line]
     bool plot       = false;
-    bool plotG      = false;
     bool mesh       = false;
     bool first      = false;
     bool write      = false;
@@ -69,7 +70,6 @@ int main(int argc, char *argv[])
     cmd.addInt( "M", "mode", "Mode number", mode );
     cmd.addReal( "S", "shift", "Set the shift of the solver.",  shift );
     cmd.addSwitch("plot", "plot",plot);
-    cmd.addSwitch("plotG", "plot geometry",plotG);
     cmd.addSwitch("mesh", "mesh",mesh);
     cmd.addSwitch("first", "Plot only first mode",first);
     cmd.addSwitch("write", "write",write);
@@ -86,38 +86,11 @@ int main(int argc, char *argv[])
     gsFileData<> fd;
     gsInfo<<"Reading geometry from "<<fn1<<"...";
     gsReadFile<>(fn1, mp);
-    if ((mp.nInterfaces()==0 && mp.nBoundary()==0) || gsFileManager::getExtension(fn1)=="3dm")
+    if (mp.nInterfaces()==0 && mp.nBoundary()==0)
     {
         gsInfo<<"No topology found. Computing it...";
-        mp.computeTopology(1e0,true);
+        mp.computeTopology();
     }
-
-    // // STEP 1: Get curve network with merged linear interfaces
-    // gsInfo<<"Loading curve network..."<<std::flush;
-    // // mp.constructInterfaceRep();
-    // mp.constructBoundaryRep();
-    // // auto & irep = mp.interfaceRep();
-    // auto & brep = mp.boundaryRep();
-    // // gsDebug <<" irep "<< irep.size() <<" \n" ;
-    // gsDebug <<" brep "<< brep.size() <<" \n" ;
-
-    // // outputing...
-    // gsMultiPatch<> crv_net, iface_net, bnd_net;
-    // // for (auto it = irep.begin(); it!=irep.end(); ++it)
-    // // {
-    // //     iface_net.addPatch((*it->second));
-    // //     crv_net.addPatch((*it->second));
-    // // }
-    // for (auto it = brep.begin(); it!=brep.end(); ++it)
-    // {
-    //     bnd_net.addPatch((*it->second));
-    //     // crv_net.addPatch((*it->second));
-    // }
-
-    // // if (plot) gsWriteParaview(iface_net,"iface_net",100);
-    // if (plot) gsWriteParaview(bnd_net,"bnd_net",100);
-    // // if (plot) gsWriteParaview(crv_net,"crv_net",100);
-
     gsInfo<<"Finished\n";
     if (mp.geoDim()==2)
         mp.embed(3);
@@ -171,9 +144,8 @@ int main(int argc, char *argv[])
         const char *command = commands.c_str();
         int systemRet = system(command);
         GISMO_ASSERT(systemRet!=-1,"Something went wrong with calling the system argument");
+        gsWriteParaview(mp,out + "/" + "mp",10,true,false);
     }
-    if (plotG)
-    	gsWriteParaview(mp,"mp",10,true,false);
 
     // for (size_t p = 0; p!=mp.nPatches(); ++p)
     //     gsDebugVar(mp.patch(p));
@@ -216,14 +188,14 @@ int main(int argc, char *argv[])
 
     // Initialize the system
 
-    gsInfo<<"Assembling mass matrix..."<<std::flush;
-    assembler.assembleMass();
-    gsSparseMatrix<> mass   = assembler.massMatrix();
-    gsInfo<<"Finished\n";
     gsInfo<<"Assembling stiffness matrix..."<<std::flush;
     assembler.assemble();
     gsSparseMatrix<> matrix = assembler.matrix();
+    gsInfo<<"Finished\n";
     gsVector<> vector = assembler.rhs();
+    gsInfo<<"Assembling mass matrix..."<<std::flush;
+    assembler.assembleMass();
+    gsSparseMatrix<> mass   = assembler.massMatrix();
     gsInfo<<"Finished\n";
 
     gsVector<> values;
@@ -239,7 +211,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-#ifdef GISMO_WITH_SPECTRA
+#ifdef gsSpectra_ENABLED
         Spectra::SortRule selectionRule = Spectra::SortRule::LargestMagn;
         Spectra::SortRule sortRule = Spectra::SortRule::SmallestMagn;
 
@@ -250,7 +222,7 @@ int main(int argc, char *argv[])
         solver.init();
         solver.compute(selectionRule,1000,1e-6,sortRule);
 
-        if (solver.info()==Spectra::CompInfo::Successful)         { gsInfo<<"Spectra converged in "<<solver.num_iterations()<<" iterations and with "<<solver.num_operations()<<"operations. \n"; }
+        if (solver.info()==Spectra::CompInfo::Successful)         { gsDebug<<"Spectra converged in "<<solver.num_iterations()<<" iterations and with "<<solver.num_operations()<<"operations. \n"; }
         else if (solver.info()==Spectra::CompInfo::NumericalIssue){ GISMO_ERROR("Spectra did not converge! Error code: NumericalIssue"); }
         else if (solver.info()==Spectra::CompInfo::NotConverging) { GISMO_ERROR("Spectra did not converge! Error code: NotConverging"); }
         else if (solver.info()==Spectra::CompInfo::NotComputed)   { GISMO_ERROR("Spectra did not converge! Error code: NotComputed");   }
@@ -311,10 +283,10 @@ int main(int argc, char *argv[])
             gsWriteParaview<>(solField, fileName, 1000,mesh);
             for (index_t p = 0; p!=mp.nPatches(); p++)
             {
-                fileName = output + util::to_string(m) + "_" + util::to_string(p);
-                collection.addPart(fileName + ".vts",m,"solution",p);
+                fileName = output + util::to_string(m) + "_";
+                collection.addTimestep(fileName,p,m,".vts");
                 if (mesh)
-                    collection.addPart(fileName + "_mesh.vtp",m,"mesh",p);
+                    collection.addTimestep(fileName,p,m,"_mesh.vtp");
             }
         }
         collection.save();
