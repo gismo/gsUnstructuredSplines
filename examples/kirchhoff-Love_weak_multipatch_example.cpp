@@ -23,15 +23,7 @@
 #include <gsKLShell/src/gsMaterialMatrixLinear.h>
 #include <gsKLShell/src/gsFunctionSum.h>
 
-#include <gsUtils/gsQuasiInterpolate.h>
-
-
-#include <gsAssembler/gsExprAssembler.h>
-
-#include <gsStructuralAnalysis/gsStructuralAnalysisUtils.h>
-
 using namespace gismo;
-
 
 int main(int argc, char *argv[])
 {
@@ -215,7 +207,7 @@ int main(int argc, char *argv[])
     // for (size_t p = 0; p!=mp.nPatches(); ++p)
     //     gsDebugVar(mp.patch(p));
 
-    std::vector<gsFunction<>*> parameters(2);
+    std::vector<gsFunctionSet<>*> parameters(2);
     parameters[0] = &E;
     parameters[1] = &nu;
 
@@ -435,15 +427,16 @@ int main(int argc, char *argv[])
     if (stress)
     {
         gsPiecewiseFunction<> membraneStresses;
-        assembler.constructStress(mp_def,membraneStresses,stress_type::membrane);
-        gsField<> membraneStress(mp_def,membraneStresses, true);
+        assembler.constructStress(mp,mp_def,membraneStresses,stress_type::membrane);
+        gsWriteParaview(mp,membraneStresses,"MembraneStress",5000);
+
+        gsPiecewiseFunction<> membraneStressesVM;
+        assembler.constructStress(mp,mp_def,membraneStressesVM,stress_type::von_mises_membrane);
+        gsWriteParaview(mp,membraneStressesVM,"MembraneStressVM",5000);
 
         gsPiecewiseFunction<> flexuralStresses;
-        assembler.constructStress(mp_def,flexuralStresses,stress_type::flexural);
-        gsField<> flexuralStress(mp_def,flexuralStresses, true);
-
-        gsWriteParaview(membraneStress,"MembraneStress",1000);
-        gsWriteParaview(flexuralStress,"FlexuralStress",1000);
+        assembler.constructStress(mp,mp_def,flexuralStresses,stress_type::flexural);
+        gsWriteParaview(mp,flexuralStresses,"FlexuralStress",5000);
     }
     return EXIT_SUCCESS;
 }

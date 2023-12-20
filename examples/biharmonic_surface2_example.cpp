@@ -381,7 +381,9 @@ namespace gismo{
 
             var1_expr(const E & u, const gsGeometryMap<Scalar> & G) : _u(u), _G(G) { }
 
+#           define Eigen gsEigen
             EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+#           undef Eigen
 
             const gsMatrix<Scalar> & eval(const index_t k) const {return eval_impl(_u,k); }
 

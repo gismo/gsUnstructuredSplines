@@ -15,8 +15,6 @@
 
 #include <gsKLShell/src/gsThinShellAssembler.h>
 #include <gsKLShell/src/gsMaterialMatrixLinear.h>
-#include <gsKLShell/src/gsThinShellUtils.h>
-#include <gsStructuralAnalysis/gsStructuralAnalysisUtils.h>
 
 using namespace gismo;
 
@@ -105,7 +103,7 @@ int main(int argc, char *argv[])
 
     bc.setGeoMap(mp);
 
-    if ((plot || write) && !dirname.empty())
+    if ((plot) && !dirname.empty())
     {
         std::string commands = "mkdir -p " + dirname;
         const char *command = commands.c_str();
@@ -208,7 +206,7 @@ int main(int argc, char *argv[])
         gsInfo <<"Basis "<<p<<": "<< dbasis.basis(0)<<"\n";
 
     //! [Make assembler]
-    std::vector<gsFunction<>*> parameters(2);
+    std::vector<gsFunctionSet<>*> parameters(2);
     parameters[0] = &E;
     parameters[1] = &nu;
 

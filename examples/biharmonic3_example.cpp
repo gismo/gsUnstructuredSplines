@@ -314,7 +314,7 @@ int main(int argc, char *argv[])
     index_t method = 0;
 
     index_t numRefine  = 3;
-    index_t numRefineIni  = 0;
+    index_t numRefineIni  = 1;
     index_t degree = 3;
     index_t smoothness = 2;
 
@@ -330,7 +330,7 @@ int main(int argc, char *argv[])
 
     bool project    = false;
 
-    index_t PiMat = 0;
+    index_t PiMat = 1;
 
     real_t penalty_init = -1.0;
     std::string xml;

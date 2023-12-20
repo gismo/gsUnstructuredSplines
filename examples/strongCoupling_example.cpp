@@ -25,15 +25,7 @@
 #include <gsKLShell/src/gsMaterialMatrixIntegrate.h>
 #include <gsKLShell/src/gsFunctionSum.h>
 
-#include <gsUtils/gsQuasiInterpolate.h>
-
-
-#include <gsAssembler/gsExprAssembler.h>
-
-#include <gsStructuralAnalysis/gsStructuralAnalysisUtils.h>
-
-#include <gsKLShell/src/gsThinShellUtils.h>
-
+#include <gsStructuralAnalysis/src/gsStructuralAnalysisTools/gsStructuralAnalysisUtils.h>
 
 using namespace gismo;
 
@@ -260,7 +252,7 @@ int main(int argc, char *argv[])
     for (size_t p = 0; p!=mp.nPatches(); ++p)
         gsDebugVar(mp.basis(p));
 
-    std::vector<gsFunction<>*> parameters(2);
+    std::vector<gsFunctionSet<>*> parameters(2);
     parameters[0] = &E;
     parameters[1] = &nu;
 
@@ -582,20 +574,20 @@ int main(int argc, char *argv[])
     if (write)
     {
         std::vector<std::string> headers = {"u_x","u_y","u_z"};
-        gsStaticOutput<real_t> ptsWriter(dirname + "pointcoordinates.csv",refPoints);
+        gsStructuralAnalysisOutput<real_t> ptsWriter(dirname + "pointcoordinates.csv",refPoints);
         ptsWriter.init(headers);
         gsMatrix<> pointResults(mp.geoDim(),refPoints.cols());
         for (index_t p=0; p!=refPoints.cols(); p++)
             pointResults.col(p) = mp.piece(refPatches(0,p)).eval(refPoints.col(p));
         ptsWriter.add(pointResults);
 
-        gsStaticOutput<real_t> numWriter(dirname + "numerical.csv",refPoints);
+        gsStructuralAnalysisOutput<real_t> numWriter(dirname + "numerical.csv",refPoints);
         numWriter.init(headers);
         for (index_t p=0; p!=refPoints.cols(); p++)
             pointResults.col(p) = solField.value(refPoints.col(p),refPatches(0,p));
         numWriter.add(pointResults);
 
-        gsStaticOutput<real_t> refWriter(dirname + "reference.csv",refPoints);
+        gsStructuralAnalysisOutput<real_t> refWriter(dirname + "reference.csv",refPoints);
         refWriter.init(headers);
         refWriter.add(refValue);
     }

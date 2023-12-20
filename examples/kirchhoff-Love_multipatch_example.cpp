@@ -29,8 +29,6 @@
 
 #include <gsAssembler/gsExprAssembler.h>
 
-#include <gsStructuralAnalysis/gsStructuralAnalysisUtils.h>
-
 using namespace gismo;
 
 int main(int argc, char *argv[])
@@ -226,7 +224,7 @@ int main(int argc, char *argv[])
 
     if (plot) gsWriteParaview(mp,"mp",1000,true,false);
 
-    std::vector<gsFunction<>*> parameters(2);
+    std::vector<gsFunctionSet<>*> parameters(2);
     parameters[0] = &E;
     parameters[1] = &nu;
 
@@ -622,7 +620,7 @@ int main(int argc, char *argv[])
     }
 
     //! [Export visualization in ParaView]
-    if (plot)
+    if (plot || stress)
     {
         /// Make a gsMappedSpline to represent the solution
         // 1. Get all the coefficients (including the ones from the eliminated BCs.)
@@ -637,30 +635,42 @@ int main(int argc, char *argv[])
 
         gsFunctionSum<real_t> def(&mp,&mspline);
 
-        // 4. Plot the mapped spline on the original geometry
-        gsField<> solField(geom, mspline,true);
-        gsInfo<<"Plotting in Paraview...\n";
-        gsWriteParaview<>( solField, "Deformation", 1000, true);
-
-        // 5. Plot the mapped spline on the deformed geometry
-        gsField<> defField(geom, def,true);
-        gsInfo<<"Plotting in Paraview...\n";
-        gsWriteParaview<>( defField, "mp_def", 1000, true);
-
-        // QUASI INTERPOLATION
-        // /*
-
-        // gsMultiPatch<> mpatches = mbasis.exportToPatches(tmp);
-        gsMultiPatch<> mp2;
-        for (size_t p = 0; p!=mp.nPatches(); p++)
+        if (plot)
         {
-            gsMatrix<> coefs;
-            gsQuasiInterpolate<real_t>::localIntpl(mp.basis(p), mspline.piece(p), coefs);
-            mp2.addPatch(mp.basis(p).makeGeometry( give(coefs) ));
+            // 4. Plot the mapped spline on the original geometry
+            gsField<> solField(geom, mspline,true);
+            gsInfo<<"Plotting in Paraview...\n";
+            gsWriteParaview<>( solField, "Deformation", 1000, true);
+
+            // 5. Plot the mapped spline on the deformed geometry
+            gsField<> defField(geom, def,true);
+            gsInfo<<"Plotting in Paraview...\n";
+            gsWriteParaview<>( defField, "mp_def", 1000, true);
+        }
+        if (stress)
+        {
+            gsMatrix<real_t> solZero = solFull;
+            solZero.setZero();
+
+            gsMappedSpline<2,real_t> mspline_ori(bb2,solZero);
+            gsMappedSpline<2,real_t> mspline_def(bb2,solFull);
+
+            gsFunctionSum<real_t> ori(&geom,&mspline_ori);
+            gsFunctionSum<real_t> def(&geom,&mspline_def);
+
+            gsPiecewiseFunction<> membraneStresses;
+            assembler.constructStress(ori,def,membraneStresses,stress_type::membrane);
+            gsWriteParaview(ori,membraneStresses,"MembraneStress",5000);
+
+            gsPiecewiseFunction<> membraneStressesVM;
+            assembler.constructStress(ori,def,membraneStressesVM,stress_type::von_mises_membrane);
+            gsWriteParaview(ori,membraneStressesVM,"MembraneStressVM",5000);
+
+            gsPiecewiseFunction<> flexuralStresses;
+            assembler.constructStress(ori,def,flexuralStresses,stress_type::flexural);
+            gsWriteParaview(geom,flexuralStresses,"FlexuralStress",5000);
         }
 
-        gsField<> solfield(mp,mp2,true);
-        gsWriteParaview(solfield,"solfield");
     }
     //! [Export visualization in ParaView]
 

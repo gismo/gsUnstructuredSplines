@@ -24,17 +24,9 @@
 #include <gsKLShell/src/gsMaterialMatrixLinear.h>
 #include <gsKLShell/src/gsFunctionSum.h>
 
+#ifdef GISMO_WITH_SPECTRA
 #include <gsSpectra/gsSpectra.h>
-
-#include <gsUtils/gsQuasiInterpolate.h>
-
-
-#include <gsAssembler/gsExprAssembler.h>
-
-#include <gsStructuralAnalysis/gsStructuralAnalysisUtils.h>
-
-#include <gsKLShell/src/gsThinShellUtils.h>
-
+#endif
 
 using namespace gismo;
 
@@ -234,7 +226,7 @@ int main(int argc, char *argv[])
         gsWriteParaview(mp,out + "/" + "mp",10,true,false);
     }
 
-    std::vector<gsFunction<>*> parameters(2);
+    std::vector<gsFunctionSet<>*> parameters(2);
     parameters[0] = &E;
     parameters[1] = &nu;
 
@@ -388,7 +380,7 @@ int main(int argc, char *argv[])
     gsInfo<<"Computing Eigenmodes..."<<std::flush;
     if (dense)
     {
-        Eigen::GeneralizedSelfAdjointEigenSolver< typename gsMatrix<>::Base >  eigSolver;
+        gsEigen::GeneralizedSelfAdjointEigenSolver< typename gsMatrix<>::Base >  eigSolver;
         eigSolver.compute(K_L,dK);
         values = eigSolver.eigenvalues();
         vectors = eigSolver.eigenvectors();

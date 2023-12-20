@@ -24,18 +24,6 @@
 #include <gsKLShell/src/gsMaterialMatrixLinear.h>
 #include <gsKLShell/src/gsFunctionSum.h>
 
-#include <gsSpectra/gsSpectra.h>
-
-#include <gsUtils/gsQuasiInterpolate.h>
-
-
-#include <gsAssembler/gsExprAssembler.h>
-
-#include <gsStructuralAnalysis/gsStructuralAnalysisUtils.h>
-
-#include <gsKLShell/src/gsThinShellUtils.h>
-
-
 using namespace gismo;
 
 int main(int argc, char *argv[])
@@ -228,7 +216,7 @@ int main(int argc, char *argv[])
 
     if (plotGeo) gsWriteParaview(geom,"geom",1000,true,false);
 
-    std::vector<gsFunction<>*> parameters(2);
+    std::vector<gsFunctionSet<>*> parameters(2);
     parameters[0] = &E;
     parameters[1] = &nu;
 
@@ -457,26 +445,26 @@ int main(int argc, char *argv[])
         assembler.constructStress(ori,def,flexuralStresses,stress_type::flexural);
         gsWriteParaview(geom,flexuralStresses,"FlexuralStress",5000);
     }
-    if (write)
-    {
-        std::vector<std::string> headers = {"u_x","u_y","u_z"};
-        gsStaticOutput<real_t> ptsWriter("pointcoordinates.csv",refPoints);
-        ptsWriter.init(headers);
-        gsMatrix<> pointResults(geom.geoDim(),refPoints.cols());
-        for (index_t p=0; p!=refPoints.cols(); p++)
-            pointResults.col(p) = geom.piece(refPatches(0,p)).eval(refPoints.col(p));
-        ptsWriter.add(pointResults);
+    // if (write)
+    // {
+    //     std::vector<std::string> headers = {"u_x","u_y","u_z"};
+    //     gsStaticOutput<real_t> ptsWriter("pointcoordinates.csv",refPoints);
+    //     ptsWriter.init(headers);
+    //     gsMatrix<> pointResults(geom.geoDim(),refPoints.cols());
+    //     for (index_t p=0; p!=refPoints.cols(); p++)
+    //         pointResults.col(p) = geom.piece(refPatches(0,p)).eval(refPoints.col(p));
+    //     ptsWriter.add(pointResults);
 
-        gsStaticOutput<real_t> numWriter("numerical.csv",refPoints);
-        numWriter.init(headers);
-        for (index_t p=0; p!=refPoints.cols(); p++)
-            pointResults.col(p) = solField.value(refPoints.col(p),refPatches(0,p));
-        numWriter.add(pointResults);
+    //     gsStaticOutput<real_t> numWriter("numerical.csv",refPoints);
+    //     numWriter.init(headers);
+    //     for (index_t p=0; p!=refPoints.cols(); p++)
+    //         pointResults.col(p) = solField.value(refPoints.col(p),refPatches(0,p));
+    //     numWriter.add(pointResults);
 
-        gsStaticOutput<real_t> refWriter("reference.csv",refPoints);
-        refWriter.init(headers);
-        refWriter.add(refValue);
-    }
+    //     gsStaticOutput<real_t> refWriter("reference.csv",refPoints);
+    //     refWriter.init(headers);
+    //     refWriter.add(refValue);
+    // }
     //! [Export visualization in ParaView]
 
     return EXIT_SUCCESS;
