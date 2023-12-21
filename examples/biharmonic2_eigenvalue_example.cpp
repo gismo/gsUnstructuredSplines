@@ -228,7 +228,7 @@ int main(int argc, char *argv[])
     // gsMatrix<> values  = solver.eigenvalues();
     // gsMatrix<> vectors = solver.eigenvectors();
 
-    gsEigen::gsEigen::GeneralizedSelfAdjointEigenSolver< gsEigen::MatrixXd >  eigSolver;
+    gsEigen::GeneralizedSelfAdjointEigenSolver< typename gsMatrix<>::Base >  eigSolver;
     eigSolver.compute(K,M);
     gsMatrix<> values  = eigSolver.eigenvalues();
     gsMatrix<> vectors = eigSolver.eigenvectors();
