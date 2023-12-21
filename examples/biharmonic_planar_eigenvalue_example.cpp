@@ -32,11 +32,11 @@ using namespace gismo;
  */
 enum MethodFlags
 {
-    DPATCH       = 1, // D-Patch
-    APPROXC1     = 2, // Approx C1 Method
-    SURFASG1     = 3, // AS-G1
-    ALMOSTC1     = 4, // Almost C1
-    NITSCHE      = 5, // Nitsche
+    DPATCH         = 1, // D-Patch
+    APPROXC1       = 2, // Approx C1 Method
+    SURFASG1       = 3, // AS-G1
+    ALMOSTC1       = 4, // Almost C1
+    NITSCHE        = 5, // Nitsche
     // Add more [...]
 };
 

@@ -37,11 +37,11 @@ using namespace gismo;
  */
 enum MethodFlags
 {
-    APPROXC1       = 0, // Approx C1 Method
     DPATCH         = 1, // D-Patch
-    ALMOSTC1       = 2, // Almost C1
-    NITSCHE        = 3, // Nitsche
-    SURFASG1       = 5, // AS-G1
+    APPROXC1       = 2, // Approx C1 Method
+    SURFASG1       = 3, // AS-G1
+    ALMOSTC1       = 4, // Almost C1
+    NITSCHE        = 5, // Nitsche
     // Add more [...]
 };
 
@@ -95,7 +95,6 @@ int main(int argc, char *argv[])
     std::string output;
     std::string write;
     std::string assemberOptionsFile("options/assembler_options.xml");
-    std::string geometry = "g1000";
 
     std::string fn;
 
@@ -114,7 +113,6 @@ int main(int argc, char *argv[])
 
     // Flags related to the input/geometry
     cmd.addString( "f", "file", "Input geometry file from path (with .xml)", fn );
-    cmd.addString( "g", "geometry", "Input geometry file",  geometry );
     cmd.addString("x", "xml", "Use the input from the xml file", xml);
 
     // Flags related to the discrete settings
@@ -164,16 +162,11 @@ int main(int argc, char *argv[])
     //! [Initialize data]
 
     //! [Read Argument inputs]
-    if (xml.empty()) {
+    if (xml.empty() && !fn.empty())
+    {
         //! [Read geometry]
-        std::string string_geo;
-        if (fn.empty())
-            string_geo = "planar/geometries/" + geometry + ".xml";
-        else
-            string_geo = fn;
-
-        gsInfo << "Filedata: " << string_geo << "\n";
-        gsReadFile<>(string_geo, mp);
+        gsInfo << "Filedata: " << fn << "\n";
+        gsReadFile<>(fn, mp);
         mp.clearTopology();
         mp.fixOrientation();
         mp.computeTopology();
@@ -222,10 +215,7 @@ int main(int argc, char *argv[])
 
         gsInfo << "Finished\n";
     }
-    //! [Read Argument inputs]
-
-    //! [Read XML file]
-    else
+    else if (!xml.empty())
     {
         // id=0 Boundary
         // id=1 Source function
@@ -270,6 +260,8 @@ int main(int argc, char *argv[])
         mesh = optionList.getSwitch("mesh");
         interpolation = optionList.getSwitch("interpolation");
     }
+    else
+        GISMO_ERROR("No XML file provided and no geometry file provided!");
 
     //! [Read XML file]
 

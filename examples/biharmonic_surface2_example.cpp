@@ -27,12 +27,12 @@
  */
 enum MethodFlags
 {
-    APPROXC1       = 0, // Approx C1 Method
     DPATCH         = 1, // D-Patch
-    ALMOSTC1       = 2, // Almost C1
-    NITSCHE        = 3, // Nitsche
-    SPLINE         = 4, // Spline (only for single patch)
-    SURFASG1       = 5, // Only for AS-G1 geometries
+    APPROXC1       = 2, // Approx C1 Method
+    SURFASG1       = 3, // Only for AS-G1 geometries
+    ALMOSTC1       = 4, // Almost C1
+    NITSCHE        = 5, // Nitsche
+    SPLINE         = 6, // Spline (only for single patch)
     // Add more [...]
 };
 
