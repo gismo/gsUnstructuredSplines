@@ -869,15 +869,15 @@ namespace gismo
     void gsDPatchBase<d,T>::_performChecks(bool basis)
     {
         bool checkSides = std::all_of(m_sideCheck.begin(), m_sideCheck.end(), [](bool m_sideCheck) { return m_sideCheck; });
-        GISMO_ASSERT(checkSides,"Not all sides are checked");
+        GISMO_ENSURE(checkSides,"Not all sides are checked");
         bool checkVerts = std::all_of(m_vertCheck.begin(), m_vertCheck.end(), [](bool m_vertCheck) { return m_vertCheck; });
-        GISMO_ASSERT(checkVerts,"Not all vertices are checked");
+        GISMO_ENSURE(checkVerts,"Not all vertices are checked");
 
         if (!basis)
             return;
 
         bool checkBasis = std::all_of(m_basisCheck.begin(), m_basisCheck.end(), [](bool m_basisCheck) { return m_basisCheck; });
-        GISMO_ASSERT(checkBasis,"Not all basis functions are checked");
+        GISMO_ENSURE(checkBasis,"Not all basis functions are checked");
     }
 
     template<short_t d,class T>

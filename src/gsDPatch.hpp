@@ -394,7 +394,7 @@ namespace gismo
                         patches.insert(std::make_pair(side.patch,i));
                         corners[i] = corner;
                         bool isInterface = m_topology.getInterface(side,interfaces[i]);
-                        GISMO_ASSERT(isInterface,"Side must be an interface!");
+                        GISMO_ENSURE(isInterface,"Side must be an interface!");
 
                         std::vector<boxCorner> adjcorners;
                         m_topology.getNeighbour(side,otherSide);
@@ -407,7 +407,7 @@ namespace gismo
                                 otherCorner = patchCorner(otherSide.patch,adjcorners[1]);
                             else continue;
                         }
-                        GISMO_ASSERT(otherCorner!=patchCorner(0,0),"Error");
+                        GISMO_ENSURE(otherCorner!=patchCorner(0,0),"Error");
 
                         // interfaces[i] = boundaryInterface(side,otherSide,d);
                         // GISMO_ASSERT(corners[i].patch==interfaces[i].first().patch,"Must be true");
