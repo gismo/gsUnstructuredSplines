@@ -181,9 +181,8 @@ int main(int argc, char *argv[])
 
     real_t penalty_init = -1.0;
     std::string output;
-    std::string geometry = "g1000";
 
-    std::string fn;
+    std::string fn = "planar/1p_square.xml";
 
     gsCmdLine cmd("Tutorial on solving a Biharmonic problem with different spaces.");
     // Flags related to the method (default: Approx C1 method)
@@ -191,7 +190,6 @@ int main(int argc, char *argv[])
 
     // Flags related to the input/geometry
     cmd.addString( "f", "file", "Input geometry file from path (with .xml)", fn );
-    cmd.addString( "g", "geometry", "Input geometry file",  geometry );
 
     // Flags related to the discrete settings
     cmd.addInt( "p", "degree", "Set the polynomial degree of the basis.", degree );
@@ -231,13 +229,10 @@ int main(int argc, char *argv[])
     //! [Read Argument inputs]
     //! [Read geometry]
     std::string string_geo;
-    if (fn.empty())
-        string_geo = "planar/geometries/" + geometry + ".xml";
-    else
-        string_geo = fn;
+    GISMO_ENSURE(!fn.empty(),"No XML file provided and no geometry file provided!");
 
-    gsInfo << "Filedata: " << string_geo << "\n";
-    gsReadFile<>(string_geo, mp);
+    gsInfo << "Filedata: " << fn << "\n";
+    gsReadFile<>(fn, mp);
     mp.clearTopology();
     mp.computeTopology();
     gsMultiBasis<real_t> dbasis(mp, false);//true: poly-splines (not NURBS)
@@ -255,14 +250,14 @@ int main(int argc, char *argv[])
             mp.uniformRefine(1, degree-smoothness);
     }
 
-    // Assume that the condition holds for each patch TODO
-    // Refine once
-    if (mp.basis(0).numElements() < 4)
-    {
-        dbasis.uniformRefine(1, degree-smoothness);
-        if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1 || method == MethodFlags::SURFASG1)
-            mp.uniformRefine(1, degree-smoothness);
-    }
+    // // Assume that the condition holds for each patch TODO
+    // // Refine once
+    // if (mp.basis(0).numElements() < 4)
+    // {
+    //     dbasis.uniformRefine(1, degree-smoothness);
+    //     if (method == MethodFlags::DPATCH || method == MethodFlags::ALMOSTC1 || method == MethodFlags::SURFASG1)
+    //         mp.uniformRefine(1, degree-smoothness);
+    // }
 
     //! [Refinement]
 
@@ -287,15 +282,6 @@ int main(int argc, char *argv[])
 #ifdef _OPENMP
     gsInfo<< "Available threads: "<< omp_get_max_threads() <<"\n";
 #endif
-
-
-    if (geometry == "g1012")
-    {
-        gsInfo << "ATTENTION: Patch 0 is one time uniform refined \n";
-        dbasis.basis(0).component(1).uniformRefine(1);
-        mp.basis(0).component(1).uniformRefine(1);
-    }
-
 
 //    gsWriteParaview(mp, "geom", 2000);
 //

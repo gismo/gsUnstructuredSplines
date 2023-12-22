@@ -11,6 +11,7 @@
     Author(s): H.M. Verhelst
 */
 
+#include <gsNurbs/gsTensorNurbsBasis.h>
 #include <gsHSplines/gsHTensorBasis.h>
 #include <gsHSplines/gsTHBSpline.h>
 
@@ -280,7 +281,9 @@ namespace gismo
     const index_t gsDPatchBase<d,T>::_indexFromVert(const gsBasis<T> * basis, const index_t index, const patchCorner corner, const patchSide side, const index_t offset) const
     {
         const gsTensorBSplineBasis<d,T> * tbbasis;
+        const gsTensorNurbsBasis<d,T> * tnbasis;
         const gsHTensorBasis<d,T> * thbasis;
+
         if ((index==0) && (offset==0))
         {
             // gsHTensorBasis<d,T> *basis = dynamic_cast<gsHTensorBasis<d,T>*>(&bases.basis(corner.patch));
@@ -291,12 +294,15 @@ namespace gismo
         {
             if ((tbbasis = dynamic_cast<const gsTensorBSplineBasis<d,T> * >(basis)))
                 return _indexFromVert_impl(tbbasis,index,corner,side,offset);
+            else if ((tnbasis = dynamic_cast<const gsTensorNurbsBasis<d,T> * >(basis)))
+                return _indexFromVert_impl(&tnbasis->source(),index,corner,side,offset);
             else if ((thbasis = dynamic_cast<const gsHTensorBasis<d,T> * >(basis)))
                 return _indexFromVert_impl(thbasis,index,corner,side,offset);
             else
                 GISMO_ERROR("Basis type unknown");
         }
     }
+
     template<short_t d,class T>
     template<class U>
     typename util::enable_if<util::is_same<U,   const gsTensorBSplineBasis<d,T> *>::value,

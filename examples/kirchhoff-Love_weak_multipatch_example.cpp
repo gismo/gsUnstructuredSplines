@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
     bool homogeneous= false;
 
     index_t numRefine  = 0;
-    index_t numRefine0 = 1;
+    index_t numRefine0 = 0;
     index_t degree = 3;
     index_t smoothness = 2;
 
@@ -52,7 +52,6 @@ int main(int argc, char *argv[])
     fn3 = "options/solver_options.xml";
 
     real_t ifcDirichlet = 1.0;
-    real_t ifcClamped = 1.0;
 
     std::string dirname = ".";
 
@@ -61,7 +60,6 @@ int main(int argc, char *argv[])
     cmd.addReal( "C", "ClaBc", "Clamped BC penalty scalar",  bcClamped );
 
     cmd.addReal( "d", "DirIfc", "Dirichlet penalty scalar",  ifcDirichlet );
-    cmd.addReal( "c", "ClaIfc", "Clamped penalty scalar",  ifcClamped );
 
     cmd.addString( "G", "geom","File containing the geometry",  fn1 );
     cmd.addString( "B", "bvp", "File containing the Boundary Value Problem (BVP)",  fn2 );
@@ -267,8 +265,7 @@ int main(int argc, char *argv[])
         assembler.options().setReal("WeakClamped",bcClamped);
         // Set the penalty parameter for the interface C1 continuity
         assembler.options().setInt("Continuity",-1);
-        assembler.options().setReal("IfcDirichlet",ifcDirichlet);
-        assembler.options().setReal("IfcClamped",ifcClamped);
+        assembler.options().setReal("IfcPenalty",ifcDirichlet);
         assembler.addWeakC0(mp.topology().interfaces());
         assembler.addWeakC1(mp.topology().interfaces());
         assembler.initInterfaces();
@@ -404,6 +401,7 @@ int main(int argc, char *argv[])
         {
             buffer<<std::setprecision(12)<<","<<refs(k,3*p)<<","<<refs(k,3*p+1)<<","<<refs(k,3*p+2);
         }
+        buffer<<","<<DisplacementNorm[k]<<","<<EnergyNorm[k];
         buffer<<"\n";
     }
     gsInfo<<buffer.str();

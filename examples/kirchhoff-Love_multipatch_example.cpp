@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     index_t smoothness = 2;
 
     real_t bcDirichlet = 1e3;
-    real_t bcClamped = 1e3;
+    real_t bcClamped = 1e13;
 
     std::string fn1,fn2,fn3;
     fn1 = "pde/2p_square_geom.xml";
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     std::string write = "solution.csv";
 
     index_t method = 0;
-    index_t PiMat = 0;
+    index_t PiMat = 1;
     real_t beta = 0.4;
 
     gsCmdLine cmd("Composite basis tests.");
