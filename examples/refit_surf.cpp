@@ -19,9 +19,6 @@
 #include <gsUnstructuredSplines/src/gsDPatch.h>
 #include <gsUnstructuredSplines/src/gsAlmostC1.h>
 #include <gsUnstructuredSplines/src/gsC1SurfSpline.h>
-#ifdef GISMO_WITH_SPECTRA
-#include <gsSpectra/gsSpectra.h>
-#endif
 #include <gsUtils/gsL2Projection.h>
 using namespace gismo;
 //! [Include namespace]
