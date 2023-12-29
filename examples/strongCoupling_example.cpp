@@ -9,6 +9,7 @@
     file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
     Author(s): H.M.Verhelst (2019 - ..., TU Delft)
+               A. Farahat   (2019 - 2023, RICAM Linz)
 */
 
 #include <gismo.h>

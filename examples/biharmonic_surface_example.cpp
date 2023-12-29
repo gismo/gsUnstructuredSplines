@@ -1,6 +1,7 @@
-/** @file biharmonic_example.cpp
+/** @file biharmonic_surface_example.cpp
 
-    @brief A Biharmonic example for a single patch.
+    @brief Tutorial on how to use expression assembler and 
+                gsUnstructuredSplines to solve the Surface Biharmonic equation
 
     This file is part of the G+Smo library.
 
@@ -8,7 +9,8 @@
     License, v. 2.0. If a copy of the MPL was not distributed with this
     file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-    Author(s): P. Weinmueller
+    Author(s): P. Weinmueller,
+               H.M Verhelst
 */
 
 # include <gismo.h>

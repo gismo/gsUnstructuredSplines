@@ -1,6 +1,6 @@
-/** @file strongCoupling_Error_example.cpp
+/** @file kirchhoff-Love_multipatch_example.cpp
 
-    @brief TODO
+    @brief Multi-patch analysis of Kirchhoff-Love using gsUnstructuredSplines
 
     This file is part of the G+Smo library.
 
@@ -21,9 +21,9 @@
 #include <gsUnstructuredSplines/src/gsC1SurfSpline.h>
 
 #ifdef gsKLShell_ENABLED
-#include <gsKLShell/src/gsThinShellAssembler.h>
 #include <gsKLShell/src/gsMaterialMatrixLinear.h>
 #include <gsKLShell/src/gsFunctionSum.h>
+#include <gsKLShell/src/gsThinShellAssembler.h>
 #endif
 
 using namespace gismo;
@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
     index_t PiMat = 1;
     real_t beta = 0.4;
 
-    gsCmdLine cmd("Composite basis tests.");
+    gsCmdLine cmd("Multi-patch analysis of Kirchhoff-Love using gsUnstructuredSplines.");
     cmd.addReal( "D", "Dir", "Dirichlet BC penalty scalar",  bcDirichlet );
     cmd.addReal( "C", "Cla", "Clamped BC penalty scalar",  bcClamped );
 

@@ -1,6 +1,6 @@
-/** @file example_shell3D.cpp
+/** @file kirchhoff-Love_weak_multipatch_vibration_example.cpp
 
-    @brief Simple 3D examples for the shell class
+    @brief Multi-patch vibration analysis of Kirchhoff-Love using penalty methods
 
     This file is part of the G+Smo library.
 
@@ -9,13 +9,16 @@
     file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
     Author(s): H.M.Verhelst (2019 - ..., TU Delft)
+               A. Farahat   (2019 - 2023, RICAM Linz)
 */
 
 #include <gismo.h>
 
+#ifdef gsKLShell_ENABLED
 #include <gsKLShell/src/gsThinShellAssembler.h>
 #include <gsKLShell/src/gsMaterialMatrixLinear.h>
 #include <gsKLShell/src/gsThinShellUtils.h>
+#endif
 
 #ifdef gsSpectra_ENABLED
 #include <gsSpectra/gsSpectra.h>
@@ -23,7 +26,7 @@
 
 using namespace gismo;
 
-// Choose among various shell examples, default = Thin Plate
+#ifdef gsKLShell_ENABLED
 int main(int argc, char *argv[])
 {
     //! [Parse command line]
@@ -306,3 +309,10 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
 
 }// end main
+#else
+int main(int argc, char *argv[])
+{
+    GISMO_ERROR("G+Smo is not compiled with the gsKLShell module.");
+    return EXIT_FAILURE;
+}
+#endif

@@ -1,6 +1,6 @@
-/** @file TODO
+/** @file kirchhoff-Love_multipatch_vibration_example.cpp
 
-    @brief File testing the gsCompositeBasis class.
+    @brief Multi-patch vibration analysis of Kirchhoff-Love using gsUnstructuredSplines
 
     This file is part of the G+Smo library.
 
@@ -8,7 +8,8 @@
     License, v. 2.0. If a copy of the MPL was not distributed with this
     file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-    Author(s): F. Buchegger
+    Author(s): H.M.Verhelst (2019 - ..., TU Delft)
+               A. Farahat   (2019 - 2023, RICAM Linz)
 */
 
 #include <gismo.h>
@@ -20,9 +21,11 @@
 #include <gsUnstructuredSplines/src/gsApproxC1Spline.h>
 #include <gsUnstructuredSplines/src/gsC1SurfSpline.h>
 
+#ifdef gsKLShell_ENABLED
 #include <gsKLShell/src/gsThinShellAssembler.h>
 #include <gsKLShell/src/gsMaterialMatrixLinear.h>
 #include <gsKLShell/src/gsFunctionSum.h>
+#endif
 
 #ifdef gsSpectra_ENABLED
 #include <gsSpectra/gsSpectra.h>
@@ -30,6 +33,7 @@
 
 using namespace gismo;
 
+#ifdef gsKLShell_ENABLED
 int main(int argc, char *argv[])
 {
     bool plot       = false;
@@ -441,3 +445,10 @@ int main(int argc, char *argv[])
 
 
 }
+#else
+int main(int argc, char *argv[])
+{
+    GISMO_ERROR("G+Smo is not compiled with the gsKLShell module.");
+    return EXIT_FAILURE;
+}
+#endif

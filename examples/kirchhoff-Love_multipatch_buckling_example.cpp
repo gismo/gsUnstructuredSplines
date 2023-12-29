@@ -1,6 +1,6 @@
-/** @file TODO
+/** @file kirchhoff-Love_multipatch_buckling_example.cpp
 
-    @brief TODO
+    @brief Multi-patch buckling analysis of Kirchhoff-Love using gsUnstructuredSplines
 
     This file is part of the G+Smo library.
 
@@ -8,7 +8,7 @@
     License, v. 2.0. If a copy of the MPL was not distributed with this
     file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-    Author(s): TODO
+    Author(s): H.M. Verhelst
 */
 
 #include <gismo.h>

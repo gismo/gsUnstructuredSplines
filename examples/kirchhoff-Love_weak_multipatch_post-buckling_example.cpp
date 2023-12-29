@@ -1,6 +1,6 @@
-/** @file gsCompositeBasis_test.h
+/** @file kirchhoff-Love_weak_multipatch_post-buckling_example.cpp
 
-    @brief File testing the gsCompositeBasis class.
+    @brief Multi-patch post-buckling analysis of Kirchhoff-Love using penalty methods
 
     This file is part of the G+Smo library.
 
@@ -8,22 +8,26 @@
     License, v. 2.0. If a copy of the MPL was not distributed with this
     file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-    Author(s): F. Buchegger
+    Author(s): H.M.Verhelst (2019 - ..., TU Delft)
+               A. Farahat   (2019 - 2023, RICAM Linz)
 */
 
 #include <gismo.h>
 
+#ifdef gsKLShell_ENABLED
 #include <gsKLShell/src/gsThinShellAssembler.h>
 #include <gsKLShell/src/gsMaterialMatrixLinear.h>
 #include <gsKLShell/src/gsFunctionSum.h>
+#endif
 
+#ifdef gsStructuralAnalysis_ENABLED
 #include <gsStructuralAnalysis/src/gsALMSolvers/gsALMBase.h>
 #include <gsStructuralAnalysis/src/gsALMSolvers/gsALMRiks.h>
 #include <gsStructuralAnalysis/src/gsALMSolvers/gsALMLoadControl.h>
 #include <gsStructuralAnalysis/src/gsALMSolvers/gsALMCrisfield.h>
 #include <gsStructuralAnalysis/src/gsALMSolvers/gsALMConsistentCrisfield.h>
-
 #include <gsStructuralAnalysis/src/gsStructuralAnalysisTools/gsStructuralAnalysisUtils.h>
+#endif
 
 #ifdef gsSpectra_ENABLED
 #include <gsSpectra/gsSpectra.h>
@@ -31,6 +35,8 @@
 
 using namespace gismo;
 
+#ifdef gsKLShell_ENABLED
+#ifdef gsStructuralAnalysis_ENABLED
 int main(int argc, char *argv[])
 {
 // #ifndef GISMO_STRUCTURALANALYSIS
@@ -621,3 +627,17 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
 // #endif
 }
+#else//gsStructuralAnalysis
+int main(int argc, char *argv[])
+{
+    gsWarn<<"G+Smo is not compiled with the gsUnstructuredSplines module.";
+    return EXIT_FAILURE;
+}
+#endif
+#else//gsKLShell_ENABLED
+int main(int argc, char *argv[])
+{
+    gsWarn<<"G+Smo is not compiled with the gsKLShell module.";
+    return EXIT_FAILURE;
+}
+#endif

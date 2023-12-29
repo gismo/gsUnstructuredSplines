@@ -1,4 +1,4 @@
-/** @file biharmonic2_example.cpp
+/** @file biharmonic_planar_eigenvalue_example.cpp
 
     @brief Tutorial on how to use expression assembler and the (approx.) C1 basis function
                 to solve the Biharmonic equation
@@ -9,7 +9,8 @@
     License, v. 2.0. If a copy of the MPL was not distributed with this
     file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-    Author(s): P. Weinmueller
+    Author(s): P. Weinmueller,
+               H.M Verhelst
 */
 
 //! [Include namespace]
