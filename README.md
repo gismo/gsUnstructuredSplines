@@ -39,14 +39,14 @@ The `gsUnstructuredSplines` module provides ready-to-use unstructured spline con
   > Farahat, A., Jüttler, B., Kapl, M., & Takacs, T. (2023). Isogeometric analysis with C1-smooth functions over multi-patch surfaces. [***Computer Methods in Applied Mechanics and Engineering***, 403, 115706.](https://doi.org/10.1016/j.cma.2022.115706)
 
 - **Almost - $C^1$** (`gsAlmostC1`)
+  > Takacs, T. & Toshniwal, D. (2023). Almost-$C^1$ splines: Biquadratic splines on unstructured quadrilateral meshes and their application to fourth order problems. [***Computer Methods in Applied Mechanics and Engineering***, 403, 115640.](https://doi.org/10.1016/j.cma.2022.115640)
 - **Degenerate patches (D-Patches)** (`gsDPatch`)
+  > Toshniwal, D., Speleers, H. & Hughes, T. J. (2017). Smooth cubic spline spaces on unstructured quadrilateral meshes with particular emphasis on extraordinary points: Geometric design and isogeometric analysis considerations. [***Computer Methods in Applied Mechanics and Engineering***, 327, 411-458.](https://doi.org/10.1016/j.cma.2017.06.008)
 - **Multi-Patch B-Splines with Enhanced Smoothness** (`gsMPBESSpline`)
   > Buchegger, F., Jüttler, B., & Mantzaflaris, A. (2016). Adaptively refined multi-patch B-splines with enhanced smoothness. [***Applied Mathematics and Computation***, 272, 159-172.](https://doi.org/10.1016/j.amc.2015.06.055)
 
 ## Implementation aspects
 The general implementation of unstructured spline constructions is provided by the `gsMappedSpline` and `gsMappedBasis` classes. These classes define a global basis construction through a linear combination of local basis functions. The linear combination is stored in the `gsWeightMapper`. In general, a mapped basis is configured as follows:
-
-**TO DO**
 
 ## Examples
 
@@ -77,7 +77,7 @@ For more information, see the (Doxygen page)[url] corresponding to this file
 1. Buchegger, F., Jüttler, B., & Mantzaflaris, A. (2016). Adaptively refined multi-patch B-splines with enhanced smoothness. [***Applied Mathematics and Computation***, 272, 159-172.](https://doi.org/10.1016/j.amc.2015.06.055)
 
 ### PhD Theses
-1. Verhelst, H.M. (2024). Isogeometric analysis of wrinkling, [***PhD Thesis***]() 
+1. Verhelst, H.M. (2024). Isogeometric analysis of wrinkling, [***PhD Thesis***](https://doi.org/10.4233/uuid:0e4c3644-31a4-4157-983d-bd001d91b8ca) 
 1. Farahat, A. (2023). Isogeometric Analysis with $C^1$-smooth functions over multi-patch surfaces, [***PhD Thesis***](https://epub.jku.at/obvulihs/id/8255939) 
 1. Weinmüller, P. (2022). Weak and approximate C1 smoothness over multi-patch domains in isogeometric analysis, [***PhD Thesis***](https://epub.jku.at/obvulihs/content/titleinfo/7811106)
 ---
