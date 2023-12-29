@@ -69,7 +69,7 @@ For more information, see the (Doxygen page)[url] corresponding to this file
 ## Publications based on this module
 
 ### Journal articles
-1. Verhelst, H. M., Weinmüller, P., Mantzaflaris, A., Takacs, T., & Toshniwal, D. (2023). A comparison of smooth basis constructions for isogeometric analysis. ***arXiv preprint arXiv:2309.04405***.
+1. Verhelst, H. M., Weinmüller, P., Mantzaflaris, A., Takacs, T., & Toshniwal, D. (2023). A comparison of smooth basis constructions for isogeometric analysis. [***Computer Methods in Applied Mechanics and Engineering***, 419, 116659.](https://doi.org/10.1016/j.cma.2023.116659)
 1. Farahat, A., Verhelst, H. M., Kiendl, J., & Kapl, M. (2023). Isogeometric analysis for multi-patch structured Kirchhoff–Love shells. [***Computer Methods in Applied Mechanics and Engineering***, 411, 116060.](https://doi.org/10.1016/j.cma.2023.116060) 
 1. Farahat, A., Jüttler, B., Kapl, M., & Takacs, T. (2023). Isogeometric analysis with C1-smooth functions over multi-patch surfaces. [***Computer Methods in Applied Mechanics and Engineering***, 403, 115706.](https://doi.org/10.1016/j.cma.2022.115706)
 1. Weinmüller, P., & Takacs, T. (2022). An approximate C1 multi-patch space for isogeometric analysis with a comparison to Nitsche’s method. [***Computer Methods in Applied Mechanics and Engineering***, 401, 115592.](https://doi.org/10.1016/j.cma.2022.115592) 
