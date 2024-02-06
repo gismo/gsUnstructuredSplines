@@ -31,16 +31,23 @@ void gsApproxC1Spline<d,T>::defaultOptions()
     index_t p = basis.degree(0);
 
     // Check if the degree is the same for each patch
-    for (size_t np = 0; np < m_patches.nPatches(); np++)
-    {
-        gsTensorBSplineBasis<d, T> basis = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(np));
-        if (p != basis.degree(0))
+    for (size_t np = 0; np < m_patches.nPatches(); np++) {
+        gsTensorBSplineBasis<d, T> basis_np = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(np));
+        if (p != basis_np.degree(0))
             gsWarn << "Not suitable for different degrees! \n";
     }
 
     // Check if the multipatch has no inner knots
-
-    // Check 
+    for (size_t np = 0; np < m_patches.nPatches(); np++)
+      for (index_t dir = 0; dir < 2; dir++) {
+	const gsBSplineBasis<real_t> basis_geo =
+	  dynamic_cast<const gsBSplineBasis<real_t> &>(m_patches[np].basis().component(dir));
+	gsKnotVector<real_t> kv_geo = dynamic_cast<const gsKnotVector<real_t> &>(basis_geo.knots());
+        std::vector<real_t> unique_geo = kv_geo.unique();
+	
+	if (2 != unique_geo.size())
+	  gsWarn << "Not suitable for geometries with inner knots! \n";
+      }
 
     m_options.addSwitch("info","Print debug information",  false );
     m_options.addSwitch("plot","Print debug information",  false );
@@ -119,26 +126,22 @@ void gsApproxC1Spline<d,T>::init()
         // [!Plus Minus space]
         gsBSplineBasis<T> basis_plus;
         gsBSplineBasis<T> basis_minus;
-        //createPlusSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_plus);
-        //createMinusSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_minus);
         createPlusSpace(m_patches.patch(patch), basis, dir, basis_plus);
         createMinusSpace(m_patches.patch(patch), basis, dir, basis_minus);
         // [!Plus Minus space]
 
         // [!Gluing data space]
         gsBSplineBasis<T> basis_gluingData;
-        //createGluingDataSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_gluingData,
-        //                      m_options.getInt("gluingDataDegree"), m_options.getInt("gluingDataSmoothness"));
         createGluingDataSpace(m_patches.patch(patch), basis, dir, basis_gluingData,
                               m_options.getInt("gluingDataDegree"), m_options.getInt("gluingDataSmoothness"));
         // [!Gluing data space]
 
         // [!Edge space]
-        gsTensorBSplineBasis<d, T> basis_edge_11, basis_edge_22;
-        //createEdgeSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_plus, basis_minus, basis_gluingData, basis_edge_11);
-        //createEdgeSpace(m_patches.patch(item.second().patch), basis_22, dir_2, basis_plus, basis_minus, basis_gluingData, basis_edge_22);
-        createEdgeSpace(m_patches.patch(item.first().patch), basis_11, dir_1, basis_plus, basis_minus, basis_gluingData, basis_edge_11);
-        createEdgeSpace(m_patches.patch(item.second().patch), basis_22, dir_2, basis_plus, basis_minus, basis_gluingData, basis_edge_22);
+        gsTensorBSplineBasis<d, T> basis_edge_11, basis_edge_22;        
+        createEdgeSpace(m_patches.patch(item.first().patch), basis_11, dir_1,
+			basis_plus, basis_minus, basis_gluingData, basis_edge_11);
+        createEdgeSpace(m_patches.patch(item.second().patch), basis_22, dir_2,
+			basis_plus, basis_minus, basis_gluingData, basis_edge_22);
 
         // [!Edge space]
         m_bases[item.first().patch].setBasis(item.first().side().index(), basis_edge_11);
@@ -181,16 +184,20 @@ void gsApproxC1Spline<d,T>::init()
         {
             std::vector<patchSide> containingSides;
             allcornerLists[j].getContainingSides(d, containingSides);
-            bool isInterface_1 = m_patches.isInterface(patchSide(allcornerLists[j].patch, containingSides.at(0).side()));
-            bool isInterface_2 = m_patches.isInterface(patchSide(allcornerLists[j].patch, containingSides.at(1).side()));
+            bool isInterface_1 = m_patches.isInterface(patchSide(allcornerLists[j].patch,
+								 containingSides.at(0).side()));
+            bool isInterface_2 = m_patches.isInterface(patchSide(allcornerLists[j].patch,
+								 containingSides.at(1).side()));
 
-            gsTensorBSplineBasis<d, T> basis = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(allcornerLists[j].patch));
+            gsTensorBSplineBasis<d, T> basis =
+	      dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(allcornerLists[j].patch));
             if (isInterface_1)
             {
                 patchSide result;
                 m_patches.getNeighbour(containingSides.at(0), result);
 
-                gsTensorBSplineBasis<d, T> basis2 = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(result.patch));
+                gsTensorBSplineBasis<d, T> basis2 =
+		  dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(result.patch));
                 index_t dir_1 = containingSides.at(0).side() < 3 ? 1 : 0;
                 index_t dir_2 = result.side().index() < 3 ? 1 : 0;
                 if (basis.component(dir_1).numElements() > basis2.component(dir_2).numElements())
@@ -201,7 +208,8 @@ void gsApproxC1Spline<d,T>::init()
                 patchSide result;
                 m_patches.getNeighbour(containingSides.at(1), result);
 
-                gsTensorBSplineBasis<d, T> basis2 = dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(result.patch));
+                gsTensorBSplineBasis<d, T> basis2 =
+		  dynamic_cast<gsTensorBSplineBasis<d, T> &>(m_multiBasis.basis(result.patch));
                 index_t dir_1 = containingSides.at(1).side() < 3 ? 1 : 0;
                 index_t dir_2 = result.side().index() < 3 ? 1 : 0;
                 if (basis.component(dir_1).numElements() > basis2.component(dir_2).numElements())
@@ -246,7 +254,8 @@ void gsApproxC1Spline<d,T>::init()
             for (index_t j = 0; j < m_bases[i].nPieces(); j++)
             {
                 gsInfo << (j == 0 ? "Interior Space: " : ( j < 5 ? "Edge Space: " : "Vertex Space: ") ) << "\n";
-                gsTensorBSplineBasis<d, T> basis = dynamic_cast<const gsTensorBSplineBasis<d, T>&>(m_bases[i].piece(j));
+                gsTensorBSplineBasis<d, T> basis =
+		  dynamic_cast<const gsTensorBSplineBasis<d, T>&>(m_bases[i].piece(j));
                 std::vector<index_t> vec_1 = basis.knots(0).multiplicities();
                 std::vector<index_t> vec_2 = basis.knots(1).multiplicities();
                 gsAsVector<index_t> mult_1(vec_1);
@@ -263,7 +272,6 @@ void gsApproxC1Spline<d,T>::init()
 template<short_t d,class T>
 void gsApproxC1Spline<d,T>::compute()
 {
-    std::vector<gsEigen::Triplet<T,index_t>> tripletList;
     // Compute Inner Basis functions
     index_t shift_row = 0, shift_col = 0;
     for(size_t np = 0; np < m_patches.nPatches(); ++np)
@@ -275,7 +283,7 @@ void gsApproxC1Spline<d,T>::compute()
         for (index_t j = 2; j < dim_v-2; ++j)
             for (index_t i = 2; i < dim_u-2; ++i)
             {
-                tripletList.push_back(gsEigen::Triplet<T,index_t>(shift_row + row_i, shift_col + j*dim_u+i,1.0));
+                m_matrix.insert(shift_row + row_i, shift_col + j*dim_u+i) = 1.0;
                 ++row_i;
             }
 
@@ -308,9 +316,10 @@ void gsApproxC1Spline<d,T>::compute()
         for (size_t ii = 0; ii < basisEdge[0].nPatches(); ++ii)
         {
             index_t jj = 0;
-            for (index_t j = begin_col; j < end_col; ++j, ++jj)
+            for (index_t j = begin_col; j < end_col; ++j, ++jj) {
                 if (basisEdge[0].patch(ii).coef(jj, 0) * basisEdge[0].patch(ii).coef(jj, 0) > 1e-25)
-                    tripletList.push_back(gsEigen::Triplet<T,index_t>(shift_row + ii, shift_col + j,basisEdge[0].patch(ii).coef(jj, 0)));
+                    m_matrix.insert(shift_row + ii, shift_col + j) = basisEdge[0].patch(ii).coef(jj, 0);
+            }
         }
 
         begin_col = 0, end_col = 0, shift_col = 0;
@@ -325,9 +334,10 @@ void gsApproxC1Spline<d,T>::compute()
         for (size_t ii = 0; ii < basisEdge[1].nPatches(); ++ii)
         {
             index_t jj = 0;
-            for (index_t j = begin_col; j < end_col; ++j, ++jj)
+            for (index_t j = begin_col; j < end_col; ++j, ++jj) {
                 if (basisEdge[1].patch(ii).coef(jj, 0) * basisEdge[1].patch(ii).coef(jj, 0) > 1e-25)
-                    tripletList.push_back(gsEigen::Triplet<T,index_t>(shift_row + ii, shift_col + j,basisEdge[1].patch(ii).coef(jj, 0)));
+                    m_matrix.insert(shift_row + ii, shift_col + j) = basisEdge[1].patch(ii).coef(jj, 0);
+            }
         }
 
         shift_row += basisEdge[0].nPatches();
@@ -355,9 +365,10 @@ void gsApproxC1Spline<d,T>::compute()
         for (size_t ii = 0; ii < basisEdge[0].nPatches(); ++ii)
         {
             index_t jj = 0;
-            for (index_t j = begin_col; j < end_col; ++j, ++jj)
+            for (index_t j = begin_col; j < end_col; ++j, ++jj) {
                 if (basisEdge[0].patch(ii).coef(jj, 0) * basisEdge[0].patch(ii).coef(jj, 0) > 1e-20)
-                    tripletList.push_back(gsEigen::Triplet<T,index_t>(shift_row + ii, shift_col + j,basisEdge[0].patch(ii).coef(jj, 0)));
+                    m_matrix.insert(shift_row + ii, shift_col + j) = basisEdge[0].patch(ii).coef(jj, 0);
+            }
         }
         shift_row += basisEdge[0].nPatches();
     }
@@ -394,15 +405,16 @@ void gsApproxC1Spline<d,T>::compute()
             for (size_t ii = 0; ii < basisVertex[np].nPatches(); ++ii)
             {
                 index_t jj = 0;
-                for (index_t j = begin_col; j < end_col; ++j, ++jj)
+                for (index_t j = begin_col; j < end_col; ++j, ++jj) {
                     if (basisVertex[np].patch(ii).coef(jj, 0) * basisVertex[np].patch(ii).coef(jj, 0) > 1e-20)
-                        tripletList.push_back(gsEigen::Triplet<T,index_t>(shift_row + ii, shift_col + j,basisVertex[np].patch(ii).coef(jj, 0)));
+                    {
+                        m_matrix.insert(shift_row + ii, shift_col + j) = basisVertex[np].patch(ii).coef(jj, 0);
+                    }
+                }
             }
         }
         shift_row += basisVertex[0].nPatches(); // + 6
-
     }
-    m_matrix.setFromTriplets(tripletList.begin(),tripletList.end());
     m_matrix.makeCompressed();
 }
 
