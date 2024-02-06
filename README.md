@@ -86,6 +86,4 @@ For more information, see the (Doxygen page)[url] corresponding to this file
 
 ***
 
-#### Geometries:
-
-![plot](./readme/dictionary_geometries.png)
+### Geometries
