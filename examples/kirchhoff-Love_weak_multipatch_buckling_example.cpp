@@ -20,7 +20,9 @@
 #include <gsKLShell/src/gsThinShellUtils.h>
 #endif
 
+#ifdef gsSpectra_ENABLED
 #include <gsSpectra/gsSpectra.h>
+#endif
 
 using namespace gismo;
 
