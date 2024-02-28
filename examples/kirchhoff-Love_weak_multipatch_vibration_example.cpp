@@ -34,7 +34,6 @@ int main(int argc, char *argv[])
     bool mesh       = false;
     bool first      = false;
     bool write      = false;
-    bool info       = false;
     bool dense      = false;
 
     index_t numRefine  = 2;
@@ -281,7 +280,7 @@ int main(int argc, char *argv[])
 
             std::string fileName = dirname + "/" + output + util::to_string(m) + "_";
             gsWriteParaview<>(solField, fileName, 1000,mesh);
-            for (index_t p = 0; p!=mp.nPatches(); p++)
+            for (size_t p = 0; p!=mp.nPatches(); p++)
             {
                 fileName = output + util::to_string(m) + "_";
                 collection.addTimestep(fileName,p,m,".vts");

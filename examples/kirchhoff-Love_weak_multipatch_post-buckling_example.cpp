@@ -49,14 +49,12 @@ int main(int argc, char *argv[])
     bool mesh       = false;
     bool last       = false;
     bool info       = false;
-    bool nonlinear  = false;
     bool SingularPoint = false;
     bool quasiNewton = false;
     index_t quasiNewtonInt = -1;
     index_t numRefine  = 2;
     index_t degree = 3;
     index_t smoothness = 2;
-    index_t geometry = 1;
     std::string input;
 
     index_t step          = 10;
@@ -392,7 +390,7 @@ int main(int argc, char *argv[])
 
                 std::string fileName = dirname + "/" + output + util::to_string(m) + "_";
                 gsWriteParaview<>(solField, fileName, 1000,mesh);
-                for (index_t p = 0; p!=mp.nPatches(); p++)
+                for (size_t p = 0; p!=mp.nPatches(); p++)
                 {
                     fileName = output + util::to_string(m) + "_";
                     collection.addTimestep(fileName,p,m,".vts");
@@ -409,7 +407,7 @@ int main(int argc, char *argv[])
             solVector = vectors.col(*it);
             deformation = assembler.constructDisplacement(solVector);
 
-            for (index_t p = 0; p != mp.nPatches(); p++)
+            for (size_t p = 0; p != mp.nPatches(); p++)
             {
                 mp.patch(p).coefs() += deformation.patch(p).coefs();
                 mp.patch(p).coefs().col(2) *= tau;
@@ -547,7 +545,7 @@ int main(int argc, char *argv[])
             {
                 std::string fileName = dirname + "/" + output + util::to_string(k) + "_";
                 gsWriteParaview<>(solField, fileName, 1000,mesh);
-                for (index_t p = 0; p!=mp.nPatches(); p++)
+                for (size_t p = 0; p!=mp.nPatches(); p++)
                 {
                     fileName = output + util::to_string(k) + "_";
                     collection.addTimestep(fileName,p,k,".vts");

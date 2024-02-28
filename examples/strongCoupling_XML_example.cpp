@@ -40,7 +40,6 @@ int main(int argc, char *argv[])
     bool nonlinear  = false;
     bool homogeneous = false;
 
-    index_t method = 0;
     index_t nmodes = 10;
     index_t mode   = 0;
     std::string input;
