@@ -143,10 +143,7 @@ int main(int argc, char *argv[])
 
     if (plot)
     {
-        std::string commands = "mkdir -p " + out;
-        const char *command = commands.c_str();
-        int systemRet = system(command);
-        GISMO_ASSERT(systemRet!=-1,"Something went wrong with calling the system argument");
+        gsFileManager::mkdir(out);
         gsWriteParaview(mp,out + "/" + "mp",10,true,false);
     }
 

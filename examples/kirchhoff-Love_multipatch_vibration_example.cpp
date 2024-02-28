@@ -47,7 +47,6 @@ int main(int argc, char *argv[])
     index_t numRefine  = 2;
     index_t degree = 3;
     index_t smoothness = 2;
-    index_t geometry = 1;
     index_t method = 0;
     index_t nmodes = 10;
     index_t mode   = 0;
@@ -187,12 +186,8 @@ int main(int argc, char *argv[])
     }
 
     if (plot || write)
-    {
-        std::string commands = "mkdir -p " + out;
-        const char *command = commands.c_str();
-        int systemRet = system(command);
-        GISMO_ASSERT(systemRet!=-1,"Something went wrong with calling the system argument");
-    }
+        gsFileManager::mkdir(out);
+
     if (plot)
         gsWriteParaview(mp,"mp",10,true,false);
     // for (size_t p = 0; p!=mp.nPatches(); ++p)
@@ -419,7 +414,7 @@ int main(int argc, char *argv[])
 
             std::string fileName = dirname + "/" + output + util::to_string(m) + "_";
             gsWriteParaview<>(solField, fileName, 1000,mesh);
-            for (index_t p = 0; p!=geom.nPatches(); p++)
+            for (size_t p = 0; p!=geom.nPatches(); p++)
             {
                 fileName = output + util::to_string(m) + "_" + std::to_string(p);
                 collection.addPart(fileName + ".vts",m,"solution",p);

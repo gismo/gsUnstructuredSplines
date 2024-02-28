@@ -76,6 +76,16 @@ namespace gismo
         }
 
 
+    private:
+        // Avoid hidden overloads w.r.t. gsAssembler
+        void constructSolution(const gsMatrix<T>& solVector,
+                               gsMultiPatch<T>& result, short_t unk) const
+        { GISMO_NO_IMPLEMENTATION; }
+
+        void constructSolution(const gsMatrix<T>& solVector,
+                               gsMultiPatch<T>& result,
+                               const gsVector<index_t>  & unknowns) const
+        { GISMO_NO_IMPLEMENTATION; }
 
     protected:
 

@@ -64,7 +64,7 @@ public:
      */
     gsAlmostC1(gsMultiPatch<T> const & mp) ;
 
-    GISMO_CLONE_FUNCTION(gsAlmostC1)
+    // GISMO_CLONE_FUNCTION(gsAlmostC1)
 
     ~gsAlmostC1();
 

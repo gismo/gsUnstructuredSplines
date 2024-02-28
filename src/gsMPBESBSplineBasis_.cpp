@@ -19,7 +19,7 @@
 namespace gismo
 {
 
-    CLASS_TEMPLATE_INST gsMPBESBSplineBasis<1,real_t> ;
+    // CLASS_TEMPLATE_INST gsMPBESBSplineBasis<1,real_t> ;
     CLASS_TEMPLATE_INST gsMPBESBSplineBasis<2,real_t> ;
 
 } // end namespace gismo

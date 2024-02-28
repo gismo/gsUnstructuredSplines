@@ -211,12 +211,7 @@ int main(int argc, char *argv[])
     gsInfo<<"Finished\n";
 
     if (plot || write)
-    {
-        std::string commands = "mkdir -p " + out;
-        const char *command = commands.c_str();
-        int systemRet = system(command);
-        GISMO_ASSERT(systemRet!=-1,"Something went wrong with calling the system argument");
-    }
+        gsFileManager::mkdir(out);
 
     if (plotGeo) gsWriteParaview(geom,"geom",1000,true,false);
 

@@ -53,14 +53,12 @@ int main(int argc, char *argv[])
     bool last       = false;
     bool info       = false;
     bool writeMatrix= false;
-    bool nonlinear  = false;
     bool SingularPoint = false;
     bool quasiNewton = false;
     index_t quasiNewtonInt = -1;
     index_t numRefine  = 2;
     index_t degree = 3;
     index_t smoothness = 2;
-    index_t geometry = 1;
     index_t method = 0;
     std::string input;
 
@@ -133,10 +131,7 @@ int main(int argc, char *argv[])
     if (method==2 || method==3)
         GISMO_ENSURE(degree > 2,"Degree must be larger than 2 for the approx and exact C1 methods, but it is "<<degree);
 
-    std::string commands = "mkdir -p " + dirname;
-    const char *command = commands.c_str();
-    int systemRet = system(command);
-    GISMO_ASSERT(systemRet!=-1,"Something went wrong with calling the system argument");
+    gsFileManager::mkdir(dirname);
 
 
     if (dL==0)
@@ -549,7 +544,7 @@ int main(int argc, char *argv[])
 
                 std::string fileName = dirname + "/" + output + util::to_string(m) + "_";
                 gsWriteParaview<>(solField, fileName, 1000,mesh);
-                for (index_t p = 0; p!=mp.nPatches(); p++)
+                for (size_t p = 0; p!=mp.nPatches(); p++)
                 {
                     fileName = output + util::to_string(m) + "_";
                     collection.addTimestep(fileName,p,m,".vts");
@@ -573,9 +568,9 @@ int main(int argc, char *argv[])
             gsMatrix<> allCoefs;
             gsL2Projection<real_t>::projectFunction(dbasis,mspline,geom,allCoefs);
             allCoefs.resize(allCoefs.rows()/3,3);
-            for (index_t p = 0; p != geom.nPatches(); p++)
+            for (size_t p = 0; p != geom.nPatches(); p++)
             {
-                for (index_t k=0; k!=mapper.patchSize(p); k++)
+                for (size_t k=0; k!=mapper.patchSize(p); k++)
                 {
 
                         geom.patch(p).coefs().row(k) += allCoefs.row(mapper.index(k,p));
@@ -731,7 +726,7 @@ int main(int argc, char *argv[])
             {
                 std::string fileName = dirname + "/" + output + util::to_string(k) + "_";
                 gsWriteParaview<>(solField, fileName, 1000,mesh);
-                for (index_t p = 0; p!=mp.nPatches(); p++)
+                for (size_t p = 0; p!=mp.nPatches(); p++)
                 {
                     fileName = output + util::to_string(k) + "_";
                     collection.addTimestep(fileName,p,k,".vts");
@@ -747,7 +742,8 @@ int main(int argc, char *argv[])
                     gsMatrix<> pointResults(mp.geoDim(),refPoints.cols());
                     for (index_t p=0; p!=refPoints.cols(); p++)
                         pointResults.col(p) = solField.value(refPoints.col(p),refPatches(0,p));
-                    gsVector<> otherData{arcLength->solutionL()};
+                    gsVector<> otherData(1);
+                    otherData<<arcLength->solutionL();
                     numWriter.add(pointResults,otherData);
                 }
             }
@@ -759,7 +755,7 @@ int main(int argc, char *argv[])
                 assembler.constructStress(def,membraneStresses,stress_type::membrane);
                 fileName = dirname + "/MembraneStress" + util::to_string(k) + "_";
                 gsWriteParaview(def,membraneStresses,fileName,1000);
-                for (index_t p = 0; p!=mp.nPatches(); p++)
+                for (size_t p = 0; p!=mp.nPatches(); p++)
                 {
                     fileName = "MembraneStress" + util::to_string(k) + "_";
                     membraneStressCollection.addTimestep(fileName,p,k,".vts");
@@ -771,7 +767,7 @@ int main(int argc, char *argv[])
                 assembler.constructStress(def,flexuralStresses,stress_type::flexural);
                 fileName = dirname + "/FlexuralStresses" + util::to_string(k) + "_";
                 gsWriteParaview(def,flexuralStresses,fileName,1000);
-                for (index_t p = 0; p!=mp.nPatches(); p++)
+                for (size_t p = 0; p!=mp.nPatches(); p++)
                 {
                     fileName = "FlexuralStress" + util::to_string(k) + "_";
                     flexuralStressCollection.addTimestep(fileName,p,k,".vts");

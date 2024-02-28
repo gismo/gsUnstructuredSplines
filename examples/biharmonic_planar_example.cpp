@@ -413,7 +413,7 @@ int main(int argc, char *argv[])
                 coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
 
                 index_t offset = 0;
-                for (index_t p = 0; p != geom.nPatches(); p++)
+                for (size_t p = 0; p != geom.nPatches(); p++)
                 {
                     geom.patch(p) = give(*localbasis.basis(p).makeGeometry((coefs.block(offset,0,mapper.patchSize(p),mp.geoDim()))));
                     offset += mapper.patchSize(p);
@@ -484,7 +484,7 @@ int main(int argc, char *argv[])
                 bb2.getMapper().mapToSourceCoefs(targetCoefs,sourceCoefs);
                 gsDofMapper mapper(dbasis);
                 index_t offset = 0;
-                for (index_t p = 0; p != geom0.nPatches(); p++)
+                for (size_t p = 0; p != geom0.nPatches(); p++)
                 {
                     geom.patch(p) = give(*dbasis.basis(p).makeGeometry((sourceCoefs.block(offset,0,mapper.patchSize(p),mp.geoDim()))));
                     offset += mapper.patchSize(p);

@@ -152,12 +152,7 @@ int main(int argc, char *argv[])
     gsInfo<<"Finished\n";
 
     if (plot || write)
-    {
-        std::string commands = "mkdir -p " + out;
-        const char *command = commands.c_str();
-        int systemRet = system(command);
-        GISMO_ASSERT(systemRet!=-1,"Something went wrong with calling the system argument");
-    }
+        gsFileManager::mkdir(out);
 
     if (plotGeo) gsWriteParaview(geom,"geom",1000,true,false);
 
@@ -281,7 +276,7 @@ int main(int argc, char *argv[])
 
             std::string fileName = dirname + "/" + output + util::to_string(m) + "_";
             gsWriteParaview<>(solField, fileName, 1000,mesh);
-            for (index_t p = 0; p!=geom.nPatches(); p++)
+            for (size_t p = 0; p!=geom.nPatches(); p++)
             {
                 fileName = output + util::to_string(m) + "_" + std::to_string(p);
                 collection.addPart(fileName + ".vts",m,"solution",p);

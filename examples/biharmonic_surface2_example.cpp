@@ -1066,7 +1066,7 @@ int main(int argc, char *argv[])
     // Recover manufactured solution
     auto u_ex = ev.getVariable(ms, G);
     auto grad_u_ex = ev.getVariable(sol1der, G);
-    auto laplace_u_ex = ev.getVariable(laplace, G);
+    // auto laplace_u_ex = ev.getVariable(laplace, G);
     //! [Problem setup]
 
 #ifdef _OPENMP

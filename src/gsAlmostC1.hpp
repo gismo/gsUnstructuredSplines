@@ -381,22 +381,15 @@ namespace gismo
             totalsize += sizes.at(p);
         }
 
-        GISMO_ASSERT(totalsize==coefs.rows(),"Sizes do not agree");
+        GISMO_ENSURE(totalsize==coefs.rows(),"Sizes do not agree");
 
         gsMultiBasis<T> basis(mp);
         gsDofMapper tmpMap(basis);
         tmpMap.finalize();
 
-        index_t offset = 0;
         for (size_t p=0; p!=mp.nPatches(); p++) // patches
-        {
             for (index_t k=0; k!=sizes.at(p); k++)
-            {
                 mp.patch(p).coefs().row(k) = coefs.row(tmpMap.index(k,p));
-            }
-            offset += sizes.at(p);
-        }
-
     }
 
     /*=====================================================================================

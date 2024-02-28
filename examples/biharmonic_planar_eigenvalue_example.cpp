@@ -175,9 +175,7 @@ int main(int argc, char *argv[])
     index_t gluingDataDegree = -1;
     index_t gluingDataSmoothness = -1;
 
-    bool last = false;
     bool info = false;
-    bool cond = false;
     bool interpolation = false;
 
     real_t penalty_init = -1.0;
@@ -536,8 +534,7 @@ int main(int argc, char *argv[])
     if (plot)
     {
         gsInfo<<"Plotting in Paraview...\n";
-        int systemRet = system("mkdir -p ModalResults");
-        GISMO_ASSERT(systemRet!=-1,"Something went wrong with calling the system argument");
+        gsFileManager::mkdir("ModalResults");
 
         gsParaviewCollection collection("ModalResults/modes");
 
@@ -550,7 +547,7 @@ int main(int argc, char *argv[])
             solVector = vectors.col(m);
             std::string fileName = "ModalResults/modes" + util::to_string(m);
             ev.writeParaview( u_sol, G, fileName);
-            for (index_t p = 0; p!=mp.nPatches(); p++)
+            for (size_t p = 0; p!=mp.nPatches(); p++)
             {
                 fileName = "modes" + util::to_string(m);
                 collection.addPart(fileName + ".vts",m,"",p);
@@ -569,7 +566,7 @@ int main(int argc, char *argv[])
         omegas.push_back((math::pow(m/1.0,2)+math::pow(n/1.0,2))*math::pow(3.1415926535,2)*math::sqrt(D / (Density * thickness)));
 
     std::sort(omegas.begin(),omegas.end());
-    GISMO_ENSURE(omegas.size()>=values.rows(),"Too few analytical eigenvalues");
+    GISMO_ENSURE((index_t)omegas.size()>=values.rows(),"Too few analytical eigenvalues");
     omegas.resize(values.rows());
     gsAsVector<> analytical(omegas);
 
@@ -577,8 +574,7 @@ int main(int argc, char *argv[])
 
     if (write)
     {
-        int systemRet = system("mkdir -p ModalResults");
-        GISMO_ASSERT(systemRet!=-1,"Something went wrong with calling the system argument");
+        gsFileManager::mkdir("ModalResults");
 
         gsMatrix<> ratio = values;
         ratio.array() /= analytical.array();

@@ -107,9 +107,9 @@ int main(int argc, char *argv[])
             unsigned maxLvl = 0;
             bool THBcheck = false;
             gsHTensorBasis<2,real_t> * hbasis;
-            for (index_t p=0; p!=mp.nPatches(); p++)
+            for (size_t p=0; p!=mp.nPatches(); p++)
             {
-                if (hbasis = dynamic_cast<gsHTensorBasis<2,real_t> *>(&mp.basis(p)))
+                if ((hbasis = dynamic_cast<gsHTensorBasis<2,real_t> *>(&mp.basis(p))))
                 {
                     maxLvl = std::max(maxLvl,hbasis->maxLevel());
                     THBcheck = true;
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
                 //
                 gsTHBSpline<2,real_t> * THBspline;
                 gsTensorBSpline<2,real_t> bspline;
-                for (index_t p=0; p!=mp.nPatches(); p++)
+                for (size_t p=0; p!=mp.nPatches(); p++)
                 {
                     if ((THBspline = dynamic_cast<gsTHBSpline<2,real_t> *>(&mp.patch(p))))
                     {

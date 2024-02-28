@@ -78,10 +78,10 @@ namespace gismo
             GISMO_NO_IMPLEMENTATION;
         }
 
-        void uniformRefine()
+        void uniformRefine(int numKnots = 1, int mul=1, int dir=-1)
         {
             for (size_t i=0; i< basisContainer.size(); ++i)
-                basisContainer[i].uniformRefine();
+                basisContainer[i].uniformRefine(numKnots,mul,dir);
         }
 
         // Returm max degree of all the spaces, otherwise i =
