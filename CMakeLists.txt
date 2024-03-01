@@ -47,8 +47,10 @@ add_definitions(-DELAST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/filedata/")
 # add example files
 if(GISMO_BUILD_EXAMPLES)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/examples)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tutorials)
 else()
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/examples EXCLUDE_FROM_ALL)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tutorials EXCLUDE_FROM_ALL)
 endif(GISMO_BUILD_EXAMPLES)
 
 # add unittests

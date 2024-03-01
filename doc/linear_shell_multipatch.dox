@@ -1,0 +1,70 @@
+namespace gismo {
+/**
+
+\page linear_shell_multipatch Tutorial: Linear Kirchhoff-Love shell analysis on multi-patches using gsUnstructuredSplines
+
+This example solves a linear shell problem on a multi-patch using the \ref gsThinShellAssembler and the \ref gsUnstructuredSplines module. The goals of the tutorial are the following:
+- Define an unstructured spline
+- Solve the linear shell equation on the multi-patch basis
+
+For detailed information about the construction of \ref gsThinShellAssembler and \ref gsMaterialMatrixBase, please consult the tutorial \ref linear_shell.
+
+The problem to be solved corresponds to the hyperboloid shell example from [1].
+
+\subsection linear_shell_multipatch_Geometry Geometry and basis
+Firstly, the geometry is loaded in the same way as we load a geometry in \ref linear_shell. To be sure that our geometry has interfaces and boundaries, we compute its topology:
+
+\snippet linear_shell_multipatch.cpp Read geometry
+
+Refinement and elevation of the geometry (and the basis) are performed on the multi-patch geometry as is. This is the same as in \ref linear_shell.
+
+To perform isogeometric analysis on the multi-patch geometry and a smooth corresponding multi-basis, we will use the \ref gsMappedBasis and \ref gsMappedSpline. These objects use a locally defined (non-smooth) basis and a sparse mapping matrix. The smooth basis is defined using the D-Patch construction from [2], available in G+Smo using \ref gsDPatch. The D-Patch is constructed on the \ref gsMultiBasis belonging to our original geometry.
+
+The construction of the smooth basis and the corresponding geometry is done as follows:
+
+\snippet linear_shell_multipatch.cpp Construct basis
+
+\subsection linear_shell_multipatch_BCs Boundary conditions and loads
+The boundary conditions and external forces correspond to the hyperboloid shell case from [1], i.e. one edge of the hyperboloid is fully fixed. The boundary conditions are consequently applied to patch 0 and 1. See \ref linear_shell_BCs for more details on applying boundary conditions.
+
+\snippet linear_shell_multipatch.cpp Set boundary conditions
+
+Similarly, we define a surface force corresponding to the benchmark problem
+
+\snippet linear_shell_multipatch.cpp Set surface force
+
+\subsection linear_shell_multipatch_Assembler Configuration of the assembler
+The configuration of the material matrix and the shell assembler is the same as in \ref linear_shell, just with different material parameters, corresponding to the benchmark problem in [1].
+
+\subsection linear_shell_multipatch_Solve Solving the problem
+Assembly of the problem, as well as solving it, is the same as in \ref linear_shell.
+
+\subsection linear_shell_multipatch_Export Exporting the solution
+Construction of the solution works slightly different when a \ref gsMappedBasis is used for analysis. Instead of storing the solutions in a \ref gsMultiPatch, we now store them in a \ref gsMappedSpline. To define the deformed geometry on top of the original geometry, one can use the \ref gsFunctionSum class, which basically evaluates two functions on a parametric point, and sums their values. The full code for the construction of the deformed geometry is here:
+
+\snippet linear_shell_multipatch.cpp Construct solution and deformed geometry
+
+As can be seen in the following snippet, the constructed solution object can be used for evaluation:
+
+\snippet linear_shell_multipatch.cpp Evaluate solution
+
+And for visualization:
+
+\snippet linear_shell_multipatch.cpp Export visualization in ParaView
+
+\subsection linear_shell_multipatch_References References
+[1] Bathe, Klaus-Jürgen, Alexander Iosilevich, and Dominique Chapelle. "An evaluation of the MITC shell elements." Computers & Structures 75.1 (2000): 1-30.
+
+[2] Toshniwal D, Speleers H, Hughes TJ. Smooth cubic spline spaces on unstructured quadrilateral meshes with particular emphasis on extraordinary points: Geometric design and isogeometric analysis considerations. Computer Methods in Applied Mechanics and Engineering. 2017 Dec 1;327:411-58.
+
+
+\section linear_shell_multipatch_Annotated Annotated source file
+
+Here is the full file \c linear_shell_multipatch.cpp. Clicking on a function
+or class name will lead you to its reference documentation.
+
+\include linear_shell_multipatch.cpp
+
+*/
+
+}
