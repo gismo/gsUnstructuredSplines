@@ -1,11 +1,11 @@
 ######################################################################
-## CMakeLists.txt --- gsUnstructuredSplines/examples
+## CMakeLists.txt --- gsUnstructuredSplines/tutorials
 ## This file is part of the G+Smo library.
 ##
 ######################################################################
 
 # add tutorial files
-add_custom_target(${PROJECT_NAME}-examples)
+add_custom_target(${PROJECT_NAME}-tutorials)
 aux_cpp_directory(${CMAKE_CURRENT_SOURCE_DIR} FILES)
 foreach(file ${FILES})
     add_gismo_executable(${file})
@@ -18,7 +18,7 @@ foreach(file ${FILES})
         FOLDER "${PROJECT_NAME}"
         EXCLUDE_FROM_ALL TRUE)
     endif(GISMO_BUILD_EXAMPLES)
-    add_dependencies(${PROJECT_NAME}-examples ${tarname})
+    add_dependencies(${PROJECT_NAME}-tutorials ${tarname})
     # install the example executables (optionally)
     install(TARGETS ${tarname} DESTINATION "${BIN_INSTALL_DIR}" COMPONENT exe OPTIONAL)
 endforeach(file ${FILES})
