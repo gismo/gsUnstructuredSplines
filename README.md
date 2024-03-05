@@ -40,10 +40,15 @@ The `gsUnstructuredSplines` module provides ready-to-use unstructured spline con
 
 - **Almost - $C^1$** (`gsAlmostC1`)
   > Takacs, T. & Toshniwal, D. (2023). Almost-$C^1$ splines: Biquadratic splines on unstructured quadrilateral meshes and their application to fourth order problems. [***Computer Methods in Applied Mechanics and Engineering***, 403, 115640.](https://doi.org/10.1016/j.cma.2022.115640)
+  
 - **Degenerate patches (D-Patches)** (`gsDPatch`)
   > Toshniwal, D., Speleers, H. & Hughes, T. J. (2017). Smooth cubic spline spaces on unstructured quadrilateral meshes with particular emphasis on extraordinary points: Geometric design and isogeometric analysis considerations. [***Computer Methods in Applied Mechanics and Engineering***, 327, 411-458.](https://doi.org/10.1016/j.cma.2017.06.008)
+  
 - **Multi-Patch B-Splines with Enhanced Smoothness** (`gsMPBESSpline`)
   > Buchegger, F., Jüttler, B., & Mantzaflaris, A. (2016). Adaptively refined multi-patch B-splines with enhanced smoothness. [***Applied Mathematics and Computation***, 272, 159-172.](https://doi.org/10.1016/j.amc.2015.06.055)
+
+- **Compairison of the first four methods**
+  > Verhelst, H. M. and Weinmüller, P. and Mantzaflaris, A. and Takacs, T. and Toshniwal, D. (2024). A comparison of smooth basis constructions for isogeometric analysis. [***Computer Methods in Applied Mechanics and Engineering***](https://doi.org/10.1016/j.cma.2023.116659)
 
 ## Implementation aspects
 The general implementation of unstructured spline constructions is provided by the `gsMappedSpline` and `gsMappedBasis` classes. These classes define a global basis construction through a linear combination of local basis functions. The linear combination is stored in the `gsWeightMapper`. In general, a mapped basis is configured as follows:
