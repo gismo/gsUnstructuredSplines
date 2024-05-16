@@ -4,8 +4,8 @@
 |--:|---|
 |License|[MPL 2.0](https://www.mozilla.org/en-US/MPL/2.0/)|
 |OS support|Linux, Windows, macOS|
+|Build Status|[![ci](https://github.com/gismo/gsUnstructuredSplines/actions/workflows/ci.yml/badge.svg)](https://github.com/gismo/gsUnstructuredSplines/actions/workflows/ci.yml)|
 |Repository|[gismo/gismo/gsUnstructuredSplines](https://github.com/gismo/gsUnstructuredSplines)|
-|Status|[![ci](https://github.com/gismo/gsUnstructuredSplines/actions/workflows/ci.yml/badge.svg)](https://github.com/gismo/gsUnstructuredSplines/actions/workflows/ci.yml)|
 |Dependencies|[gismo/gismo](https://github.com/gismo/gismo)|
 |Developer|[Pascal Weinmueller](https://github.com/weinmueller),[Hugo Verhelst](https://github.com/hverhelst),[Andrea Farahat](https://github.com/AndreaFarahat)|
 |Maintainers|[pascal.weinmueller@mtu.de](mailto:pascal.weinmueller@mtu.de),[h.m.verhelst@tudelft.nl](mailto:h.m.verhelst@tudelft.nl)|
