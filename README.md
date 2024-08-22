@@ -9,7 +9,7 @@
 |Dependencies|[gismo/gismo](https://github.com/gismo/gismo)|
 |Developer|[Pascal Weinmueller](https://github.com/weinmueller),[Hugo Verhelst](https://github.com/hverhelst),[Andrea Farahat](https://github.com/AndreaFarahat)|
 |Maintainers|[pascal.weinmueller@mtu.de](mailto:pascal.weinmueller@mtu.de),[h.m.verhelst@tudelft.nl](mailto:h.m.verhelst@tudelft.nl)|
-|Last checked|21-10-2022|
+|Last checked|22-08-2024|
 
 ## Installation
 ```
