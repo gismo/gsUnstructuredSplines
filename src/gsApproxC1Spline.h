@@ -79,6 +79,11 @@ public:
         bb2.init(dbasis_temp,m_matrix);
     }
 
+    void matrix_into(gsSparseMatrix<T> & matrix) const
+    {
+        matrix = this->m_matrix;
+    }
+
     /// Sets the default options
     void defaultOptions();
 
