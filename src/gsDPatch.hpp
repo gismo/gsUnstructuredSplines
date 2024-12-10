@@ -532,10 +532,10 @@ namespace gismo
                     // interface smoothing
                     for (index_t i = 0; i!=N; i++) // for all involved interfaces
                     {
-                        patchCorner corner = corners[patches[interfaces[i][0].patch]];
-                        patchCorner otherCorner = corners[patches[interfaces[i][1].patch]];
-                        patchSide side = interfaces[i][0];
-                        patchSide otherSide = interfaces[i][1];
+                        patchCorner corner = corners[patches[interfaces[i].first().patch]];
+                        patchCorner otherCorner = corners[patches[interfaces[i].second().patch]];
+                        patchSide side = interfaces[i].first();
+                        patchSide otherSide = interfaces[i].second();
                         for (index_t k = 2; k!=4 ; k++)// std::max(basis1->maxDegree(),basis2->maxDegree())+
                         {
                             idx = this->_indexFromVert(m_bases,k,corner,side,0);
@@ -731,6 +731,8 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatch<d,T>::_handleIrregularBoundaryVertexSmooth(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(valence);
+
         // // 2. make container for the interfaces
         // std::vector<boundaryInterface> ifaces;
         // boundaryInterface iface;
@@ -1145,6 +1147,8 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatch<d,T>::_computeMapperIrregularBoundaryVertexSmooth_v3(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(valence);
+
         std::vector<patchSide> psides(2);
         std::vector<patchCorner> pcorners;
         /*

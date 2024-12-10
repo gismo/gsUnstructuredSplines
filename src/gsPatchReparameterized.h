@@ -566,7 +566,8 @@ public:
     }
 
 
-    const index_t getOrient(){
+    index_t getOrient()
+    {
         return axisOrientation;
     }
 
@@ -581,7 +582,8 @@ public:
         rotationNum = numRot;
     }
 
-    const index_t getNumberOfRotation(){
+    index_t getNumberOfRotation()
+    {
         return rotationNum;
     }
 
