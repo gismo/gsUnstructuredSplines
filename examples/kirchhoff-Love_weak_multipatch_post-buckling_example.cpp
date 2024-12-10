@@ -393,9 +393,9 @@ int main(int argc, char *argv[])
                 for (size_t p = 0; p!=mp.nPatches(); p++)
                 {
                     fileName = output + util::to_string(m) + "_";
-                    collection.addTimestep(fileName,p,m,".vts");
+                    collection.addPart(fileName+".vts",m,"Solution",p);
                     if (mesh)
-                        collection.addTimestep(fileName,p,m,"_mesh.vtp");
+                        collection.addPart(fileName+"_mesh.vtp",m,"Mesh",p);
                 }
 
             }
@@ -548,9 +548,9 @@ int main(int argc, char *argv[])
                 for (size_t p = 0; p!=mp.nPatches(); p++)
                 {
                     fileName = output + util::to_string(k) + "_";
-                    collection.addTimestep(fileName,p,k,".vts");
+                    collection.addPart(fileName+".vts",k,"Solution",p);
                     if (mesh)
-                        collection.addTimestep(fileName,p,k,"_mesh.vtp");
+                        collection.addPart(fileName+"_mesh.vtp",k,"Mesh",p);
                 }
             }
 
