@@ -52,6 +52,8 @@ public:
                 const gsOptionList & optionList)
                 : m_mp(mp), m_bases(bases), m_optionList(optionList)
     {
+        GISMO_UNUSED(numInt);
+
         m_auxPatches.clear();
         m_auxPatches.push_back(gsPatchReparameterized<d,T>(m_mp.patch(item.first().patch), m_bases[item.first().patch]));
         m_auxPatches.push_back(gsPatchReparameterized<d,T>(m_mp.patch(item.second().patch), m_bases[item.second().patch]));
@@ -97,6 +99,8 @@ public:
                 const gsOptionList & optionList)
                 : m_mp(mp), m_bases(bases), m_optionList(optionList)
     {
+        GISMO_UNUSED(numBdy);
+
         m_auxPatches.clear();
         m_auxPatches.push_back(gsPatchReparameterized<d,T>(m_mp.patch(item.patch), m_bases[item.patch]));
 

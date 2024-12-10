@@ -62,7 +62,7 @@ public:
     m_patches(mp),
     m_Bbases(mb),
     m_topology(m_Bbases.topology()),
-    m_computed(false)             
+    m_computed(false)
     {
     }
 
@@ -210,7 +210,7 @@ public:
      *
      * @param      matrix  The matrix
      */
-    virtual const void matrix_into(gsSparseMatrix<T> & matrix) const
+    virtual void matrix_into(gsSparseMatrix<T> & matrix) const
     {
         matrix = this->matrix();
     }
@@ -490,7 +490,7 @@ protected:
      *
      * @return     Index that is \a index1 in direction of \a side1 and \a index2 in direction of \a side2
      */
-    virtual const index_t _indexFromSides(index_t index1, const patchSide side1, index_t index2, const patchSide side2);
+    virtual index_t _indexFromSides(index_t index1, const patchSide side1, index_t index2, const patchSide side2);
 
 
     /**
@@ -504,9 +504,9 @@ protected:
      *
      * @return     Index of \a index places from \a corner along \a side, with offset \a offset and with offset \a levelOffset from the deepest level
      */
-    virtual const index_t _indexFromVert(const index_t index, const patchCorner corner, const patchSide side, const index_t offsets = 0) const;
-    virtual const index_t _indexFromVert(const gsMultiBasis<T> & bases, const index_t index, const patchCorner corner, const patchSide side, const index_t offsets = 0) const;
-    virtual const index_t _indexFromVert(const gsBasis<T> * basis, const index_t index, const patchCorner corner, const patchSide side, const index_t offsets = 0) const;
+    virtual index_t _indexFromVert(const index_t index, const patchCorner corner, const patchSide side, const index_t offsets = 0) const;
+    virtual index_t _indexFromVert(const gsMultiBasis<T> & bases, const index_t index, const patchCorner corner, const patchSide side, const index_t offsets = 0) const;
+    virtual index_t _indexFromVert(const gsBasis<T> * basis, const index_t index, const patchCorner corner, const patchSide side, const index_t offsets = 0) const;
 private:
     template<class U>
     typename util::enable_if<util::is_same<U, const gsHTensorBasis<d,T> *>::value,const index_t>::type
@@ -533,7 +533,7 @@ protected:
      *
      * @return     The valence.
      */
-    virtual const index_t _getValence( patchCorner corner) const
+    virtual index_t _getValence( patchCorner corner) const
     { return this->_vertexData(corner).first; }
 
     /**
@@ -543,7 +543,7 @@ protected:
      *
      * @return     True if the specified corner is interior vertex, False otherwise.
      */
-    virtual const bool _isInteriorVertex( patchCorner corner) const
+    virtual bool _isInteriorVertex( patchCorner corner) const
     { return this->_vertexData(corner).second; }
 
     /**
@@ -554,7 +554,7 @@ protected:
      *
      * @return     Returns a global index of the side
      */
-    virtual const index_t _sideIndex( index_t patch,  boxSide bside)     const
+    virtual index_t _sideIndex( index_t patch,  boxSide bside)     const
     { return 4*patch + bside - 1; }
     /**
      * @brief      Computes global index of the side
@@ -563,7 +563,7 @@ protected:
      *
      * @return     Returns a global index of the side
      */
-    virtual const index_t _sideIndex( patchSide pside)     const
+    virtual index_t _sideIndex( patchSide pside)     const
     { return _sideIndex( pside.patch , pside.side() ); }
 
     /**
@@ -574,7 +574,7 @@ protected:
      *
      * @return     Returns a global index of the corner
      */
-    virtual const index_t _vertIndex( index_t patch,  boxCorner corner)  const
+    virtual index_t _vertIndex( index_t patch,  boxCorner corner)  const
     { return 4*patch + corner -1; }
 
     /**
@@ -584,7 +584,7 @@ protected:
      *
      * @return     Returns a global index of the side
      */
-    virtual const index_t _vertIndex( patchCorner pcorner)     const
+    virtual index_t _vertIndex( patchCorner pcorner)     const
     { return _vertIndex( pcorner.patch , pcorner.corner() ); }
 
 
@@ -718,7 +718,7 @@ protected:
 protected:
     const gsMultiPatch<T> & m_patches;
     const gsMultiBasis<T> m_Bbases; // reference?
-    
+
     gsMultiBasis<T> m_bases;
 
     gsBoxTopology m_topology;

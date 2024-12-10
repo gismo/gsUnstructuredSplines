@@ -224,7 +224,7 @@ namespace gismo
     =====================================================================================*/
 
     template<short_t d,class T>
-    const index_t gsDPatchBase<d,T>::_indexFromSides(index_t index1, const patchSide side1, index_t index2, const patchSide side2)
+    index_t gsDPatchBase<d,T>::_indexFromSides(index_t index1, const patchSide side1, index_t index2, const patchSide side2)
     {
         /*
             Finds the index index1 away from side1 and index2 from side2
@@ -266,19 +266,19 @@ namespace gismo
     }
 
     template<short_t d,class T>
-    const index_t gsDPatchBase<d,T>::_indexFromVert(const index_t index, const patchCorner corner, const patchSide side, const index_t offset) const
+    index_t gsDPatchBase<d,T>::_indexFromVert(const index_t index, const patchCorner corner, const patchSide side, const index_t offset) const
     {
         return _indexFromVert(&m_bases.basis(corner.patch),index, corner, side, offset);
     }
 
     template<short_t d,class T>
-    const index_t gsDPatchBase<d,T>::_indexFromVert(const gsMultiBasis<T> & bases, const index_t index, const patchCorner corner, const patchSide side, const index_t offset) const
+    index_t gsDPatchBase<d,T>::_indexFromVert(const gsMultiBasis<T> & bases, const index_t index, const patchCorner corner, const patchSide side, const index_t offset) const
     {
         return _indexFromVert(&bases.basis(corner.patch),index, corner, side, offset);
     }
 
     template<short_t d,class T>
-    const index_t gsDPatchBase<d,T>::_indexFromVert(const gsBasis<T> * basis, const index_t index, const patchCorner corner, const patchSide side, const index_t offset) const
+    index_t gsDPatchBase<d,T>::_indexFromVert(const gsBasis<T> * basis, const index_t index, const patchCorner corner, const patchSide side, const index_t offset) const
     {
         const gsTensorBSplineBasis<d,T> * tbbasis;
         const gsTensorNurbsBasis<d,T> * tnbasis;
@@ -1019,8 +1019,8 @@ namespace gismo
         sparseEntry_t entries;
 
         // get the bases belonging to both patches
-        for (index_t p =0; p!=2; p++)
-            basis[p] = &m_bases.basis(iface[p].patch);
+        basis[0] = &m_bases.basis(iface.first().patch);
+        basis[1] = &m_bases.basis(iface.second().patch);
 
         // this assumes the directions are handled correctly in matchWith (indices has the same direction as oindices)
         basis[0]->matchWith(iface,*basis[1],indices[0],indices[1],0);
@@ -1029,16 +1029,15 @@ namespace gismo
         index_t np;
         for (index_t p =0; p!=2; p++)
         {
-            np = 1-p; // not index p;
-
-            iface[p].getContainedCorners(d,pcorners);
+            patchSide ifacep = (p==0) ? iface.first() : iface.second();
+            ifacep.getContainedCorners(d,pcorners);
             for (index_t c =0; c!=2; c++)
             {
-                selectedIndices[p].push_back(_indexFromVert(0,pcorners[c],iface[p],0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
-                selectedIndices[p].push_back(_indexFromVert(1,pcorners[c],iface[p],0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
+                selectedIndices[p].push_back(_indexFromVert(0,pcorners[c],ifacep,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
+                selectedIndices[p].push_back(_indexFromVert(1,pcorners[c],ifacep,0)); // index from vertex pcorners[c] along side psides[0] with offset 0.
 
-                selectedOIndices[p].push_back(_indexFromVert(0,pcorners[c],iface[p],1)); // index from vertex pcorners[c] along side psides[0] with offset 0.
-                selectedOIndices[p].push_back(_indexFromVert(1,pcorners[c],iface[p],1)); // index from vertex pcorners[c] along side psides[0] with offset 0.
+                selectedOIndices[p].push_back(_indexFromVert(0,pcorners[c],ifacep,1)); // index from vertex pcorners[c] along side psides[0] with offset 0.
+                selectedOIndices[p].push_back(_indexFromVert(1,pcorners[c],ifacep,1)); // index from vertex pcorners[c] along side psides[0] with offset 0.
             }
             std::vector<index_t> allIndices(indices[p].data(), indices[p].data() + indices[p].rows() * indices[p].cols());
             std::vector<index_t> result;
@@ -1070,25 +1069,27 @@ namespace gismo
         for (index_t p =0; p!= 2; p++)
         {
             np = 1-p; // not index p;
+            patchSide ifacep = (p==0) ? iface.first() : iface.second();
+            patchSide ifacenp= (np==0) ? iface.first() : iface.second();
             for (index_t k=0; k!= indices[p].size(); k++ )
             {
-                GISMO_ASSERT(m_mapModified.is_free(oindices[p].at(k),iface[p].patch),"Index "<<oindices[p].at(k)<<" on patch "<<iface[p].patch<<" is eliminated. Something went wrong?");
-                rowIdx = m_mapModified.index(oindices[p].at(k),iface[p].patch);
+                GISMO_ASSERT(m_mapModified.is_free(oindices[p].at(k),ifacep.patch),"Index "<<oindices[p].at(k)<<" on patch "<<ifacep.patch<<" is eliminated. Something went wrong?");
+                rowIdx = m_mapModified.index(oindices[p].at(k),ifacep.patch);
                 // rowIdx1 = m_mapOriginal.index(oindices[p].at(k),patches[p]);
-                GISMO_ASSERT(m_mapOriginal.is_free(oindices[p].at(k),iface[p].patch),"Index is eliminated. Something went wrong?");
-                colIdx = m_mapOriginal.index(oindices[p].at(k),iface[p].patch);
+                GISMO_ASSERT(m_mapOriginal.is_free(oindices[p].at(k),ifacep.patch),"Index is eliminated. Something went wrong?");
+                colIdx = m_mapOriginal.index(oindices[p].at(k),ifacep.patch);
                 // m_matrix(rowIdx,colIdx) = 1.0;
                 weight = 1.0;
                 entries.push_back(std::make_tuple(rowIdx,colIdx,weight));
 
-                GISMO_ASSERT(m_mapOriginal.is_free(indices[p].at(k),iface[p].patch),"Index is eliminated. Something went wrong?");
-                colIdx = m_mapOriginal.index(indices[p].at(k),iface[p].patch);
+                GISMO_ASSERT(m_mapOriginal.is_free(indices[p].at(k),ifacep.patch),"Index is eliminated. Something went wrong?");
+                colIdx = m_mapOriginal.index(indices[p].at(k),ifacep.patch);
                 // m_matrix(rowIdx,colIdx) = 0.5;
                 weight = 0.5;
                 entries.push_back(std::make_tuple(rowIdx,colIdx,weight));
 
-                GISMO_ASSERT(m_mapOriginal.is_free(indices[np].at(k),iface[np].patch),"Index is eliminated. Something went wrong?");
-                colIdx = m_mapOriginal.index(indices[np].at(k),iface[np].patch);
+                GISMO_ASSERT(m_mapOriginal.is_free(indices[np].at(k),ifacenp.patch),"Index is eliminated. Something went wrong?");
+                colIdx = m_mapOriginal.index(indices[np].at(k),ifacenp.patch);
                 weight = 0.5;
                 // m_matrix(rowIdx,colIdx) = 0.5;
                 entries.push_back(std::make_tuple(rowIdx,colIdx,weight));
@@ -1101,9 +1102,8 @@ namespace gismo
         #pragma omp critical (handle_interface)
         {
             _pushAndCheck(entries);
-
-            for (index_t p =0; p!= 2; p++)
-                m_sideCheck[ _sideIndex(iface[p].patch, iface[p].side()) ] = true; // side finished
+            m_sideCheck[ _sideIndex(iface.first().patch, iface.first().side()) ] = true; // side finished
+            m_sideCheck[ _sideIndex(iface.second().patch, iface.second().side()) ] = true; // side finished
         }
 
     }
@@ -1378,6 +1378,9 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatchBase<d,T>::_computeMapperRegularCorner_v1(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(pcorner);
+        GISMO_UNUSED(valence);
+
         // do nothing,
     }
 
@@ -1385,6 +1388,8 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatchBase<d,T>::_computeMapperRegularBoundaryVertexSmooth_v2(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(valence);
+
         std::vector<patchSide> psides(2);
 
         /*
@@ -1442,6 +1447,8 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatchBase<d,T>::_computeMapperRegularBoundaryVertexNonSmooth_v2(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(valence);
+
         std::vector<patchSide> psides(2);
 
         /*
@@ -1492,6 +1499,8 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatchBase<d,T>::_computeMapperIrregularBoundaryVertexNonSmooth_v(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(valence);
+
         // Get all the 0,1 or 1,0 DoFs on the interfaces
         // The 0,0 DoFs are kept but deleted later from the matrix
         std::vector<patchSide> psides(2);
@@ -1507,6 +1516,8 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatchBase<d,T>::_computeMapperInteriorVertex_v(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(valence);
+
         std::vector<patchSide> psides(2);
         /*
             o o o @ X |i| X @ o o o                 x: eliminated DoFs by vertex rule
@@ -1567,6 +1578,8 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatchBase<d,T>::_handleRegularBoundaryVertexSmooth(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(valence);
+
         std::vector<patchSide> psides;
         std::vector<index_t> indices(3);
 
@@ -1616,6 +1629,8 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatchBase<d,T>::_handleRegularBoundaryVertexNonSmooth(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(valence);
+
         std::vector<patchSide> psides;
         std::vector<index_t> indices(3);
 
@@ -1665,6 +1680,8 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatchBase<d,T>::_handleIrregularBoundaryVertexSmooth(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(valence);
+
         gsWarn<<"C1 handling for boundary corners with valence >2 has not yet been implemented. Using the default approach\n";
         this->_handleIrregularBoundaryVertexNonSmooth(pcorner,valence);
     }
@@ -1672,6 +1689,8 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatchBase<d,T>::_handleIrregularBoundaryVertexNonSmooth(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(valence);
+
         std::vector<patchSide> psides;
         std::vector<patchCorner> corners;
         std::vector<index_t> indices;
