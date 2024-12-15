@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     bool SingularPoint = false;
     bool quasiNewton = false;
     index_t quasiNewtonInt = -1;
-    index_t numRefine  = 2;
+    index_t numRefine  = 0;
     index_t degree = 3;
     index_t smoothness = 2;
     std::string input;
@@ -69,15 +69,14 @@ int main(int argc, char *argv[])
     real_t shift = -1e2;
 
     std::string fn1,fn2,fn3;
-    fn1 = "pde/2p_square_geom.xml";
-    fn2 = "pde/2p_square_bvp.xml";
+    fn1 = "surfaces/shell/2p_cornerSimo.xml";
+    fn2 = "pde/shell/2p_cornerSimo_bvp.xml";
     fn3 = "options/solver_options.xml";
     std::string dirname = "ArcLengthResults";
 
     real_t bcDirichlet = 1e3;
     real_t bcClamped = 1e3;
-    real_t ifcDirichlet = 1.0;
-    real_t ifcClamped = 1.0;
+    real_t ifcPenalty = 1.0;
 
     index_t nmodes = 15;
 
@@ -86,8 +85,7 @@ int main(int argc, char *argv[])
     gsCmdLine cmd("Composite basis tests.");
     cmd.addReal( "D", "Dir", "Dirichlet BC penalty scalar",  bcDirichlet );
     cmd.addReal( "C", "Cla", "Clamped BC penalty scalar",  bcClamped );
-    cmd.addReal( "d", "DirIfc", "Dirichlet penalty scalar",  ifcDirichlet );
-    cmd.addReal( "c", "ClaIfc", "Clamped penalty scalar",  ifcClamped );
+    cmd.addReal( "d", "DirIfc", "Dirichlet penalty scalar",  ifcPenalty );
 
     cmd.addString( "G", "geom","File containing the geometry",  fn1 );
     cmd.addString( "B", "bvp", "File containing the Boundary Value Problem (BVP)",  fn2 );
@@ -272,8 +270,7 @@ int main(int argc, char *argv[])
     assembler.options().setReal("WeakClamped",bcClamped);
     // Set the penalty parameter for the interface C1 continuity
     assembler.options().setInt("Continuity",-1);
-    assembler.options().setReal("IfcDirichlet",ifcDirichlet);
-    assembler.options().setReal("IfcClamped",ifcClamped);
+    assembler.options().setReal("IfcPenalty",ifcPenalty);
     assembler.addWeakC0(mp.topology().interfaces());
     assembler.addWeakC1(mp.topology().interfaces());
     assembler.initInterfaces();
@@ -420,8 +417,7 @@ int main(int argc, char *argv[])
         assembler.options().setReal("WeakClamped",bcClamped);
         // Set the penalty parameter for the interface C1 continuity
         assembler.options().setInt("Continuity",-1);
-        assembler.options().setReal("IfcDirichlet",ifcDirichlet);
-        assembler.options().setReal("IfcClamped",ifcClamped);
+        assembler.options().setReal("IfcPenalty",ifcPenalty);
         assembler.addWeakC0(mp.topology().interfaces());
         assembler.addWeakC1(mp.topology().interfaces());
         assembler.initInterfaces();

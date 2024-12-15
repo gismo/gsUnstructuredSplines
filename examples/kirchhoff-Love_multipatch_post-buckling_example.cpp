@@ -56,10 +56,10 @@ int main(int argc, char *argv[])
     bool SingularPoint = false;
     bool quasiNewton = false;
     index_t quasiNewtonInt = -1;
-    index_t numRefine  = 2;
+    index_t numRefine  = 0;
     index_t degree = 3;
     index_t smoothness = 2;
-    index_t method = 0;
+    index_t method = 1;
     std::string input;
 
     index_t step          = 10;
@@ -74,8 +74,8 @@ int main(int argc, char *argv[])
     real_t shift = -1e2;
 
     std::string fn1,fn2,fn3;
-    fn1 = "pde/2p_square_geom.xml";
-    fn2 = "pde/2p_square_bvp.xml";
+    fn1 = "surfaces/shell/2p_cornerSimo.xml";
+    fn2 = "pde/shell/2p_cornerSimo_bvp.xml";
     fn3 = "options/solver_options.xml";
     std::string dirname = "ArcLengthResults";
 

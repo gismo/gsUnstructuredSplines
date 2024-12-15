@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
     bool first      = false;
     bool write      = false;
 
-    index_t method = 0;
+    index_t method = NITSCHE;
 
     index_t numRefine  = 3;
     index_t degree = 3;
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
     real_t penalty_init = -1.0;
     std::string output;
 
-    std::string fn = "planar/1p_square.xml";
+    std::string fn = "planar/6p_square_linear.xml";
 
     gsCmdLine cmd("Tutorial on solving a Biharmonic problem with different spaces.");
     // Flags related to the method (default: Approx C1 method)
