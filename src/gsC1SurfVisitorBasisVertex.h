@@ -60,6 +60,8 @@ namespace gismo
                              std::vector<bool> & isBoundary,
                              gsMatrix<T>  & Phi)
         {
+            GISMO_UNUSED(isBoundary);
+
             md.points = quNodes;
 
             // Compute the active basis functions
@@ -420,6 +422,8 @@ namespace gismo
         inline void assemble(gsDomainIterator<T>    & element,
                              const gsVector<T>      & quWeights)
         {
+            GISMO_UNUSED(element);
+
             gsMatrix<T> & basisVals  = basisData;
             for (index_t i = 0; i < 6; i++)
             {

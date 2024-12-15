@@ -51,6 +51,8 @@ public:
                 : m_mp(mp), m_bases(bases), m_patchesAroundVertex(patchesAroundVertex),
                 m_vertexIndices(vertexIndices), m_optionList(optionList)
     {
+        GISMO_UNUSED(numVer);
+
         m_auxPatches.clear();
         basisVertexResult.clear();
 

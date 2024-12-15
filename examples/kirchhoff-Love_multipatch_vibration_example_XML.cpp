@@ -44,7 +44,10 @@ int main(int argc, char *argv[])
 
     real_t shift = 0.01;
 
-    std::string geomFileName,basisFileName,bvpFileName,optFileName;
+    std::string geomFileName = "multipatches/2p_cornerSimo_AlmostC1_geom.xml";
+    std::string basisFileName= "multipatches/2p_cornerSimo_AlmostC1_basis.xml";
+    std::string bvpFileName  = "pde/shell/2p_cornerSimo_bvp.xml";
+    std::string optFileName;
     optFileName = "options/solver_options.xml";
     std::string out = "ModalResults";
 

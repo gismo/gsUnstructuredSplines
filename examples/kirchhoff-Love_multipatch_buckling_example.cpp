@@ -57,8 +57,8 @@ int main(int argc, char *argv[])
     real_t shift = 0.01;
 
     std::string fn1,fn2,fn3;
-    fn1 = "pde/2p_square_geom.xml";
-    fn2 = "pde/2p_square_bvp.xml";
+    fn1 = "surfaces/shell/2p_cornerSimo.xml";
+    fn2 = "pde/shell/2p_cornerSimo_bvp.xml";
     fn3 = "options/solver_options.xml";
     std::string out = "BucklingResults";
 
@@ -152,9 +152,6 @@ int main(int argc, char *argv[])
 
     for (index_t k =0; k!=points.cols(); k++)
         pLoads.addLoad(points.col(k), loads.col(k), pid_ploads.at(k) ); // in parametric domain!
-
-    gsInfo<<pLoads;
-    gsInfo<<mp.patch(pid_ploads.at(0)).eval(pLoads[0].point);
 
     // // Loads
     // gsPointLoads<real_t> pLoads = gsPointLoads<real_t>();
@@ -459,9 +456,9 @@ int main(int argc, char *argv[])
             for (size_t p = 0; p!=mp.nPatches(); p++)
             {
                 fileName = output + util::to_string(m) + "_";
-                collection.addTimestep(fileName,p,m,".vts");
+                collection.addPart(fileName+".vts",m,"Solution",p);
                 if (mesh)
-                    collection.addTimestep(fileName,p,m,"_mesh.vtp");
+                    collection.addPart(fileName+"_mesh.vtp",m,"Mesh",p);
             }
         }
         collection.save();

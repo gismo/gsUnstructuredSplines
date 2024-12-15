@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     index_t degree = 3;
     index_t smoothness = 2;
 
-    std::string fn, basisOutput, geoOutput;
+    std::string fn="surfaces/6p_hyperboloid.xml", basisOutput, geoOutput;
 
     gsCmdLine cmd("Tutorial on solving a Biharmonic problem with different spaces.");
     // Flags related to the method (default: Approx C1 method)
