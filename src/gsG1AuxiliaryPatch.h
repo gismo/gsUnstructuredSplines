@@ -349,15 +349,15 @@ namespace gismo
             return auxPatch.patch(0);
         }
 
-        const index_t getGlobalPatchIndex(){
+        index_t getGlobalPatchIndex(){
             return patchIndex;
         }
 
-        const index_t getNumberOfRotatioin(){
+        index_t getNumberOfRotatioin(){
             return rotationNum;
         }
 
-        const index_t getOrient(){
+        index_t getOrient(){
             return axisOrientation;
         }
 

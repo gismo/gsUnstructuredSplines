@@ -63,6 +63,7 @@ namespace gismo
         inline void apply(bhVisitor & visitor, index_t i, std::string typeBf); // i == number of bf
         void solve();
 
+        using Base::constructSolution;
         void constructSolution(const gsMatrix<T> & solVector,
                                gsMultiPatch<T> & result, short_t unk = 0) const;
 
@@ -71,7 +72,8 @@ namespace gismo
         void assemble()
         { GISMO_NO_IMPLEMENTATION; }
 
-        void assemble(const gsMultiPatch<T> & curSolution)
+        using gsAssembler<T>::assemble;
+        void assemble(const gsMultiPatch<T> & /* curSolution */)
         { GISMO_NO_IMPLEMENTATION; }
 
     protected:

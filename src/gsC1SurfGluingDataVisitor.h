@@ -195,6 +195,8 @@ public:
                              gsMultiPatch<T> & mp,
                              gsMatrix<T> sol)
     {
+        GISMO_UNUSED(mp);
+
         md.points = quNodes;
         activesBeta.setZero(4, 1);
         activesBeta << 0, 1, 2, 3;
@@ -264,6 +266,7 @@ public:
     inline void assemble(gsDomainIterator<T>    & element,
                          const gsVector<T>      & quWeights)
     {
+        GISMO_UNUSED(element);
 
         for (index_t k = 0; k < quWeights.rows(); ++k) // loop over quadrature nodes
         {
@@ -285,6 +288,8 @@ public:
     inline void assembleBeta(gsDomainIterator<T>    & element,
                              const gsVector<T>      & quWeights)
     {
+        GISMO_UNUSED(element);
+
         for (index_t k = 0; k < quWeights.rows(); ++k) // loop over quadrature nodes
         {
 

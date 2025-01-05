@@ -70,6 +70,7 @@ public:
 
     const gsFunction<T> & piece(const index_t k) const
     {
+        GISMO_UNUSED(k);
         //delete _alpha_piece;
         _alpha_piece = new gsAlpha(*this);
         return *_alpha_piece;
@@ -176,6 +177,7 @@ public:
 
     const gsFunction<T> & piece(const index_t k) const
     {
+        GISMO_UNUSED(k);
         //delete _beta_piece;
         _beta_piece = new gsBeta(*this);
         return *_beta_piece;
@@ -280,6 +282,7 @@ public:
 
     const gsFunction<T> & piece(const index_t k) const
     {
+        GISMO_UNUSED(k);
         //delete _traceBasis_piece;
         _traceBasis_piece = new gsTraceBasis(*this);
         return *_traceBasis_piece;
@@ -367,6 +370,7 @@ public:
 
     const gsFunction<T> & piece(const index_t k) const
     {
+        GISMO_UNUSED(k);
         //delete _normalDerivBasis_piece;
         _normalDerivBasis_piece = new gsNormalDerivBasis(*this);
         return *_normalDerivBasis_piece;
@@ -459,6 +463,7 @@ public:
 
     const gsFunction<T> & piece(const index_t k) const
     {
+        GISMO_UNUSED(k);
         //delete _vertexBasis_piece;
         _vertexBasis_piece = new gsVertexBasis(*this);
         return *_vertexBasis_piece;

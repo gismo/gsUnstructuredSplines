@@ -46,8 +46,7 @@ int main(int argc, char *argv[])
     real_t bcDirichlet = 1e3;
     real_t bcClamped = 1e3;
 
-    real_t ifcDirichlet = 1.0;
-    real_t ifcClamped = 1.0;
+    real_t ifcPenalty = 1.0;
 
     real_t shift = 0.01;
 
@@ -60,8 +59,7 @@ int main(int argc, char *argv[])
     gsCmdLine cmd("Composite basis tests.");
     cmd.addReal( "D", "Dir", "Dirichlet BC penalty scalar",  bcDirichlet );
     cmd.addReal( "C", "Cla", "Clamped BC penalty scalar",  bcClamped );
-    cmd.addReal( "d", "DirIfc", "Dirichlet penalty scalar",  ifcDirichlet );
-    cmd.addReal( "c", "ClaIfc", "Clamped penalty scalar",  ifcClamped );
+    cmd.addReal( "d", "DirIfc", "Dirichlet penalty scalar",  ifcPenalty );
     cmd.addString( "G", "geom","File containing the geometry",  fn1 );
     cmd.addString( "B", "bvp", "File containing the Boundary Value Problem (BVP)",  fn2 );
     cmd.addString( "O", "opt", "File containing solver options",  fn3 );
@@ -206,8 +204,7 @@ int main(int argc, char *argv[])
     assembler.options().setReal("WeakClamped",bcClamped);
     // Set the penalty parameter for the interface C1 continuity
     assembler.options().setInt("Continuity",-1);
-    assembler.options().setReal("IfcDirichlet",ifcDirichlet);
-    assembler.options().setReal("IfcClamped",ifcClamped);
+    assembler.options().setReal("IfcPenalty",ifcPenalty);
     assembler.addWeakC0(mp.topology().interfaces());
     assembler.addWeakC1(mp.topology().interfaces());
     assembler.initInterfaces();
@@ -326,9 +323,9 @@ int main(int argc, char *argv[])
             for (size_t p = 0; p!=mp.nPatches(); p++)
             {
                 fileName = output + util::to_string(m) + "_";
-                collection.addTimestep(fileName,p,m,".vts");
+                collection.addPart(fileName+".vts",m,"Solution",p);
                 if (mesh)
-                    collection.addTimestep(fileName,p,m,"_mesh.vtp");
+                    collection.addPart(fileName+"_mesh.vtp",m,"Mesh",p);
             }
         }
         collection.save();

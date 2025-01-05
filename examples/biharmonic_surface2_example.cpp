@@ -1,6 +1,6 @@
 /** @file biharmonic_surface2_example.cpp
 
-    @brief Tutorial on how to use expression assembler and 
+    @brief Tutorial on how to use expression assembler and
                 gsUnstructuredSplines to solve the Surface Biharmonic equation
 
     This file is part of the G+Smo library.
@@ -910,7 +910,7 @@ int main(int argc, char *argv[])
     bool plot = false;
     bool mesh = false;
 
-    index_t method = 0;
+    index_t method = NITSCHE;
 
     index_t numRefine  = 5;
     index_t degree = 3;
@@ -924,7 +924,7 @@ int main(int argc, char *argv[])
     bool residual = false;
 
     std::string output;
-    std::string fn = "surfaces/surface_roof.xml";
+    std::string fn = "surfaces/6p_hyperboloid.xml";
     std::string geometry;
 
     gsCmdLine cmd("Example for solving the biharmonic problem (single patch only).");

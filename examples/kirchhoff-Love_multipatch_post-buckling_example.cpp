@@ -56,10 +56,10 @@ int main(int argc, char *argv[])
     bool SingularPoint = false;
     bool quasiNewton = false;
     index_t quasiNewtonInt = -1;
-    index_t numRefine  = 2;
+    index_t numRefine  = 0;
     index_t degree = 3;
     index_t smoothness = 2;
-    index_t method = 0;
+    index_t method = 1;
     std::string input;
 
     index_t step          = 10;
@@ -74,8 +74,8 @@ int main(int argc, char *argv[])
     real_t shift = -1e2;
 
     std::string fn1,fn2,fn3;
-    fn1 = "pde/2p_square_geom.xml";
-    fn2 = "pde/2p_square_bvp.xml";
+    fn1 = "surfaces/shell/2p_cornerSimo.xml";
+    fn2 = "pde/shell/2p_cornerSimo_bvp.xml";
     fn3 = "options/solver_options.xml";
     std::string dirname = "ArcLengthResults";
 
@@ -547,9 +547,9 @@ int main(int argc, char *argv[])
                 for (size_t p = 0; p!=mp.nPatches(); p++)
                 {
                     fileName = output + util::to_string(m) + "_";
-                    collection.addTimestep(fileName,p,m,".vts");
+                    collection.addPart(fileName+".vts",m,"Solution",p);
                     if (mesh)
-                        collection.addTimestep(fileName,p,m,"_mesh.vtp");
+                        collection.addPart(fileName+"_mesh.vtp",m,"Mesh",p);
                 }
             }
             collection.save();
@@ -729,9 +729,9 @@ int main(int argc, char *argv[])
                 for (size_t p = 0; p!=mp.nPatches(); p++)
                 {
                     fileName = output + util::to_string(k) + "_";
-                    collection.addTimestep(fileName,p,k,".vts");
+                    collection.addPart(fileName+".vts",k,"Solution",p);
                     if (mesh)
-                        collection.addTimestep(fileName,p,k,"_mesh.vtp");
+                        collection.addPart(fileName+"_mesh.vtp",k,"Mesh",p);
                 }
             }
 
@@ -758,9 +758,9 @@ int main(int argc, char *argv[])
                 for (size_t p = 0; p!=mp.nPatches(); p++)
                 {
                     fileName = "MembraneStress" + util::to_string(k) + "_";
-                    membraneStressCollection.addTimestep(fileName,p,k,".vts");
+                    membraneStressCollection.addPart(fileName+".vts",k,"Solution",p);
                     if (mesh)
-                        membraneStressCollection.addTimestep(fileName,p,k,"_mesh.vtp");
+                        membraneStressCollection.addPart(fileName+"_mesh.vtp",k,"Mesh",p);
                 }
 
                 gsPiecewiseFunction<> flexuralStresses;
@@ -770,9 +770,9 @@ int main(int argc, char *argv[])
                 for (size_t p = 0; p!=mp.nPatches(); p++)
                 {
                     fileName = "FlexuralStress" + util::to_string(k) + "_";
-                    flexuralStressCollection.addTimestep(fileName,p,k,".vts");
+                    flexuralStressCollection.addPart(fileName+".vts",k,"Solution",p);
                     if (mesh)
-                        flexuralStressCollection.addTimestep(fileName,p,k,"_mesh.vtp");
+                        flexuralStressCollection.addPart(fileName+"_mesh.vtp",k,"Mesh",p);
                 }
 
             }

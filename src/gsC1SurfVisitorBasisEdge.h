@@ -161,6 +161,8 @@ namespace gismo
         inline void assemble(gsDomainIterator<T>    & element,
                              const gsVector<T>      & quWeights)
         {
+            GISMO_UNUSED(element);
+
             gsMatrix<T> & basisVals  = basisData;
 
             // ( u, v)

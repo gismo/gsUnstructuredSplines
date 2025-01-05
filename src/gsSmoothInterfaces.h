@@ -66,7 +66,7 @@ protected:
      *
      */
     gsMatrix<T> _preCoefficients(const gsMultiPatch<T> & patches) override;
-//    using Base::_preCoefficients;
+   using Base::_preCoefficients;
 
 //    using Base::allCoefficients;
 

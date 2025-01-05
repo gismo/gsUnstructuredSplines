@@ -1,6 +1,6 @@
 /** @file biharmonic_planar_example.cpp
 
-    @brief Tutorial on how to use expression assembler and 
+    @brief Tutorial on how to use expression assembler and
                 gsUnstructuredSplines to solve the Biharmonic equation
 
     This file is part of the G+Smo library.
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
     bool plotApproxC1 = false;
     bool mesh  = false;
 
-    index_t method = 0;
+    index_t method = NITSCHE;
 
     index_t numRefine  = 3;
     index_t numRefineIni  = 1;

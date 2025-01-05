@@ -1,6 +1,6 @@
 /** @file biharmonic_surface_example.cpp
 
-    @brief Tutorial on how to use expression assembler and 
+    @brief Tutorial on how to use expression assembler and
                 gsUnstructuredSplines to solve the Surface Biharmonic equation
 
     This file is part of the G+Smo library.
@@ -445,8 +445,8 @@ int main(int argc, char *argv[])
     bool second = false;
     bool residual = false;
 
-    std::string fn;
-    std::string geometry = "g1000";
+    std::string fn= "surfaces/simple.xml";
+    std::string geometry;
 
     gsCmdLine cmd("Example for solving the biharmonic problem (single patch only).");
     cmd.addInt("p", "degree","Set discrete polynomial degree", degree);
