@@ -1,15 +1,14 @@
+![GitHub commits since latest release](https://img.shields.io/github/commits-since/gismo/gsUnstructuredSplines/latest?color=008A00)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/gismo/gsUnstructuredSplines?color=008A00)
+
 # `gsUnstructuredSplines`: Unstructured spline constructions for G+Smo
 
 |CMake flags|```-DGISMO_OPTIONAL="<other submodules>;gsUnstructuredSplines"```|
 |--:|---|
-|License|[MPL 2.0](https://www.mozilla.org/en-US/MPL/2.0/)|
+|License|![GitHub License](https://img.shields.io/github/license/gismo/gismo?color=008A00)|
 |OS support|Linux, Windows, macOS|
 |Build Status|[![ci](https://github.com/gismo/gsUnstructuredSplines/actions/workflows/ci.yml/badge.svg)](https://github.com/gismo/gsUnstructuredSplines/actions/workflows/ci.yml)|
-|Repository|[gismo/gismo/gsUnstructuredSplines](https://github.com/gismo/gsUnstructuredSplines)|
-|Dependencies|[gismo/gismo](https://github.com/gismo/gismo)|
-|Developer|[Pascal Weinmueller](https://github.com/weinmueller),[Hugo Verhelst](https://github.com/hverhelst),[Andrea Farahat](https://github.com/AndreaFarahat)|
-|Maintainers|[pascal.weinmueller@mtu.de](mailto:pascal.weinmueller@mtu.de),[h.m.verhelst@tudelft.nl](mailto:h.m.verhelst@tudelft.nl)|
-|Last checked|22-08-2024|
+|Developers/maintainers| [![Static Badge](https://img.shields.io/badge/@hverhelst-008A00)](https://github.com/hverhelst) [![Static Badge](https://img.shields.io/badge/@weinmueller-008A00)](https://github.com/weinmueller) [![Static Badge](https://img.shields.io/badge/@AndreaFarahat-008A00)](https://github.com/AndreaFarahat)|
 
 ## Installation
 ```
