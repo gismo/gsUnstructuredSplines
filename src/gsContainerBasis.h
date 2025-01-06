@@ -78,10 +78,10 @@ namespace gismo
             GISMO_NO_IMPLEMENTATION;
         }
 
-        void uniformRefine()
+        void uniformRefine(int numKnots = 1, int mul=1, int dir=-1)
         {
             for (size_t i=0; i< basisContainer.size(); ++i)
-                basisContainer[i].uniformRefine();
+                basisContainer[i].uniformRefine(numKnots,mul,dir);
         }
 
         // Returm max degree of all the spaces, otherwise i =
@@ -130,19 +130,24 @@ namespace gismo
 
         index_t nPieces() const {return basisContainer.size();}
 
-        typename gsBasis<T>::domainIter makeDomainIterator(const boxSide & side) const
+        typename gsBasis<T>::domainIter makeDomainIterator(const boxSide & side) const override
         {
             // Using the inner basis for iterating
             return basisContainer[0].makeDomainIterator(side);
         }
 
-        typename gsBasis<T>::domainIter makeDomainIterator() const
+        typename gsBasis<T>::domainIter makeDomainIterator() const override
         {
             // Using the inner basis for iterating
             return basisContainer[0].makeDomainIterator();
         }
 
-        const gsBasis<T> & component(short_t i) const
+              gsBasis<T> & component(short_t i) override
+        {
+            return basisContainer[0].component(i);
+        }
+
+        const gsBasis<T> & component(short_t i) const override
         {
             return basisContainer[0].component(i);
         }
@@ -151,9 +156,14 @@ namespace gismo
                        gsMatrix<index_t> & bndThis, gsMatrix<index_t> & bndOther) const;
 */
 
-        gsMatrix<T> support() const
+        gsMatrix<T> support() const override
         {
             return basisContainer[0].support();
+        }
+
+        gsMatrix<T> support(const index_t & i) const override
+        {
+            return basisContainer[0].support(i);
         }
 
         gsBasis<T>* boundaryBasis_impl(boxSide const & s) const
@@ -245,7 +255,9 @@ namespace gismo
         }
 
         void matchWith(const boundaryInterface &bi, const gsBasis<T> &other, gsMatrix<index_t> &bndThis,
-                       gsMatrix<index_t> &bndOther) const {
+                       gsMatrix<index_t> &bndOther, int) const override
+        {
+            GISMO_UNUSED(bi); GISMO_UNUSED(other); GISMO_UNUSED(bndThis); GISMO_UNUSED(bndOther);
             // First side
             // edge
             gsDebug << "matchWith() function is not implemented yet \n";

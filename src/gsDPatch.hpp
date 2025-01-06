@@ -394,7 +394,7 @@ namespace gismo
                         patches.insert(std::make_pair(side.patch,i));
                         corners[i] = corner;
                         bool isInterface = m_topology.getInterface(side,interfaces[i]);
-                        GISMO_ASSERT(isInterface,"Side must be an interface!");
+                        GISMO_ENSURE(isInterface,"Side must be an interface!");
 
                         std::vector<boxCorner> adjcorners;
                         m_topology.getNeighbour(side,otherSide);
@@ -407,7 +407,7 @@ namespace gismo
                                 otherCorner = patchCorner(otherSide.patch,adjcorners[1]);
                             else continue;
                         }
-                        GISMO_ASSERT(otherCorner!=patchCorner(0,0),"Error");
+                        GISMO_ENSURE(otherCorner!=patchCorner(0,0),"Error");
 
                         // interfaces[i] = boundaryInterface(side,otherSide,d);
                         // GISMO_ASSERT(corners[i].patch==interfaces[i].first().patch,"Must be true");
@@ -532,10 +532,10 @@ namespace gismo
                     // interface smoothing
                     for (index_t i = 0; i!=N; i++) // for all involved interfaces
                     {
-                        patchCorner corner = corners[patches[interfaces[i][0].patch]];
-                        patchCorner otherCorner = corners[patches[interfaces[i][1].patch]];
-                        patchSide side = interfaces[i][0];
-                        patchSide otherSide = interfaces[i][1];
+                        patchCorner corner = corners[patches[interfaces[i].first().patch]];
+                        patchCorner otherCorner = corners[patches[interfaces[i].second().patch]];
+                        patchSide side = interfaces[i].first();
+                        patchSide otherSide = interfaces[i].second();
                         for (index_t k = 2; k!=4 ; k++)// std::max(basis1->maxDegree(),basis2->maxDegree())+
                         {
                             idx = this->_indexFromVert(m_bases,k,corner,side,0);
@@ -731,6 +731,8 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatch<d,T>::_handleIrregularBoundaryVertexSmooth(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(valence);
+
         // // 2. make container for the interfaces
         // std::vector<boundaryInterface> ifaces;
         // boundaryInterface iface;
@@ -1145,6 +1147,8 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatch<d,T>::_computeMapperIrregularBoundaryVertexSmooth_v3(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(valence);
+
         std::vector<patchSide> psides(2);
         std::vector<patchCorner> pcorners;
         /*

@@ -65,11 +65,11 @@ public:
      */
     gsDPatch(const gsMultiPatch<T> & mp) ;
 
-    GISMO_CLONE_FUNCTION(gsDPatch)
+    // GISMO_CLONE_FUNCTION(gsDPatch)
 
     ~gsDPatch();
 
-    void defaultOptions();
+    void defaultOptions() override;
 
     // using Base::exportToPatches;
 
@@ -116,7 +116,7 @@ protected:
     using Base::_performChecks;
     using Base::_resetChecks;
 
-    void _countDoFs();
+    void _countDoFs() override;
 
     // void _computeMapper(); // also initialize the mappers!
     using Base::_computeMapper;
@@ -168,7 +168,7 @@ protected:
     // void _computeBoundaryMapper(patchSide boundary);
     using Base::_computeBoundaryMapper;
 
-    void _computeVertexMapper(patchCorner pcorner);
+    void _computeVertexMapper(patchCorner pcorner) override;
 
 
 private:
@@ -208,13 +208,13 @@ private:
     // template<bool _boundary, index_t _v, bool _smooth>
     // typename std::enable_if<  _boundary && _v==-1 && _smooth, void>::type
     // DIFFERENT
-    void _computeMapperIrregularBoundaryVertexSmooth_v(patchCorner pcorner, index_t valence);
+    void _computeMapperIrregularBoundaryVertexSmooth_v(patchCorner pcorner, index_t valence) override;
 
     // Boundary vertex of valence !(1,2,3) with C0 smoothness
     // template<bool _boundary, index_t _v, bool _smooth>
     // typename std::enable_if<  _boundary && _v==-1 && (!_smooth), void>::type
     // DIFFERENT
-    void _computeMapperIrregularBoundaryVertexNonSmooth_v(patchCorner pcorner, index_t valence);
+    void _computeMapperIrregularBoundaryVertexNonSmooth_v(patchCorner pcorner, index_t valence) override;
 
     // // Interior vertex
     // template<bool _boundary, index_t _v>
@@ -312,9 +312,9 @@ private:
 
     // void _handleRegularBoundaryVertexSmooth(patchCorner pcorner, index_t valence);
 
-    void _handleIrregularBoundaryVertexSmooth(patchCorner pcorner, index_t valence);
+    void _handleIrregularBoundaryVertexSmooth(patchCorner pcorner, index_t valence) override;
 
-    void _handleIrregularBoundaryVertexNonSmooth(patchCorner pcorner, index_t valence);
+    void _handleIrregularBoundaryVertexNonSmooth(patchCorner pcorner, index_t valence) override;
 
 protected:
     using Base::_whichHandled;

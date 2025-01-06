@@ -8,7 +8,7 @@
     License, v. 2.0. If a copy of the MPL was not distributed with this
     file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-    Author(s): A. Farahat & P. Weinmueller  
+    Author(s): A. Farahat & P. Weinmueller
 */
 
 #pragma once
@@ -59,6 +59,7 @@ namespace gismo
 
 
         void refresh();
+        using Base::assemble;
         void assemble();
         inline void apply(bhVisitor & visitor, index_t patchIndex);
         void solve();
@@ -76,6 +77,16 @@ namespace gismo
         }
 
 
+    private:
+        // Avoid hidden overloads w.r.t. gsAssembler
+        void constructSolution(const gsMatrix<T>& /* solVector */,
+                               gsMultiPatch<T>& /* result */, short_t /* unk */) const
+        { GISMO_NO_IMPLEMENTATION; }
+
+        void constructSolution(const gsMatrix<T>& /* solVector */,
+                               gsMultiPatch<T>& /* result */,
+                               const gsVector<index_t>  & /* unknowns */) const
+        { GISMO_NO_IMPLEMENTATION; }
 
     protected:
 

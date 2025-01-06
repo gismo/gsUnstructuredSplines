@@ -1,7 +1,7 @@
-/** @file biharmonic2_example.cpp
+/** @file create_multipatch.cpp
 
-    @brief Tutorial on how to use expression assembler and the (approx.) C1 basis function
-                to solve the Biharmonic equation
+    @brief Export the multi-patch geometry, the multi-basis and the sparse mapper
+           for several unstructured spline constructions
 
     This file is part of the G+Smo library.
 
@@ -9,7 +9,8 @@
     License, v. 2.0. If a copy of the MPL was not distributed with this
     file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-    Author(s): P. Weinmueller
+    Author(s): P. Weinmueller,
+               H.M Verhelst
 */
 
 //! [Include namespace]
@@ -34,11 +35,11 @@ using namespace gismo;
  */
 enum MethodFlags
 {
-    APPROXC1       = 0, // Approx C1 Method
     DPATCH         = 1, // D-Patch
-    ALMOSTC1       = 2, // Almost C1
-    NITSCHE        = 3, // Nitsche
-    SURFASG1       = 5, // AS-G1
+    APPROXC1       = 2, // Approx C1 Method
+    SURFASG1       = 3, // AS-G1
+    ALMOSTC1       = 4, // Almost C1
+    NITSCHE        = 5, // Nitsche
     // Add more [...]
 };
 
@@ -53,7 +54,7 @@ int main(int argc, char *argv[])
     index_t degree = 3;
     index_t smoothness = 2;
 
-    std::string fn, basisOutput, geoOutput;
+    std::string fn="surfaces/6p_hyperboloid.xml", basisOutput, geoOutput;
 
     gsCmdLine cmd("Tutorial on solving a Biharmonic problem with different spaces.");
     // Flags related to the method (default: Approx C1 method)
@@ -106,9 +107,9 @@ int main(int argc, char *argv[])
             unsigned maxLvl = 0;
             bool THBcheck = false;
             gsHTensorBasis<2,real_t> * hbasis;
-            for (index_t p=0; p!=mp.nPatches(); p++)
+            for (size_t p=0; p!=mp.nPatches(); p++)
             {
-                if (hbasis = dynamic_cast<gsHTensorBasis<2,real_t> *>(&mp.basis(p)))
+                if ((hbasis = dynamic_cast<gsHTensorBasis<2,real_t> *>(&mp.basis(p))))
                 {
                     maxLvl = std::max(maxLvl,hbasis->maxLevel());
                     THBcheck = true;
@@ -123,7 +124,7 @@ int main(int argc, char *argv[])
                 //
                 gsTHBSpline<2,real_t> * THBspline;
                 gsTensorBSpline<2,real_t> bspline;
-                for (index_t p=0; p!=mp.nPatches(); p++)
+                for (size_t p=0; p!=mp.nPatches(); p++)
                 {
                     if ((THBspline = dynamic_cast<gsTHBSpline<2,real_t> *>(&mp.patch(p))))
                     {

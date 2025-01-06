@@ -52,7 +52,7 @@ public:
      */
     gsSmoothInterfaces(gsMultiPatch<T> const & mp) ;
 
-    GISMO_CLONE_FUNCTION(gsSmoothInterfaces)
+    // GISMO_CLONE_FUNCTION(gsSmoothInterfaces)
 
     // ~gsSmoothInterfaces();
 
@@ -65,8 +65,8 @@ protected:
      * Takes the coefficients which are tagged as "free" in the modified DoFMapper (m_mapModified) and when a boundary vertex with valence=3 is present, this one is shifted.
      *
      */
-    gsMatrix<T> _preCoefficients(const gsMultiPatch<T> & patches);
-//    using Base::_preCoefficients;
+    gsMatrix<T> _preCoefficients(const gsMultiPatch<T> & patches) override;
+   using Base::_preCoefficients;
 
 //    using Base::allCoefficients;
 

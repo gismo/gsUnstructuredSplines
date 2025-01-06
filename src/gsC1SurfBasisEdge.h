@@ -63,7 +63,18 @@ namespace gismo
         inline void apply(bhVisitor & visitor, index_t i, std::string typeBf); // i == number of bf
         void solve();
 
-        void constructSolution(const gsMatrix<T> & solVector, gsMultiPatch<T> & result);
+        using Base::constructSolution;
+        void constructSolution(const gsMatrix<T> & solVector,
+                               gsMultiPatch<T> & result, short_t unk = 0) const;
+
+    private:
+        // Avoid hidden overloads w.r.t. gsAssembler
+        void assemble()
+        { GISMO_NO_IMPLEMENTATION; }
+
+        using gsAssembler<T>::assemble;
+        void assemble(const gsMultiPatch<T> & /* curSolution */)
+        { GISMO_NO_IMPLEMENTATION; }
 
     protected:
 
@@ -144,8 +155,10 @@ namespace gismo
     } // setG1BasisEdge
 
     template <class T, class bhVisitor>
-    void gsC1SurfBasisEdge<T,bhVisitor>::constructSolution(const gsMatrix<T> & solVector, gsMultiPatch<T> & result)
+    void gsC1SurfBasisEdge<T,bhVisitor>::constructSolution(const gsMatrix<T> & solVector, gsMultiPatch<T> & result, short_t unk) const
     {
+        GISMO_UNUSED(unk);
+
         // Dim is the same for all basis functions
         const index_t dim = ( 0!=solVector.cols() ? solVector.cols() :  m_ddof[0].cols() );
 

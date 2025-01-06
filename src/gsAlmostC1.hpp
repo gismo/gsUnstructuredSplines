@@ -381,22 +381,15 @@ namespace gismo
             totalsize += sizes.at(p);
         }
 
-        GISMO_ASSERT(totalsize==coefs.rows(),"Sizes do not agree");
+        GISMO_ENSURE(totalsize==coefs.rows(),"Sizes do not agree");
 
         gsMultiBasis<T> basis(mp);
         gsDofMapper tmpMap(basis);
         tmpMap.finalize();
 
-        index_t offset = 0;
         for (size_t p=0; p!=mp.nPatches(); p++) // patches
-        {
             for (index_t k=0; k!=sizes.at(p); k++)
-            {
                 mp.patch(p).coefs().row(k) = coefs.row(tmpMap.index(k,p));
-            }
-            offset += sizes.at(p);
-        }
-
     }
 
     /*=====================================================================================
@@ -668,7 +661,7 @@ namespace gismo
                 {
                     colIdx = uind(0,j);
                     m_matrix.prune(
-                                    [&colIdx](index_t i, index_t j, T)
+                                    [&colIdx](index_t, index_t j, T)
                                     { return j!=colIdx; }
                                     );
                 }
@@ -826,6 +819,7 @@ namespace gismo
     template<short_t d,class T>
     void gsAlmostC1<d,T>::_computeMapperRegularBoundaryVertexNonSmooth_v2(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(valence);
         // for C0 vertices, the 1,0 and 0,1 DoFs on the interface need to be eliminated
         // However, we need a minimum of 3 DoFs around the vertex and we keep the 0,0s anyways
         // Using _removeLowestIndices(indices,3), only the 0,1 or 1,0 index with the highest is selected for removal
@@ -853,6 +847,7 @@ namespace gismo
     template<short_t d,class T>
     void gsAlmostC1<d,T>::_computeMapperIrregularBoundaryVertexSmooth_v(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(valence);
         std::vector<std::pair<index_t,index_t>> indices0  = _getAllInterfaceIndices(pcorner,0,m_bases);
         std::vector<std::pair<index_t,index_t>> indices1  = _getAllInterfaceIndices(pcorner,1,m_bases);
         std::vector<patchCorner> pcorners;
@@ -883,6 +878,7 @@ namespace gismo
     template<short_t d,class T>
     void gsAlmostC1<d,T>::_computeMapperInteriorVertex_v(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(valence);
         std::vector<std::pair<index_t,index_t>> indices0  = _getAllInterfaceIndices(pcorner,0,m_bases);
         std::vector<std::pair<index_t,index_t>> indices1  = _getAllInterfaceIndices(pcorner,1,m_bases);
         std::vector<patchCorner> pcorners;
@@ -911,6 +907,7 @@ namespace gismo
     template<short_t d,class T>
     void gsAlmostC1<d,T>::_handleIrregularBoundaryVertexSmooth(patchCorner pcorner, index_t valence)
     {
+        GISMO_UNUSED(valence);
         std::vector<patchSide> psides;
         std::vector<patchCorner> corners;
         std::vector<index_t> indices;

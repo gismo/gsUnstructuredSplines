@@ -1,6 +1,7 @@
-/** @file biharmonic_example.cpp
+/** @file biharmonic_surface2_example.cpp
 
-    @brief A Biharmonic example for a single patch.
+    @brief Tutorial on how to use expression assembler and
+                gsUnstructuredSplines to solve the Surface Biharmonic equation
 
     This file is part of the G+Smo library.
 
@@ -8,7 +9,8 @@
     License, v. 2.0. If a copy of the MPL was not distributed with this
     file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-    Author(s): P. Weinmueller
+    Author(s): P. Weinmueller,
+               H.M Verhelst
 */
 
 # include <gismo.h>
@@ -27,12 +29,12 @@
  */
 enum MethodFlags
 {
-    APPROXC1       = 0, // Approx C1 Method
     DPATCH         = 1, // D-Patch
-    ALMOSTC1       = 2, // Almost C1
-    NITSCHE        = 3, // Nitsche
-    SPLINE         = 4, // Spline (only for single patch)
-    SURFASG1       = 5, // Only for AS-G1 geometries
+    APPROXC1       = 2, // Approx C1 Method
+    SURFASG1       = 3, // Only for AS-G1 geometries
+    ALMOSTC1       = 4, // Almost C1
+    NITSCHE        = 5, // Nitsche
+    SPLINE         = 6, // Spline (only for single patch)
     // Add more [...]
 };
 
@@ -381,7 +383,9 @@ namespace gismo{
 
             var1_expr(const E & u, const gsGeometryMap<Scalar> & G) : _u(u), _G(G) { }
 
+#           define Eigen gsEigen
             EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+#           undef Eigen
 
             const gsMatrix<Scalar> & eval(const index_t k) const {return eval_impl(_u,k); }
 
@@ -906,7 +910,7 @@ int main(int argc, char *argv[])
     bool plot = false;
     bool mesh = false;
 
-    index_t method = 0;
+    index_t method = NITSCHE;
 
     index_t numRefine  = 5;
     index_t degree = 3;
@@ -920,7 +924,7 @@ int main(int argc, char *argv[])
     bool residual = false;
 
     std::string output;
-    std::string fn = "surfaces/surface_roof.xml";
+    std::string fn = "surfaces/6p_hyperboloid.xml";
     std::string geometry;
 
     gsCmdLine cmd("Example for solving the biharmonic problem (single patch only).");
@@ -1062,7 +1066,7 @@ int main(int argc, char *argv[])
     // Recover manufactured solution
     auto u_ex = ev.getVariable(ms, G);
     auto grad_u_ex = ev.getVariable(sol1der, G);
-    auto laplace_u_ex = ev.getVariable(laplace, G);
+    // auto laplace_u_ex = ev.getVariable(laplace, G);
     //! [Problem setup]
 
 #ifdef _OPENMP

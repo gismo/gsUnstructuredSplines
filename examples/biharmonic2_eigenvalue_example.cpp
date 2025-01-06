@@ -8,11 +8,11 @@
     License, v. 2.0. If a copy of the MPL was not distributed with this
     file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-    Author(s): P. Weinmueller
+    Author(s): P. Weinmueller,
+               H.M Verhelst
 */
 
 # include <gismo.h>
-#include <gsSpectra/gsSpectra.h>
 
 using namespace gismo;
 
@@ -228,7 +228,7 @@ int main(int argc, char *argv[])
     // gsMatrix<> values  = solver.eigenvalues();
     // gsMatrix<> vectors = solver.eigenvectors();
 
-    gsEigen::gsEigen::GeneralizedSelfAdjointEigenSolver< gsEigen::MatrixXd >  eigSolver;
+    gsEigen::GeneralizedSelfAdjointEigenSolver< typename gsMatrix<>::Base >  eigSolver;
     eigSolver.compute(K,M);
     gsMatrix<> values  = eigSolver.eigenvalues();
     gsMatrix<> vectors = eigSolver.eigenvectors();
@@ -240,8 +240,7 @@ int main(int argc, char *argv[])
     if (plot)
     {
         gsInfo<<"Plotting in Paraview...\n";
-        int systemRet = system("mkdir -p ModalResults");
-        GISMO_ASSERT(systemRet!=-1,"Something went wrong with calling the system argument");
+        gsFileManager::mkdir("ModalResults");
 
         gsParaviewCollection collection("ModalResults/modes");
 
@@ -270,7 +269,7 @@ int main(int argc, char *argv[])
         omegas.push_back((math::pow(m/1.0,2)+math::pow(n/1.0,2))*math::pow(3.1415926535,2)*math::sqrt(D / (Density * thickness)));
 
     std::sort(omegas.begin(),omegas.end());
-    GISMO_ENSURE((omegas.size()>=values.rows()),"Too few analytical eigenvalues");
+    GISMO_ENSURE(((index_t)omegas.size()>=values.rows()),"Too few analytical eigenvalues");
     omegas.resize(values.rows());
     gsAsVector<> analytical(omegas);
 
@@ -278,8 +277,7 @@ int main(int argc, char *argv[])
 
     if (write)
     {
-        int systemRet = system("mkdir -p ModalResults");
-        GISMO_ASSERT(systemRet!=-1,"Something went wrong with calling the system argument");
+        gsFileManager::mkdir("ModalResults");
 
         gsMatrix<> ratio = values;
         ratio.array() /= analytical.array();

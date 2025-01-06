@@ -136,7 +136,7 @@ public:
     //////////////////////////////////////////////////
 
     /// Returns the number of active (nonzero) basis functions at points \a u in \a result.
-    void numActive_into(const unsigned patch,const gsMatrix<T> & u, gsVector<unsigned>& result) const
+    void numActive_into(const index_t patch,const gsMatrix<T> & u, gsVector<index_t>& result) const
     {
         GISMO_UNUSED(patch); GISMO_UNUSED(u); GISMO_UNUSED(result);
         GISMO_NO_IMPLEMENTATION
