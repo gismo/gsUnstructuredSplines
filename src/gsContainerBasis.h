@@ -130,12 +130,19 @@ namespace gismo
 
         index_t nPieces() const {return basisContainer.size();}
 
+        virtual memory::shared_ptr<gsDomain<T> > domain() const
+        {
+            return basisContainer[0].domain();
+        }
+
+        GISMO_DEPRECATED
         typename gsBasis<T>::domainIter makeDomainIterator(const boxSide & side) const override
         {
             // Using the inner basis for iterating
             return basisContainer[0].makeDomainIterator(side);
         }
 
+        GISMO_DEPRECATED
         typename gsBasis<T>::domainIter makeDomainIterator() const override
         {
             // Using the inner basis for iterating
