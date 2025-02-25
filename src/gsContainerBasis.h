@@ -102,7 +102,7 @@ namespace gismo
             return sz;
         }
 
-        void reverse()
+        void reverse() override
         {
             for (size_t i=0; i< basisContainer.size(); ++i)
             {
@@ -128,9 +128,9 @@ namespace gismo
             }
         }
 
-        index_t nPieces() const {return basisContainer.size();}
+        index_t nPieces() const override {return basisContainer.size();}
 
-        virtual memory::shared_ptr<gsDomain<T> > domain() const
+        virtual memory::shared_ptr<gsDomain<T> > domain() const override
         {
             return basisContainer[0].domain();
         }
@@ -173,7 +173,7 @@ namespace gismo
             return basisContainer[0].support(i);
         }
 
-        gsBasis<T>* boundaryBasis_impl(boxSide const & s) const
+        gsBasis<T>* boundaryBasis_impl(boxSide const & s) const override
         {
             /*
             if (basisContainer.size() != 1)
@@ -194,7 +194,7 @@ namespace gismo
             return bBasis;
         }
 
-        void active_into(const gsMatrix<T> & u, gsMatrix<index_t> & result) const
+        void active_into(const gsMatrix<T> & u, gsMatrix<index_t> & result) const override
         {
             GISMO_ASSERT(u.rows() == d, "Dimension of the points in active_into is wrong");
             //GISMO_ASSERT(u.cols() == 1, "Active_into is wrong");
@@ -222,7 +222,7 @@ namespace gismo
             }
         }
 
-        void eval_into(const gsMatrix<T> & u, gsMatrix<T> & result) const
+        void eval_into(const gsMatrix<T> & u, gsMatrix<T> & result) const override
         {
             result.resize(0, u.cols());
             for (size_t i=0; i< basisContainer.size(); ++i)
@@ -235,7 +235,7 @@ namespace gismo
             }
         }
 
-        void deriv_into(const gsMatrix<T> & u, gsMatrix<T> & result) const
+        void deriv_into(const gsMatrix<T> & u, gsMatrix<T> & result) const override
         {
             result.resize(0, u.cols());
             for (size_t i=0; i< basisContainer.size(); ++i)
@@ -248,7 +248,7 @@ namespace gismo
             }
         }
 
-        void deriv2_into(const gsMatrix<T> & u, gsMatrix<T> & result) const
+        void deriv2_into(const gsMatrix<T> & u, gsMatrix<T> & result) const override
         {
             result.resize(0, u.cols());
             for (size_t i=0; i< basisContainer.size(); ++i)
@@ -291,7 +291,7 @@ namespace gismo
         }
 
 
-        gsMatrix<index_t> boundaryOffset(const boxSide & bside, index_t offset) const
+        gsMatrix<index_t> boundaryOffset(const boxSide & bside, index_t offset) const override
         {
             gsMatrix<index_t> result;
 
@@ -352,7 +352,7 @@ namespace gismo
             return result;
         }
 
-        index_t functionAtCorner(const boxCorner & corner) const
+        index_t functionAtCorner(const boxCorner & corner) const override
         {
             if (basisContainer.size() != 1)
             {
@@ -374,7 +374,7 @@ namespace gismo
         // basisContainer:
         void setBasis(index_t row, gsTensorBSplineBasis<d,T> basis) { basisContainer[row] = basis; }
 
-        const gsBasis<T> & piece(const index_t k) const { return basisContainer[k]; }
+        const gsBasis<T> & piece(const index_t k) const override { return basisContainer[k]; }
         // basisContainer END
 
         //std::vector<gsTensorBSplineBasis<d,T>> & getBasisContainer() { return basisContainer; }
