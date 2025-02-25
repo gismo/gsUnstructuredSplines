@@ -52,40 +52,40 @@ namespace gismo
 
     public:
 
-    GISMO_CLONE_FUNCTION(gsContainerBasis)
+        GISMO_OVERRIDE_CLONE_FUNCTION(gsContainerBasis)
 
-        short_t domainDim() const
+        short_t domainDim() const override
         {
             return d;
         }
 
         void connectivity(const gsMatrix<T> & nodes,
-                          gsMesh<T>   & mesh) const
+                          gsMesh<T>   & mesh) const override
         {
             GISMO_UNUSED(nodes); GISMO_UNUSED(mesh);
             GISMO_NO_IMPLEMENTATION;
         }
 
-        memory::unique_ptr<gsGeometry<T> > makeGeometry( gsMatrix<T> coefs ) const
+        memory::unique_ptr<gsGeometry<T> > makeGeometry( gsMatrix<T> coefs ) const override
         {
             GISMO_UNUSED(coefs);
             GISMO_NO_IMPLEMENTATION;
         }
 
-        std::ostream &print(std::ostream &os) const
+        std::ostream &print(std::ostream &os) const override
         {
             GISMO_UNUSED(os);
             GISMO_NO_IMPLEMENTATION;
         }
 
-        void uniformRefine(int numKnots = 1, int mul=1, int dir=-1)
+        void uniformRefine(int numKnots = 1, int mul=1, int dir=-1) override
         {
             for (size_t i=0; i< basisContainer.size(); ++i)
                 basisContainer[i].uniformRefine(numKnots,mul,dir);
         }
 
         // Returm max degree of all the spaces, otherwise i =
-        short_t degree(short_t dir) const
+        short_t degree(short_t dir) const override
         {
             short_t deg = 0;
             for (size_t i=0; i< basisContainer.size(); ++i)
@@ -95,7 +95,7 @@ namespace gismo
             return deg;
         }
 
-        index_t size() const {
+        index_t size() const override {
             index_t sz = 0;
             for (size_t i=0; i< basisContainer.size(); ++i)
                 sz += basisContainer[i].size();
