@@ -127,7 +127,7 @@ protected:
         m_system_beta_S.matrix().makeCompressed();
 
     }
-    
+
     template <class T, class bhVisitor>
     inline void gsC1SurfGluingDataAssembler<T, bhVisitor>::apply(bhVisitor & visitor,
                                                                index_t patchIndex,
@@ -155,23 +155,25 @@ protected:
 
             //const gsGeometry<T> & patch = m_geo.patch(patchIndex); // 0 = patchindex
 
-            // Initialize domain element iterator -- using unknown 0
-            typename gsBasis<T>::domainIter domIt = basis.makeDomainIterator(boundary::none);
+            // Initialize domain element iterator
+            typename gsBasis<T>::domainIter domIt    = basis.domain()->beginBdr(boundary::none);
+            typename gsBasis<T>::domainIter domItEnd = basis.domain()->endBdr(boundary::none);
 
-    #ifdef _OPENMP
-            for ( domIt->next(tid); domIt->good(); domIt->next(nt) )
-    #else
-            for (; domIt->good(); domIt->next() )
-    #endif
+#           ifdef _OPENMP
+            domIt += tid;
+            for ( ; domIt<domItEnd; domIt+=nt )
+#           else
+            for (; domIt<domItEnd; ++domIt )
+#           endif
             {
                 // Map the Quadrature rule to the element
-                quRule.mapTo( domIt->lowerCorner(), domIt->upperCorner(), quNodes, quWeights );
+                quRule.mapTo( domIt.lowerCorner(), domIt.upperCorner(), quNodes, quWeights );
 
                 // Perform required evaluations on the quadrature nodes
                 visitor_.evaluate(basis, quNodes, m_uv, m_mp, m_gamma, m_isBoundary);
 
                 // Assemble on element
-                visitor_.assemble(*domIt, quWeights);
+                visitor_.assemble(domIt, quWeights);
 
                 // Push to global matrix and right-hand side vector
     #pragma omp critical(localToGlobal)
