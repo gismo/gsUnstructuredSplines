@@ -52,7 +52,7 @@ namespace gismo
 
     public:
 
-        GISMO_OVERRIDE_CLONE_FUNCTION(gsContainerBasis)
+        GISMO_CLONE_FUNCTION(gsContainerBasis)
 
         short_t domainDim() const override
         {
