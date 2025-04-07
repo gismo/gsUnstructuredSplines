@@ -6,6 +6,7 @@
 |CMake flags|```-DGISMO_OPTIONAL="<other submodules>;gsUnstructuredSplines"```|
 |--:|---|
 |License|![GitHub License](https://img.shields.io/github/license/gismo/gismo?color=008A00)|
+|DOI|[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15167574.svg)](https://doi.org/10.5281/zenodo.15167574)|
 |OS support|Linux, Windows, macOS|
 |Build Status|[![ci](https://github.com/gismo/gsUnstructuredSplines/actions/workflows/ci.yml/badge.svg)](https://github.com/gismo/gsUnstructuredSplines/actions/workflows/ci.yml)|
 |Developers/maintainers| [![Static Badge](https://img.shields.io/badge/@hverhelst-008A00)](https://github.com/hverhelst) [![Static Badge](https://img.shields.io/badge/@weinmueller-008A00)](https://github.com/weinmueller) [![Static Badge](https://img.shields.io/badge/@AndreaFarahat-008A00)](https://github.com/AndreaFarahat)|
