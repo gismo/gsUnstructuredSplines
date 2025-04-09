@@ -42,7 +42,7 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}/src"
   FILES_MATCHING PATTERN "*.h" )
 
 # add filedata folder
-add_definitions(-DELAST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/filedata/")
+add_definitions(-D${PROJECT_NAME}_DATA="${CMAKE_CURRENT_SOURCE_DIR}/filedata/")
 
 # add example files
 if(GISMO_BUILD_EXAMPLES)
