@@ -15,7 +15,7 @@
 #include <gsHSplines/gsHTensorBasis.h>
 #include <gsHSplines/gsTHBSpline.h>
 
-#include <gsAssembler/gsExprHelper.h>
+#include <gsExpressions/gsExprHelper.h>
 #include <gsAssembler/gsExprEvaluator.h>
 #include <gsAssembler/gsAssembler.h>
 

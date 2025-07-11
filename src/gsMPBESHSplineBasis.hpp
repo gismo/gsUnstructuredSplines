@@ -85,7 +85,7 @@ gsMPBESHSplineBasis<d,T>::gsMPBESHSplineBasis( gsMultiPatch<T> const & mp, index
     //topol.computeAllVertices();
     for (size_t i = 0; i < mp.nPatches(); i++)
     {
-        GISMO_ASSERT(dynamic_cast<gsHTensorBasis<2> * >(& mp.basis(i))!=NULL,"Bases is not of type gsHTensorBasis<2>");
+        GISMO_ASSERT(dynamic_cast<const gsHTensorBasis<2> * >(& mp.basis(i))!=NULL,"Bases is not of type gsHTensorBasis<2>");
     }
     m_topol = mp;
     m_bases = mp.basesCopy();

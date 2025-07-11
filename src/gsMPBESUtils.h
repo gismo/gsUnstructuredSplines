@@ -22,7 +22,7 @@ gsMPBESBasis<d,T> * getCompBasisFromMultiPatch(const gsMultiPatch<T> & mp,index_
     std::vector<gsTensorBSplineBasis<d,T>* >tensorBases;
     for(size_t i = 0;i<mp.nPatches();++i)
     {
-        tensorBases.push_back(dynamic_cast<gsTensorBSplineBasis<d,T> * >(& mp.basis(i)));
+        tensorBases.push_back(dynamic_cast<gsTensorBSplineBasis<d,T> * >(mp.basis(i).clone().release()));
         tensorBSpline = tensorBSpline && tensorBases[i]!=NULL;
     }
     if(tensorBSpline)
@@ -32,12 +32,14 @@ gsMPBESBasis<d,T> * getCompBasisFromMultiPatch(const gsMultiPatch<T> & mp,index_
         std::vector<gsHTensorBasis<d,T>* >hBases;
         for(size_t i = 0;i<mp.nPatches();++i)
         {
-            hBases.push_back(dynamic_cast<gsHTensorBasis<d,T> * >(& mp.basis(i)));
+            hBases.push_back(dynamic_cast<gsHTensorBasis<d,T> * >(mp.basis(i).clone().release()));
             hTensor = hTensor && hBases[i]!=NULL;
         }
         if(hTensor)
             compBasis = (new gsMPBESHSplineBasis<d,T>(hBases,mp,incrSmoothness,minEVDistance));
+        freeAll(hBases);
     }
+    freeAll(tensorBases);
     GISMO_ASSERT(tensorBSpline||hTensor,"No suitable basis for gsMappedBasis found.");
     return compBasis;
 }
@@ -51,7 +53,7 @@ gsMPBESBasis<d,T> * getCompBasisFromMultiPatch_withCoefs(const gsMultiPatch<T> &
     std::vector<gsTensorBSplineBasis<d,T>* >tensorBases;
     for(size_t i = 0;i<mp.nPatches();++i)
     {
-        tensorBases.push_back(dynamic_cast<gsTensorBSplineBasis<d,T> * >(& mp.basis(i)));
+        tensorBases.push_back(dynamic_cast<gsTensorBSplineBasis<d,T> * >(mp.basis(i).clone().release()));
         tensorBSpline = tensorBSpline && tensorBases[i]!=NULL;
     }
     if(tensorBSpline)
@@ -61,12 +63,19 @@ gsMPBESBasis<d,T> * getCompBasisFromMultiPatch_withCoefs(const gsMultiPatch<T> &
         std::vector<gsHTensorBasis<d,T>* >hBases;
         for(size_t i = 0;i<mp.nPatches();++i)
         {
-            hBases.push_back(dynamic_cast<gsHTensorBasis<d,T> * >(& mp.basis(i)));
+            hBases.push_back(dynamic_cast<gsHTensorBasis<d,T> * >(mp.basis(i).clone().release()));
             hTensor = hTensor && hBases[i]!=NULL;
         }
         if(hTensor)
             compBasis = (new gsMPBESHSplineBasis<d,T>(hBases,mp,coefs,incrSmoothness,minEVDistance));
+        // Remove HBasis pointers since they are cloned inside the constructor of the gsMPBESHSplineBasis
+        if (hBases.size()>0)
+            freeAll(hBases);
     }
+    // Remove BSpline pointers since they are cloned inside the constructor of the gsMPBESBSplineBasis
+    if (tensorBases.size()>0)
+        freeAll(tensorBases);
+
     GISMO_ASSERT(tensorBSpline||hTensor,"No suitable basis for gsMappedBasis found.");
     return compBasis;
 }

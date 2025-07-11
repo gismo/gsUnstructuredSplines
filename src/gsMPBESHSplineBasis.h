@@ -96,7 +96,7 @@ public:
     gsMPBESHSplineBasis<d,T>& operator=( const gsMPBESHSplineBasis& other );
 
     ~gsMPBESHSplineBasis()
-    { 
+    {
 
     } //destructor
 
@@ -123,7 +123,7 @@ public:
     gsHTensorBasis<d,T> & basis(size_t i)
     { return static_cast<gsHTensorBasis<d,T>&>(*m_bases[i]); }
 
-    const gsHTensorBasis<d,T> & basis(size_t i) const 
+    const gsHTensorBasis<d,T> & basis(size_t i) const
     { return static_cast<const gsHTensorBasis<d,T>&>(*m_bases[i]); }
 
     unsigned basisFunctionsOnSide(const patchSide& ps) const;
