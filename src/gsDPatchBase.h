@@ -716,7 +716,7 @@ protected:
 //     }
 
 protected:
-    const gsMultiPatch<T> & m_patches;
+    const gsMultiPatch<T> m_patches;
     const gsMultiBasis<T> m_Bbases; // reference?
 
     gsMultiBasis<T> m_bases;
