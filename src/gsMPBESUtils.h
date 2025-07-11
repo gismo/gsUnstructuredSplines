@@ -68,9 +68,14 @@ gsMPBESBasis<d,T> * getCompBasisFromMultiPatch_withCoefs(const gsMultiPatch<T> &
         }
         if(hTensor)
             compBasis = (new gsMPBESHSplineBasis<d,T>(hBases,mp,coefs,incrSmoothness,minEVDistance));
-        freeAll(hBases);
+        // Remove HBasis pointers since they are cloned inside the constructor of the gsMPBESHSplineBasis
+        if (hBases.size()>0)
+            freeAll(hBases);
     }
-    freeAll(tensorBases);
+    // Remove BSpline pointers since they are cloned inside the constructor of the gsMPBESBSplineBasis
+    if (tensorBases.size()>0)
+        freeAll(tensorBases);
+
     GISMO_ASSERT(tensorBSpline||hTensor,"No suitable basis for gsMappedBasis found.");
     return compBasis;
 }
