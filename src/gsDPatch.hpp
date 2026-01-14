@@ -295,7 +295,7 @@ namespace gismo
         std::vector< std::vector<index_t> > elVec;
         this->_refBoxes(elVec);
 
-        gsSparseMatrix<T,RowMajor> tmp;
+        gsSparseMatrix<T> tmp;
         index_t rows = 0, cols = 0;
         std::vector<gsEigen::Triplet<T,index_t>> tripletList;
         for (size_t p=0; p!=m_bases0.nBases(); p++)
@@ -309,7 +309,7 @@ namespace gismo
             std::vector< gsSortedVector< index_t > > xmat = basis->getXmatrix();
             basis->refineElements_withTransfer(elVec[p],tmp);
             for (index_t i = 0; i<tmp.outerSize(); ++i)
-                for (typename gsSparseMatrix<T,RowMajor>::iterator it(tmp,i); it; ++it)
+                for (typename gsSparseMatrix<T>::iterator it(tmp,i); it; ++it)
                     tripletList.push_back(gsEigen::Triplet<T,index_t>(it.row()+rows,it.col()+cols,it.value()));
 
             rows += tmp.rows();

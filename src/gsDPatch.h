@@ -327,7 +327,7 @@ protected:
     gsMultiBasis<T> m_bases0;
     using Base::m_Bbases;
     using Base::m_tMatrix;
-    std::vector<gsSparseMatrix<T,RowMajor>> m_tMatrices;
+    std::vector<gsSparseMatrix<T>> m_tMatrices;
     using Base::m_sideCheck;
     using Base::m_vertCheck;
     using Base::m_basisCheck;
