@@ -324,14 +324,14 @@ int main(int argc, char *argv[])
                 mapper.finalize();
                 gsMatrix<> coefs;
                 // First project the geometry geom0 onto bb2 and make a mapped spline
-                gsInfo<<"L2-Projection error of geom0 on bb2 = "<<gsL2Projection<real_t>::projectGeometry(dbasis,bb2,geom0,coefs)<<"\n";
+                gsInfo<<"L2-Projection error of geom0 on bb2 = "<<gsL2Projection<real_t>::project(bb2,dbasis,geom0,coefs)<<"\n";
                 coefs.resize(coefs.rows()/geom0.geoDim(),geom0.geoDim());
                 gsMappedSpline<2,real_t> mspline;
                 mspline.init(bb2,coefs);
                 if (plot) gsWriteParaview( mspline, "mspline");
 
                 // Then project onto dbasis so that geom represents the mapped geometry
-                gsInfo<<"L2-Projection error of geom0 on dbasis = "<<gsL2Projection<real_t>::projectGeometry(dbasis,mspline,coefs)<<"\n";
+                gsInfo<<"L2-Projection error of geom0 on dbasis = "<<gsL2Projection<real_t>::project(dbasis,mp,mspline,coefs)<<"\n";
                 coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
 
                 index_t offset = 0;
@@ -383,7 +383,7 @@ int main(int argc, char *argv[])
                     gsMatrix<> coefs;
                     // First project the geometry geom0 onto bb2 and make a mapped spline
                     gsTHBSplineBasis<2,real_t> tbasis = thbsplineBasis->tensorLevel(thbsplineBasis->maxLevel());
-                    gsInfo<<"L2-Projection error of geom patch"<<p<<" on bb2 = "<<gsL2Projection<real_t>::projectGeometry(tbasis,geom.patch(p),coefs)<<"\n";
+                    gsInfo<<"L2-Projection error of geom patch"<<p<<" on bb2 = "<<gsL2Projection<real_t>::project(tbasis,geom.patch(p),coefs)<<"\n";
                     coefs.resize(coefs.rows()/geom0.geoDim(),geom0.geoDim());
                     tmp.addPatch(tbasis.makeGeometry(coefs));
                 }
@@ -421,14 +421,14 @@ int main(int argc, char *argv[])
                 mapper.finalize();
                 gsMatrix<> coefs;
                 // First project the geometry geom0 onto bb2 and make a mapped spline
-                gsInfo<<"L2-Projection error of geom0 on bb2 = "<<gsL2Projection<real_t>::projectGeometry(dbasis,bb2,geom0,coefs)<<"\n";
+                gsInfo<<"L2-Projection error of geom0 on bb2 = "<<gsL2Projection<real_t>::project(bb2,dbasis,geom0,coefs)<<"\n";
                 coefs.resize(coefs.rows()/geom0.geoDim(),geom0.geoDim());
                 gsMappedSpline<2,real_t> mspline;
                 mspline.init(bb2,coefs);
                 if (plot) gsWriteParaview( mspline, "mspline");
 
                 // Then project onto dbasis so that geom represents the mapped geometry
-                gsInfo<<"L2-Projection error of geom0 on dbasis = "<<gsL2Projection<real_t>::projectGeometry(dbasis,mspline,coefs)<<"\n";
+                gsInfo<<"L2-Projection error of geom0 on dbasis = "<<gsL2Projection<real_t>::project(dbasis,geom,mspline,coefs)<<"\n";
                 coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
                 index_t offset = 0;
                 for (size_t p = 0; p != geom.nPatches(); p++)
