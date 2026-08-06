@@ -16,6 +16,8 @@
 
 #include <gsUnstructuredSplines/src/gsC1SurfGluingDataVisitor.h>
 
+#include <gsAssembler/gsDofMapperCreator.h>
+
 namespace gismo
 {
 
@@ -86,9 +88,9 @@ protected:
     void gsC1SurfGluingDataAssembler<T, bhVisitor>::refresh()
     {
         // 1. Obtain a map from basis functions to matrix columns and rows
-        gsDofMapper map_alpha(m_basis[0]);
+        gsDofMapper map_alpha = createMapper(m_basis[0], 1, false);
 
-        gsDofMapper map_beta_S(m_basis[0]);
+        gsDofMapper map_beta_S = createMapper(m_basis[0], 1, false);
 
         map_alpha.finalize();
         map_beta_S.finalize();

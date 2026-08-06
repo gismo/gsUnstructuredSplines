@@ -5,6 +5,6 @@
 ######################################################################
 
 # add example files
-aux_gs_cpp_directory(${PROJECT_SOURCE_DIR} unittests_SRCS)
+aux_gs_cpp_directory(${CMAKE_CURRENT_SOURCE_DIR} unittests_SRCS)
 set(gismo_UNITTESTS ${gismo_UNITTESTS} ${unittests_SRCS}
   CACHE INTERNAL "gismo list of unittests")

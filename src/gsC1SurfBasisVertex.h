@@ -17,6 +17,8 @@
 #include <gsUnstructuredSplines/src/gsC1SurfGluingData.h>
 #include <gsUnstructuredSplines/src/gsC1SurfVisitorBasisVertex.h>
 
+#include <gsAssembler/gsDofMapperCreator.h>
+
 
 
 namespace gismo
@@ -160,7 +162,7 @@ namespace gismo
     void gsC1SurfBasisVertex<T,bhVisitor>::refresh()
     {
         // 1. Obtain a map from basis functions to matrix columns and rows
-        gsDofMapper map(m_basis.basis(0));
+        gsDofMapper map = createMapper(m_basis.basis(0), 1, false);
 
         // SET THE DOFS
 

@@ -15,6 +15,7 @@
 #include <gsUnstructuredSplines/src/gsMPBESBasis.h>
 #include <gsNurbs/gsKnotVector.h>
 #include <gsNurbs/gsTensorBSplineBasis.h>
+#include <gsCore/gsMultiPatch.h>
 
 namespace gismo
 {

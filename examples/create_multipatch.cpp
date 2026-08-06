@@ -22,7 +22,7 @@
 #include <gsUnstructuredSplines/src/gsDPatch.h>
 #include <gsUnstructuredSplines/src/gsAlmostC1.h>
 #include <gsUnstructuredSplines/src/gsC1SurfSpline.h>
-#include <gsUtils/gsL2Projection.h>
+#include <gsUtils/gsProjection.h>
 using namespace gismo;
 //! [Include namespace]
 

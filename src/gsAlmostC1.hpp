@@ -18,6 +18,7 @@
 #include <gsExpressions/gsExprHelper.h>
 #include <gsAssembler/gsExprEvaluator.h>
 #include <gsAssembler/gsAssembler.h>
+#include <gsAssembler/gsDofMapperCreator.h>
 
 namespace gismo
 {
@@ -384,7 +385,7 @@ namespace gismo
         GISMO_ENSURE(totalsize==coefs.rows(),"Sizes do not agree");
 
         gsMultiBasis<T> basis(mp);
-        gsDofMapper tmpMap(basis);
+        gsDofMapper tmpMap = createMapper(basis, 1, false);
         tmpMap.finalize();
 
         for (size_t p=0; p!=mp.nPatches(); p++) // patches
@@ -550,7 +551,7 @@ namespace gismo
         }
 
         // redefine the mappers
-        m_mapOriginal = gsDofMapper(m_bases);
+        m_mapOriginal = createMapper(m_bases, 1, false);
         m_mapOriginal.finalize();
 
         // gsWriteParaview<T>(m_RefPatches,"mp_ref",100,true);

@@ -15,6 +15,8 @@
 
 #include <gsUnstructuredSplines/src/gsApproxC1Utils.h>
 
+#include <gsAssembler/gsDofMapperCreator.h>
+
 namespace gismo
 {
 
@@ -135,7 +137,7 @@ void gsApproxC1GluingData<d, T>::setGlobalGluingData(index_t patchID, index_t di
     auto u = A.getSpace(BsplineSpace);
 
     // Create Mapper
-    gsDofMapper map(BsplineSpace);
+    gsDofMapper map = createMapper(BsplineSpace, 1, false);
     gsMatrix<index_t> act(2,1);
     act(0,0) = 0;
     act(1,0) = BsplineSpace[0].size()-1; // First and last

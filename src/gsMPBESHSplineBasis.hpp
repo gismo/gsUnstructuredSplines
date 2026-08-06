@@ -13,6 +13,7 @@
 
 #include <gsUnstructuredSplines/src/gsMPBESHSplineBasis.h>
 #include <gsCore/gsMultiBasis.h>
+#include <gsCore/gsMultiPatch.h>
 
 namespace gismo
 {

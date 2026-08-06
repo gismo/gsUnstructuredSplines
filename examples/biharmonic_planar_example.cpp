@@ -25,7 +25,7 @@
 #ifdef gsSpectra_ENABLED
 #include <gsSpectra/gsSpectra.h>
 #endif
-#include <gsUtils/gsL2Projection.h>
+#include <gsAssembler/gsDofMapperCreator.h>
 using namespace gismo;
 //! [Include namespace]
 
@@ -398,18 +398,18 @@ int main(int argc, char *argv[])
                 geom0 = geom = dpatch.exportToPatches(mp);
             else
             {
-                gsDofMapper mapper(localbasis);
+                gsDofMapper mapper = createMapper(localbasis, 1, false);
                 mapper.finalize();
                 gsMatrix<> coefs;
                 // First project the geometry geom0 onto bb2 and make a mapped spline
-                gsInfo<<"L2-Projection error of geom0 on bb2 = "<<gsL2Projection<real_t>::projectGeometry(localbasis,bb2,geom0,coefs)<<"\n";
+                gsInfo<<"L2-Projection error of geom0 on bb2 = "<<gsL2Projection<real_t>::project(bb2,localbasis,geom0,coefs)<<"\n";
                 coefs.resize(coefs.rows()/geom0.geoDim(),geom0.geoDim());
                 gsMappedSpline<2,real_t> mspline;
                 mspline.init(bb2,coefs);
                 if (plot) gsWriteParaview( mspline, "mspline");
 
                 // Then project onto localbasis so that geom represents the mapped geometry
-                gsInfo<<"L2-Projection error of geom0 on dbasis = "<<gsL2Projection<real_t>::projectGeometry(localbasis,mspline,coefs)<<"\n";
+                gsInfo<<"L2-Projection error of geom0 on dbasis = "<<gsL2Projection<real_t>::project(localbasis,mspline,coefs)<<"\n";
                 coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
 
                 index_t offset = 0;
@@ -423,7 +423,7 @@ int main(int argc, char *argv[])
             if (plot) gsWriteParaview( geom, "geom",1000,true,false);
 
             // gsMatrix<> coefs;
-            // gsL2Projection<real_t>::projectGeometry(dbasis,bb2,geom0,coefs);
+            // gsL2Projection<real_t>::project(bb2,dbasis,geom0,coefs);
         }
         else if (method == MethodFlags::ALMOSTC1)
         {
@@ -438,7 +438,7 @@ int main(int argc, char *argv[])
                     gsMatrix<> coefs;
                     // First project the geometry geom0 onto bb2 and make a mapped spline
                     gsTHBSplineBasis<2,real_t> tbasis = thbsplineBasis->tensorLevel(thbsplineBasis->maxLevel());
-                    gsInfo<<"L2-Projection error of geom patch"<<p<<" on bb2 = "<<gsL2Projection<real_t>::projectGeometry(tbasis,geom.patch(p),coefs)<<"\n";
+                    gsInfo<<"L2-Projection error of geom patch"<<p<<" on bb2 = "<<gsL2Projection<real_t>::project(tbasis,geom.patch(p),coefs)<<"\n";
                     coefs.resize(coefs.rows()/geom0.geoDim(),geom0.geoDim());
                     tmp.addPatch(tbasis.makeGeometry(coefs));
                 }
@@ -479,10 +479,10 @@ int main(int argc, char *argv[])
             //     geom = almostC1.exportToPatches();
             // }
                 gsMatrix<> targetCoefs, sourceCoefs;
-                gsL2Projection<real_t>::projectGeometry(dbasis,bb2,geom0,targetCoefs);
+                gsL2Projection<real_t>::project(bb2,dbasis,geom0,targetCoefs);
                 targetCoefs.resize(targetCoefs.rows()/2,2);
                 bb2.getMapper().mapToSourceCoefs(targetCoefs,sourceCoefs);
-                gsDofMapper mapper(dbasis);
+                gsDofMapper mapper = createMapper(dbasis, 1, false);
                 index_t offset = 0;
                 for (size_t p = 0; p != geom0.nPatches(); p++)
                 {
