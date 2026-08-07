@@ -26,10 +26,11 @@ using namespace gismo;
 
 /**
  * Smoothing method:
- * - m 0 == Approx C1 method
  * - m 1 == D-Patch method
- * - m 2 == Almost C1 method
- * - m 3 == Nitsche's method
+ * - m 2 == Approx C1 method
+ * - m 3 == AS-G1 method (analysis-suitable G1, requires degree p >= 3)
+ * - m 4 == Almost C1 method
+ * - m 5 == Nitsche's method
  */
 enum MethodFlags
 {

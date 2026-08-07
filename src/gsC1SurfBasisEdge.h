@@ -265,8 +265,8 @@ namespace gismo
             const gsGeometry<T> & patch = m_mp.patch(0);
 
             // Initialize domain element iterator
-            typename gsBasis<T>::domainIter domIt    = m_geo.basis(0).domain()->beginBdr(boundary::none);
-            typename gsBasis<T>::domainIter domItEnd = m_geo.basis(0).domain()->endBdr(boundary::none);
+            typename gsBasis<T>::domainIter domIt    = m_geo.basis(0).domain()->beginAll();
+            typename gsBasis<T>::domainIter domItEnd = m_geo.basis(0).domain()->endAll();
 
 #           ifdef _OPENMP
             domIt += tid;

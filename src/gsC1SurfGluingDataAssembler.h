@@ -158,8 +158,8 @@ protected:
             //const gsGeometry<T> & patch = m_geo.patch(patchIndex); // 0 = patchindex
 
             // Initialize domain element iterator
-            typename gsBasis<T>::domainIter domIt    = basis.domain()->beginBdr(boundary::none);
-            typename gsBasis<T>::domainIter domItEnd = basis.domain()->endBdr(boundary::none);
+            typename gsBasis<T>::domainIter domIt    = basis.domain()->beginAll();
+            typename gsBasis<T>::domainIter domItEnd = basis.domain()->endAll();
 
 #           ifdef _OPENMP
             domIt += tid;

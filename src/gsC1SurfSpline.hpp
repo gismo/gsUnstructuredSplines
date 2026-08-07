@@ -41,6 +41,13 @@ namespace gismo
             for (short_t dd = 0; dd!=d; dd++)
             {
                 degree = basis_patch->component(dd).knots().degree();
+                // The edge/vertex spaces below are built from basis_plus
+                // (continuity elevated) and basis_minus (degree reduced) with
+                // dimension counts that assume a cubic-or-higher space; for
+                // degree < 3 the predicted row count does not match the
+                // assembled one and the construction produces out-of-range
+                // matrix entries. Fail early with a clear message instead.
+                GISMO_ENSURE(degree>=3,"The AS-G1 construction requires a basis of degree at least 3, but direction "<<dd<<" of patch "<<p<<" has degree "<<degree<<".");
                 GISMO_ENSURE((index_t)(basis_patch->component(dd).knots().size()-2*(degree+1))>=(index_t)(5-degree),"For a degree="<<degree<<" basis, the knot vector should at least have "<<5-degree<<" inner knots, but now it has "<<basis_patch->component(dd).knots().size()-2*(degree+1)<<" inner knots.");
             }
 
