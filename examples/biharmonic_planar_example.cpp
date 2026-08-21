@@ -26,6 +26,7 @@
 #include <gsSpectra/gsSpectra.h>
 #endif
 #include <gsAssembler/gsDofMapperCreator.h>
+#include <gsUtils/gsProjection.h>
 using namespace gismo;
 //! [Include namespace]
 
