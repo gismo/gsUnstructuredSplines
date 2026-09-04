@@ -277,8 +277,9 @@ public:
             auto u = A.getSpace(vertexSpace);
 
             // Create Mapper
+            const bool interpolation = m_optionList.getSwitch("interpolation");
             gsDofMapper map = createMapper(vertexSpace, 1, false);
-            if (!m_optionList.getSwitch("interpolation"))
+            if (!interpolation)
             {
                 gsMatrix<index_t> act;
                 for (index_t dir = 0; dir < vertexSpace.basis(0).domainDim(); dir++)
@@ -300,34 +301,44 @@ public:
                 solver.compute(A.matrix());
             }
 
-            // Create Basis functions
+            // Create Basis functions: one gsVertexBasis over the whole range [0, 6)
+            // so the bfID-independent prelude of eval_into (c_0/c_1, c_*_plus/minus,
+            // alpha/beta, geo_jac, geo_der2, dd_ik_*, d_ik, d_ilik_*) runs once per
+            // quadrature pass instead of six times.
             gsMultiPatch<T> result_1;
-            for (index_t bfID = 0; bfID < 6; bfID++)
+            gsVertexBasis<T> vertexBasisBatch(geo, basis_pm, alpha, beta, basis_plus, basis_minus, Phi,
+                                               kindOfEdge, 0, 6);
+            if (interpolation)
             {
-                gsVertexBasis<T> vertexBasis(geo, basis_pm, alpha, beta, basis_plus, basis_minus, Phi,
-                                             kindOfEdge, bfID);
-                if (m_optionList.getSwitch("interpolation"))
+                gsMatrix<T> anchors = vertexSpace.basis(0).anchors();
+                gsMatrix<T> values = vertexBasisBatch.eval(anchors); // 6 x nAnchors
+                for (index_t col = 0; col < 6; ++col)
                 {
-                    //gsQuasiInterpolate<T>::Schoenberg(edgeSpace.basis(0), traceBasis, sol);
-                    //result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
-                    gsMatrix<T> anchors = vertexSpace.basis(0).anchors();
-                    gsMatrix<T> values = vertexBasis.eval(anchors);
-                    result_1.addPatch(vertexSpace.basis(0).interpolateAtAnchors(give(values)));
+                    gsMatrix<T> row = values.row(col);
+                    result_1.addPatch(vertexSpace.basis(0).interpolateAtAnchors(give(row)));
                 }
-                else
+            }
+            else
+            {
+                A.initVector(6);
+                auto aa = A.getCoeff(vertexBasisBatch);
+                A.assemble(u * aa.tr());
+
+                gsMatrix<T> solMat = solver.solve(A.rhs()); // (free dofs) x 6
+
+                // Build coefficients per column directly from the mapper, instead of
+                // gsFeSpace::getCoeffs' multi-column path (which only fills the
+                // eliminated-DoF value into column 0 of a multi-column result).
+                const gsDofMapper & mapper = u.mapper();
+                const gsMatrix<T> & fixedDofsRHS = u.fixedPart();
+                const index_t sz = vertexSpace.basis(0).size();
+                for (index_t col = 0; col < 6; ++col)
                 {
-                    A.initVector();
-
-                    auto aa = A.getCoeff(vertexBasis);
-                    A.assemble(u * aa);
-
-                    gsMatrix<T> solVector = solver.solve(A.rhs());
-
-                    auto u_sol = A.getSolution(u, solVector);
-                    gsMatrix<T> sol;
-                    u_sol.extract(sol);
-
-                    result_1.addPatch(vertexSpace.basis(0).makeGeometry(give(sol)));
+                    gsMatrix<T> coefs(sz, 1);
+                    for (index_t k = 0; k < sz; ++k)
+                        coefs(k, 0) = mapper.is_free(k, 0) ? solMat(mapper.index(k, 0), col)
+                                                           : fixedDofsRHS(mapper.bindex(k, 0), 0);
+                    result_1.addPatch(vertexSpace.basis(0).makeGeometry(give(coefs)));
                 }
             }
             //Problem setup end

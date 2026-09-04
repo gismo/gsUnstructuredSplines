@@ -78,7 +78,6 @@ namespace gismo
             constructSolution(result);
         }
 
-
     private:
         // Avoid hidden overloads w.r.t. gsAssembler
         void constructSolution(const gsMatrix<T>& /* solVector */,
@@ -112,12 +111,12 @@ namespace gismo
         gsMultiBasis<T> m_geo;
 
         // System
-        std::vector<gsSparseSystem<T> > m_f;
+        using Base::m_system;
 
         // For Dirichlet boundary
         using Base::m_ddof;
 
-        std::vector<gsMatrix<T>> solVec;
+        gsMatrix<T> m_solMat;
 
     }; // class gsG1BasisEdge
 
@@ -128,31 +127,22 @@ namespace gismo
 
         result.clear();
 
-        // Dim is the same for all basis functions
-        const index_t dim = ( 0!=solVec.at(0).cols() ? solVec.at(0).cols() :  m_ddof[0].cols() );
+        const gsDofMapper & mapper = m_system.colMapper(0); // unknown = 0, same mapper for all six patches
+
+        // Reconstruct solution coefficients on patch p
+        const index_t sz = m_basis.basis(0).size();
 
         gsMatrix<T> coeffs;
         for (index_t p = 0; p < 6; ++p)
         {
-            const gsDofMapper & mapper = m_f.at(p).colMapper(0); // unknown = 0
-
-            // Reconstruct solution coefficients on patch p
-            index_t sz;
-            sz = m_basis.basis(0).size();
-
-            coeffs.resize(sz, dim);
+            coeffs.resize(sz, 1);
 
             for (index_t i = 0; i < sz; ++i)
             {
                 if (mapper.is_free(i, 0)) // DoF value is in the solVector // 0 = unitPatch
-                {
-                    coeffs.row(i) = solVec.at(p).row(mapper.index(i, 0));
-                }
+                    coeffs(i, 0) = m_solMat(mapper.index(i, 0), p);
                 else // eliminated DoF: fill with Dirichlet data
-                {
-                    //gsInfo << "mapper index dirichlet: " << m_ddof[unk].row( mapper.bindex(i, p) ).head(dim) << "\n";
-                    coeffs.row(i) = m_ddof[0].row( mapper.bindex(i, 0) ).head(dim); // = 0
-                }
+                    coeffs(i, 0) = m_ddof[0](mapper.bindex(i, 0), p); // = 0
             }
             result.addPatch(m_basis_g1.basis(0).makeGeometry(give(coeffs)));
         }
@@ -170,9 +160,7 @@ namespace gismo
 
 
         // 2. Create the sparse system
-        gsSparseSystem<T> m_system = gsSparseSystem<T>(map);
-        for (index_t i = 0; i < 6; i++)
-            m_f.push_back(m_system);
+        m_system = gsSparseSystem<T>(map);
 
     } // refresh()
 
@@ -181,23 +169,20 @@ namespace gismo
     {
         // Reserve sparse system
         const index_t nz = gsAssemblerOptions::numColNz(m_basis[0],2,1,0.333333);
-        for (size_t i = 0; i < m_f.size(); i++)
-            m_f.at(i).reserve(nz, 1);
-
+        m_system.reserve(nz, 6);
 
         if(m_ddof.size()==0)
             m_ddof.resize(1); // 0,1
 
-        const gsDofMapper & map = m_f.at(0).colMapper(0); // Map same for every
+        const gsDofMapper & map = m_system.colMapper(0); // Map same for every
 
-        m_ddof[0].setZero(map.boundarySize(), 1 ); // plus
+        m_ddof[0].setZero(map.boundarySize(), 6 ); // plus
 
         // Assemble volume integrals
         bhVisitor visitor;
         apply(visitor,0); // patch 0
 
-        for (size_t i = 0; i < m_f.size(); i++)
-            m_f.at(i).matrix().makeCompressed();
+        m_system.matrix().makeCompressed();
 
     } // assemble()
 
@@ -253,7 +238,7 @@ namespace gismo
 
                 // Push to global matrix and right-hand side vector
 #pragma omp critical(localToGlobal)
-                visitor_.localToGlobal(patchIndex, m_ddof, m_f); // omp_locks inside // patchIndex == 0
+                visitor_.localToGlobal(patchIndex, m_ddof, m_system); // omp_locks inside // patchIndex == 0
             }
         }//omp parallel
     } // apply
@@ -264,14 +249,8 @@ namespace gismo
         typename gsSparseSolver<T>::SimplicialLDLT solver;
 //    typename gsSparseSolver<T>::LU solver;
 
-
-//    gsInfo << "rhs: " << m_f.at(4).rhs() << "\n";
-
-        for (index_t i = 0; i < 6; i++) // Tilde
-        {
-            solver.compute(m_f.at(i).matrix());
-            solVec.push_back(solver.solve(m_f.at(i).rhs()));
-        }
+        solver.compute(m_system.matrix());
+        m_solMat = solver.solve(m_system.rhs());   // (free dofs) x 6
     } // solve
 
 } // namespace gismo

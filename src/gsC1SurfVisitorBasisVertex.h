@@ -42,11 +42,6 @@ namespace gismo
 
             // Set Geometry evaluation flags
             md.flags = NEED_MEASURE ;
-
-            localMat.resize(6);
-            localRhs.resize(6);
-
-            rhsVals.resize(6);
         }
 
         // Evaluate on element.
@@ -385,9 +380,10 @@ namespace gismo
             }
 
 
+            rhsVals.resize(6, md.points.cols());
             for (index_t i = 0; i < 6; i++)
             {
-                rhsVals.at(i) = d_ilik_minus.at(0)(i,0) * (c_0_plus.at(0).cwiseProduct(c_0.at(1)) -
+                rhsVals.row(i) = d_ilik_minus.at(0)(i,0) * (c_0_plus.at(0).cwiseProduct(c_0.at(1)) -
                                                            beta[0].cwiseProduct(c_0_plus_deriv.at(0).cwiseProduct(c_1.at(1)))) +
                                 d_ilik_minus.at(1)(i,0) * (c_1_plus.at(0).cwiseProduct(c_0.at(1)) -
                                                            beta[0].cwiseProduct(c_1_plus_deriv.at(0).cwiseProduct(c_1.at(1)))) +
@@ -396,7 +392,7 @@ namespace gismo
                                 d_ilik_minus.at(3)(i,0) * alpha[0].cwiseProduct(c_0_minus.at(0).cwiseProduct(c_1.at(1))) -
                                 d_ilik_minus.at(4)(i,0) * alpha[0].cwiseProduct(c_1_minus.at(0).cwiseProduct(c_1.at(1))); // f*_(ik-1,ik)
 
-                rhsVals.at(i) += d_ilik_plus.at(0)(i,0) * (c_0_plus.at(1).cwiseProduct(c_0.at(0)) -
+                rhsVals.row(i) += d_ilik_plus.at(0)(i,0) * (c_0_plus.at(1).cwiseProduct(c_0.at(0)) -
                                                            beta[1].cwiseProduct(c_0_plus_deriv.at(1).cwiseProduct(c_1.at(0)))) +
                                  d_ilik_plus.at(1)(i,0) * (c_1_plus.at(1).cwiseProduct(c_0.at(0)) -
                                                            beta[1].cwiseProduct(c_1_plus_deriv.at(1).cwiseProduct(c_1.at(0)))) +
@@ -405,15 +401,12 @@ namespace gismo
                                  d_ilik_plus.at(3)(i,0) * alpha[1].cwiseProduct(c_0_minus.at(1).cwiseProduct(c_1.at(0))) +
                                  d_ilik_plus.at(4)(i,0) * alpha[1].cwiseProduct(c_1_minus.at(1).cwiseProduct(c_1.at(0))); // f*_(ik+1,ik)
 
-                rhsVals.at(i) -= d_ik.at(0)(i,0) * c_0.at(0).cwiseProduct(c_0.at(1)) + d_ik.at(2)(i,0) * c_0.at(0).cwiseProduct(c_1.at(1)) +
+                rhsVals.row(i) -= d_ik.at(0)(i,0) * c_0.at(0).cwiseProduct(c_0.at(1)) + d_ik.at(2)(i,0) * c_0.at(0).cwiseProduct(c_1.at(1)) +
                                  d_ik.at(1)(i,0) * c_1.at(0).cwiseProduct(c_0.at(1)) + d_ik.at(3)(i,0) * c_1.at(0).cwiseProduct(c_1.at(1)); // f*_(ik)
-
-                localMat.at(i).setZero(numActive, numActive);
-                localRhs.at(i).setZero(numActive, rhsVals.at(i).rows());//multiple right-hand sides
-
-                localMat.at(i).setZero(numActive, numActive);
-                localRhs.at(i).setZero(numActive, rhsVals.at(i).rows());//multiple right-hand sides
             }
+
+            localMat.setZero(numActive, numActive);
+            localRhs.setZero(numActive, rhsVals.rows());//multiple right-hand sides
 
 
 
@@ -425,45 +418,40 @@ namespace gismo
             GISMO_UNUSED(element);
 
             gsMatrix<T> & basisVals  = basisData;
-            for (index_t i = 0; i < 6; i++)
+
+            // ( u, v)
+            localMat.noalias() = basisData * quWeights.asDiagonal() * md.measures.asDiagonal() * basisData.transpose();
+
+            for (index_t k = 0; k < quWeights.rows(); ++k) // loop over quadrature nodes
             {
-                // ( u, v)
-                localMat.at(i).noalias() = basisData * quWeights.asDiagonal() * md.measures.asDiagonal() * basisData.transpose();
+                T weight = quWeights[k];
+                gsMatrix<T> Jk = md.jacobian(k);
 
-                for (index_t k = 0; k < quWeights.rows(); ++k) // loop over quadrature nodes
+                if( Jk.dim().second + 1 == Jk.dim().first)
                 {
-                    T weight = quWeights[k];
-                    gsMatrix<T> Jk = md.jacobian(k);
-
-                    if( Jk.dim().second + 1 == Jk.dim().first)
-                    {
-                        gsMatrix<T> G = Jk.transpose() * Jk;
-                        T detG = G.determinant();
-                        weight *= sqrt(detG);
-                    }
-                    else
-                    {
-                        weight *=  md.measure(k);
-                    }
-                    // Multiply weight by the geometry measure
-
-                    localRhs.at(i).noalias() += weight * (basisVals.col(k) * rhsVals.at(i).col(k).transpose());
+                    gsMatrix<T> G = Jk.transpose() * Jk;
+                    T detG = G.determinant();
+                    weight *= sqrt(detG);
                 }
+                else
+                {
+                    weight *=  md.measure(k);
+                }
+                // Multiply weight by the geometry measure
+
+                localRhs.noalias() += weight * (basisVals.col(k) * rhsVals.col(k).transpose());
             }
         }
 
         inline void localToGlobal(const index_t patchIndex,
                                   const std::vector<gsMatrix<T> >    & eliminatedDofs,
-                                  std::vector< gsSparseSystem<T> >     & system)
+                                  gsSparseSystem<T>     & system)
         {
             gsMatrix<index_t> actives_temp;
-            for (size_t i = 0; i < system.size(); i++) // 6
-            {
-                // Map patch-local DoFs to global DoFs
-                system.at(i).mapColIndices(actives, patchIndex, actives_temp);
-                // Add contributions to the system matrix and right-hand side
-                system.at(i).push(localMat.at(i), localRhs.at(i), actives_temp, eliminatedDofs[0], 0, 0);
-            }
+            // Map patch-local DoFs to global DoFs
+            system.mapColIndices(actives, patchIndex, actives_temp);
+            // Add contributions to the system matrix and right-hand side
+            system.push(localMat, localRhs, actives_temp, eliminatedDofs[0], 0, 0);
         }
 
     protected:
@@ -473,12 +461,12 @@ namespace gismo
 
     protected:
         // Local values of the right hand side
-        std::vector< gsMatrix<T> >  rhsVals;
+        gsMatrix<T>  rhsVals;    // 6 x numQuadNodes
 
     protected:
         // Local matrices
-        std::vector< gsMatrix<T> > localMat;
-        std::vector< gsMatrix<T> > localRhs;
+        gsMatrix<T> localMat;   // numActive x numActive
+        gsMatrix<T> localRhs;   // numActive x 6
 
         gsMapData<T> md;
 

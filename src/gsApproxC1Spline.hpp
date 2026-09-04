@@ -266,7 +266,7 @@ void gsApproxC1Spline<d,T>::init()
             }
         }
     }
-}   
+}
 
 
 template<short_t d,class T>

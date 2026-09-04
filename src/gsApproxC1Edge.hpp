@@ -116,65 +116,87 @@ namespace gismo
             index_t n_plus = basis_plus.size();
             index_t n_minus = basis_minus.size();
 
-            index_t bfID_init = 3;
-            for (index_t bfID = bfID_init; bfID < n_plus - bfID_init; bfID++) // first 3 and last 3 bf are eliminated
-            {
-                gsTraceBasis<T> traceBasis(geo, beta, basis_plus, initSpace.basis(0), bdy, bfID, dir);
+            const bool interpolation = m_optionList.getSwitch("interpolation");
+            const index_t sz = edgeSpace.basis(0).size();
 
-                if (m_optionList.getSwitch("interpolation"))
+            index_t bfID_init = 3;
+            if (interpolation)
+            {
+                for (index_t bfID = bfID_init; bfID < n_plus - bfID_init; bfID++) // first 3 and last 3 bf are eliminated
                 {
-                    //gsQuasiInterpolate<T>::Schoenberg(edgeSpace.basis(0), traceBasis, sol);
-                    //result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
+                    gsTraceBasis<T> traceBasis(geo, beta, basis_plus, initSpace.basis(0), bdy, bfID, dir);
                     gsMatrix<T> anchors = edgeSpace.basis(0).anchors();
                     gsMatrix<T> values = traceBasis.eval(anchors);
                     result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
                 }
-                else
+            }
+            else if (n_plus - 2*bfID_init > 0)
+            {
+                // All (n_plus - 2*bfID_init) trace-basis right-hand sides are batched into
+                // ONE quadrature pass (gsTraceBasisBatch) and ONE multi-column solve
+                // against the mass-matrix factorization computed above.
+                const index_t M = n_plus - 2*bfID_init;
+                gsTraceBasisBatch<T> traceBasisBatch(geo, beta, basis_plus, initSpace.basis(0), bdy,
+                                                      bfID_init, n_plus - bfID_init, dir);
+
+                A.initVector(M);
+                auto aa = A.getCoeff(traceBasisBatch);
+                A.assemble(u * aa.tr());
+
+                gsMatrix<T> solMat = solver.solve(A.rhs()); // sz_free x M
+
+                // Build coefficients per column directly from the mapper, instead of
+                // gsFeSpace::getCoeffs' multi-column path (which only fills the
+                // eliminated-DoF value into column 0 of a multi-column result).
+                // Eliminated rows read from fixedDofs, exactly as constructSolution()
+                // does elsewhere in this submodule (e.g. gsC1SurfBasisEdge.h).
+                const gsDofMapper & mapper = u.mapper();
+                const gsMatrix<T> & fixedDofsRHS = u.fixedPart();
+                for (index_t col = 0; col < M; ++col)
                 {
-                    A.initVector(); // Just the rhs
-
-                    auto aa = A.getCoeff(traceBasis);
-
-                    A.assemble(u * aa);
-
-                    gsMatrix<T> solVector = solver.solve(A.rhs());
-
-                    auto u_sol = A.getSolution(u, solVector);
-                    gsMatrix<T> sol;
-                    u_sol.extract(sol);
-
-                    result.addPatch(edgeSpace.basis(0).makeGeometry(give(sol)));
+                    gsMatrix<T> coefs(sz, 1);
+                    for (index_t i = 0; i < sz; ++i)
+                        coefs(i, 0) = mapper.is_free(i, 0)
+                                    ? solMat(mapper.index(i, 0), col)
+                                    : fixedDofsRHS(mapper.bindex(i, 0), 0);
+                    result.addPatch(edgeSpace.basis(0).makeGeometry(give(coefs)));
                 }
             }
 
             bfID_init = 2;
-            for (index_t bfID = bfID_init; bfID < n_minus - bfID_init; bfID++)  // first 2 and last 2 bf are eliminated
+            if (interpolation)
             {
-                gsNormalDerivBasis<T> normalDerivBasis(geo, alpha, basis_minus, initSpace.basis(0), bdy, bfID,
-                                                            dir);
-                if (m_optionList.getSwitch("interpolation"))
+                for (index_t bfID = bfID_init; bfID < n_minus - bfID_init; bfID++)  // first 2 and last 2 bf are eliminated
                 {
-                    //gsQuasiInterpolate<T>::Schoenberg(edgeSpace.basis(0), traceBasis, sol);
-                    //result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
+                    gsNormalDerivBasis<T> normalDerivBasis(geo, alpha, basis_minus, initSpace.basis(0), bdy, bfID,
+                                                                dir);
                     gsMatrix<T> anchors = edgeSpace.basis(0).anchors();
                     gsMatrix<T> values = normalDerivBasis.eval(anchors);
                     result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
                 }
-                else
+            }
+            else if (n_minus - 2*bfID_init > 0)
+            {
+                const index_t M = n_minus - 2*bfID_init;
+                gsNormalDerivBasisBatch<T> normalDerivBasisBatch(geo, alpha, basis_minus, initSpace.basis(0), bdy,
+                                                                  bfID_init, n_minus - bfID_init, dir);
+
+                A.initVector(M);
+                auto aa = A.getCoeff(normalDerivBasisBatch);
+                A.assemble(u * aa.tr());
+
+                gsMatrix<T> solMat = solver.solve(A.rhs());
+
+                const gsDofMapper & mapper = u.mapper();
+                const gsMatrix<T> & fixedDofsRHS = u.fixedPart();
+                for (index_t col = 0; col < M; ++col)
                 {
-                    A.initVector(); // Just the rhs
-
-                    auto aa = A.getCoeff(normalDerivBasis);
-
-                    A.assemble(u * aa);
-
-                    gsMatrix<T> solVector = solver.solve(A.rhs());
-
-                    auto u_sol = A.getSolution(u, solVector);
-                    gsMatrix<T> sol;
-                    u_sol.extract(sol);
-
-                    result.addPatch(edgeSpace.basis(0).makeGeometry(give(sol)));
+                    gsMatrix<T> coefs(sz, 1);
+                    for (index_t i = 0; i < sz; ++i)
+                        coefs(i, 0) = mapper.is_free(i, 0)
+                                    ? solMat(mapper.index(i, 0), col)
+                                    : fixedDofsRHS(mapper.bindex(i, 0), 0);
+                    result.addPatch(edgeSpace.basis(0).makeGeometry(give(coefs)));
                 }
             }
 
