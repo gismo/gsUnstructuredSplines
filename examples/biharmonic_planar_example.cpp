@@ -411,7 +411,7 @@ int main(int argc, char *argv[])
                 if (plot) gsWriteParaview( mspline, "mspline");
 
                 // Then project onto localbasis so that geom represents the mapped geometry
-                gsInfo<<"L2-Projection error of geom0 on dbasis = "<<gsL2Projection<real_t>::project(localbasis,mspline,coefs)<<"\n";
+                gsInfo<<"L2-Projection error of geom0 on localbasis = "<<gsL2Projection<real_t>::project(localbasis,mspline,coefs)<<"\n";
                 coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
 
                 index_t offset = 0;
