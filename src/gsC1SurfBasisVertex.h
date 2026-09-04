@@ -76,9 +76,6 @@ namespace gismo
             solve();
 
             constructSolution(result);
-
-            if (gsC1SurfProfilingEnabled())
-                gsC1SurfGetProfile().print(gsInfo); // cumulative report after this vertex
         }
 
     private:
@@ -192,10 +189,6 @@ namespace gismo
     template <class T, class bhVisitor>
     void gsC1SurfBasisVertex<T,bhVisitor>::apply(bhVisitor & visitor, index_t patchIndex)
     {
-        const bool profile = gsC1SurfProfilingEnabled();
-        gsStopwatch applyClock;
-        if (profile) applyClock.restart();
-
 #pragma omp parallel
         {
 
@@ -248,33 +241,16 @@ namespace gismo
                 visitor_.localToGlobal(patchIndex, m_ddof, m_system); // omp_locks inside // patchIndex == 0
             }
         }//omp parallel
-
-        if (profile)
-        {
-            gsC1SurfProfile & prof = gsC1SurfGetProfile();
-            prof.t_vertexApply += applyClock.stop();
-            ++prof.n_vertexApplyCalls;
-            // Unlike gsC1SurfBasisEdge, this is ONE full 2D pass that builds the
-            // single six-column system for all six vertex basis functions together.
-            prof.n_vertexElemVisits += (index_t)m_geo.basis(0).numElements();
-        }
     } // apply
 
     template <class T, class bhVisitor>
     void gsC1SurfBasisVertex<T,bhVisitor>::solve()
     {
-        const bool profile = gsC1SurfProfilingEnabled();
-        gsStopwatch clock;
-        if (profile) clock.restart();
-
         typename gsSparseSolver<T>::SimplicialLDLT solver;
 //    typename gsSparseSolver<T>::LU solver;
 
         solver.compute(m_system.matrix());
         m_solMat = solver.solve(m_system.rhs());   // (free dofs) x 6
-
-        if (profile)
-            gsC1SurfGetProfile().t_vertexSolve += clock.stop();
     } // solve
 
 } // namespace gismo

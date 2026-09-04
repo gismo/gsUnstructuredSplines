@@ -26,9 +26,6 @@ namespace gismo
     template<short_t d,class T>
     void gsApproxC1Edge<d,T>::compute(std::vector<patchSide> & sidesContainer) {
 
-        const bool profile = m_optionList.getSwitch("info");
-        gsStopwatch clock;
-
         // Compute GLuing data
         gsApproxC1GluingData<d, T> approxGluingData(m_auxPatches, m_optionList, sidesContainer);
 
@@ -110,17 +107,10 @@ namespace gismo
                 gsMatrix<T> &fixedDofs = const_cast<expr::gsFeSpace<T> &>(u).fixedPart();
                 fixedDofs.setZero(u.mapper().boundarySize(), 1);
 
-                if (profile) clock.restart();
                 A.initSystem();
                 A.assemble(u * u.tr()); // The Matrix is the same for each bf
                 solver.compute(A.matrix());
                 // [!The same setup for each bf!]
-                if (profile)
-                {
-                    gsApproxC1Profile & prof = gsApproxC1GetProfile();
-                    prof.t_edgeSetup += clock.stop();
-                    ++prof.n_edgeSides;
-                }
             }
 
             index_t n_plus = basis_plus.size();
@@ -142,27 +132,18 @@ namespace gismo
             }
             else if (n_plus - 2*bfID_init > 0)
             {
-                // Batch all (n_plus - 2*bfID_init) trace-basis right-hand sides into
-                // ONE quadrature pass (gsTraceBasisBatch) and ONE multi-column solve,
-                // instead of one A.assemble()+solve() per bf. The shared mass-matrix
-                // factorization (solver.compute() above) is unchanged.
+                // All (n_plus - 2*bfID_init) trace-basis right-hand sides are batched into
+                // ONE quadrature pass (gsTraceBasisBatch) and ONE multi-column solve
+                // against the mass-matrix factorization computed above.
                 const index_t M = n_plus - 2*bfID_init;
                 gsTraceBasisBatch<T> traceBasisBatch(geo, beta, basis_plus, initSpace.basis(0), bdy,
                                                       bfID_init, n_plus - bfID_init, dir);
 
-                if (profile) clock.restart();
                 A.initVector(M);
                 auto aa = A.getCoeff(traceBasisBatch);
                 A.assemble(u * aa.tr());
-                if (profile) { gsApproxC1GetProfile().t_edgeBfAssemble += clock.stop(); clock.restart(); }
 
                 gsMatrix<T> solMat = solver.solve(A.rhs()); // sz_free x M
-                if (profile)
-                {
-                    gsApproxC1Profile & prof = gsApproxC1GetProfile();
-                    prof.t_edgeBfSolve += clock.stop();
-                    prof.n_edgeBf += M;
-                }
 
                 // Build coefficients per column directly from the mapper, instead of
                 // gsFeSpace::getCoeffs' multi-column path (which only fills the
@@ -200,19 +181,11 @@ namespace gismo
                 gsNormalDerivBasisBatch<T> normalDerivBasisBatch(geo, alpha, basis_minus, initSpace.basis(0), bdy,
                                                                   bfID_init, n_minus - bfID_init, dir);
 
-                if (profile) clock.restart();
                 A.initVector(M);
                 auto aa = A.getCoeff(normalDerivBasisBatch);
                 A.assemble(u * aa.tr());
-                if (profile) { gsApproxC1GetProfile().t_edgeBfAssemble += clock.stop(); clock.restart(); }
 
                 gsMatrix<T> solMat = solver.solve(A.rhs());
-                if (profile)
-                {
-                    gsApproxC1Profile & prof = gsApproxC1GetProfile();
-                    prof.t_edgeBfSolve += clock.stop();
-                    prof.n_edgeBf += M;
-                }
 
                 const gsDofMapper & mapper = u.mapper();
                 const gsMatrix<T> & fixedDofsRHS = u.fixedPart();

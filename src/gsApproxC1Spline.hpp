@@ -61,14 +61,6 @@ void gsApproxC1Spline<d,T>::defaultOptions()
 template<short_t d,class T>
 void gsApproxC1Spline<d,T>::init()
 {
-    const bool profile = m_options.getSwitch("info");
-    gsStopwatch clock;
-    if (profile)
-    {
-        gsApproxC1GetProfile().reset(); // fresh accounting for this init()+compute() cycle
-        clock.restart();
-    }
-
     index_t row_dofs = 0;
 
     // Fix orientation of each patch
@@ -274,21 +266,12 @@ void gsApproxC1Spline<d,T>::init()
             }
         }
     }
-
-    if (profile)
-        gsApproxC1GetProfile().t_init += clock.stop();
 }
 
 
 template<short_t d,class T>
 void gsApproxC1Spline<d,T>::compute()
 {
-    const bool profile = m_options.getSwitch("info");
-    gsStopwatch clock;
-    real_t nestedTime = 0; // time spent inside gsApproxC1Edge/gsApproxC1Vertex constructors,
-                            // excluded from t_finalAssembly since it is accounted for separately
-    if (profile) clock.restart();
-
     // Compute Inner Basis functions
     index_t shift_row = 0, shift_col = 0;
     for(size_t np = 0; np < m_patches.nPatches(); ++np)
@@ -318,9 +301,7 @@ void gsApproxC1Spline<d,T>::compute()
         index_t patch_1 = item.first().patch;
         index_t patch_2 = item.second().patch;
 
-        const real_t nestedBefore1 = profile ? gsApproxC1GetProfile().total() : 0;
         gsApproxC1Edge<d, T> approxC1Edge(m_patches, m_bases, item, numInt, m_options);
-        if (profile) nestedTime += gsApproxC1GetProfile().total() - nestedBefore1;
         std::vector<gsMultiPatch<T>> basisEdge = approxC1Edge.getEdgeBasis();
 
         index_t begin_col = 0, end_col = 0, shift_col = 0;
@@ -369,9 +350,7 @@ void gsApproxC1Spline<d,T>::compute()
         index_t side_1 = bit.side().index();
         index_t patch_1 = bit.patch;
 
-        const real_t nestedBefore2 = profile ? gsApproxC1GetProfile().total() : 0;
         gsApproxC1Edge<d, T> approxC1Edge(m_patches, m_bases, bit, numBdy, m_options);
-        if (profile) nestedTime += gsApproxC1GetProfile().total() - nestedBefore2;
         std::vector<gsMultiPatch<T>> basisEdge = approxC1Edge.getEdgeBasis();
 
         index_t begin_col = 0, end_col = 0, shift_col = 0;
@@ -406,9 +385,7 @@ void gsApproxC1Spline<d,T>::compute()
             vertIndex.push_back(allcornerLists[j].m_index);
         }
 
-        const real_t nestedBefore3 = profile ? gsApproxC1GetProfile().total() : 0;
         gsApproxC1Vertex<d, T> approxC1Vertex(m_patches, m_bases, patchIndex, vertIndex, numVer, m_options);
-        if (profile) nestedTime += gsApproxC1GetProfile().total() - nestedBefore3;
         std::vector<gsMultiPatch<T>> basisVertex = approxC1Vertex.getVertexBasis();
 
         for (size_t np = 0; np < patchIndex.size(); ++np)
@@ -439,13 +416,6 @@ void gsApproxC1Spline<d,T>::compute()
         shift_row += basisVertex[0].nPatches(); // + 6
     }
     m_matrix.makeCompressed();
-
-    if (profile)
-    {
-        gsApproxC1Profile & prof = gsApproxC1GetProfile();
-        prof.t_finalAssembly += clock.stop() - nestedTime;
-        prof.print(gsInfo);
-    }
 }
 
 

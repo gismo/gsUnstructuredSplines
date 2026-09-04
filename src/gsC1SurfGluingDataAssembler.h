@@ -21,10 +21,6 @@
 namespace gismo
 {
 
-/** @brief Not instantiated anywhere in the AS-G1 construction pipeline: gsC1SurfEdge/
-    gsC1SurfGluingData use gsC1SurfGluingData's own apply()/applyBeta() instead. Its
-    beginAll()/endAll() loop (below) is therefore not on any hot path and is not
-    separately profiled here -- timing dead code would not attribute anything real. */
 template <class T, class bhVisitor = gsC1SurfGluingDataVisitor<T> >
 class gsC1SurfGluingDataAssembler : public gsAssembler<T>
 {

@@ -18,80 +18,9 @@
 #include <gsUnstructuredSplines/src/gsC1SurfGluingDataVisitor.h>
 #include <gsUnstructuredSplines/src/gsG1AuxiliaryPatch.h>
 
-#include <gsUtils/gsStopwatch.h>
-#include <cstdlib>
 
 namespace gismo
 {
-
-/** @brief Profiling accumulator for gsC1SurfSpline / AS-G1.
-
-    Mirrors gsApproxC1Profile (see gsApproxC1GluingData.h). Unlike the
-    Approx-C1 classes, none of gsC1SurfGluingData/gsC1SurfGluingDataAssembler/
-    gsC1SurfBasisEdge/gsC1SurfBasisVertex take a gsOptionList, so there is no
-    existing "info" switch to gate on here. Printing (and therefore the
-    accumulation, kept zero-cost otherwise) is gated on the environment
-    variable GISMO_C1SURF_PROFILE instead -- set it to any non-empty value to
-    turn profiling on. This is a deliberate deviation from the "info" switch
-    used for Approx-C1, needed because AS-G1
-    has no equivalent option infrastructure to hook into without changing
-    out-of-scope files (gsC1SurfSpline.h/.hpp).
-
-    gsC1SurfSpline::compute() is out of scope for this task, so there is no
-    single point after the last edge/vertex where a one-shot final report can
-    be printed. Instead gsC1SurfBasisEdge::setG1BasisEdge() (once per edge/
-    boundary) and gsC1SurfBasisVertex::setG1BasisVertex() (once per vertex)
-    each reprint the *cumulative* report; the last one printed during a run
-    is the complete total.
-*/
-struct gsC1SurfProfile
-{
-    real_t t_gluingData   = 0; // gsC1SurfGluingData construction (7x7 + 4x4 solves, once per interface/boundary)
-    real_t t_edgeApply    = 0; // gsC1SurfBasisEdge::apply(): the FULL 2-D beginAll()/endAll() quadrature pass, once per patch side
-    real_t t_edgeSolve    = 0; // gsC1SurfBasisEdge::setG1BasisEdge(): one factorisation + multi-column solve, once per patch side
-    real_t t_vertexApply  = 0; // gsC1SurfBasisVertex::apply(): ONE full 2-D pass builds the single six-column system
-    real_t t_vertexSolve  = 0; // gsC1SurfBasisVertex::solve(): one factorisation + six-column solve per vertex
-
-    index_t n_gluingData      = 0;
-    index_t n_edgeApplyCalls  = 0; // == number of edge (patch-side) apply() calls
-    index_t n_edgeElemVisits  = 0; // sum, over all edgeApply calls, of elements visited per call
-    index_t n_vertexApplyCalls = 0;
-    index_t n_vertexElemVisits = 0;
-
-    void reset() { *this = gsC1SurfProfile(); }
-
-    real_t total() const { return t_gluingData + t_edgeApply + t_edgeSolve + t_vertexApply + t_vertexSolve; }
-
-    void print(std::ostream & os) const
-    {
-        const real_t tot = total();
-        const real_t pct = (tot > 0 ? (real_t)100.0/tot : (real_t)0.0);
-        os << "=== gsC1SurfSpline (AS-G1) attributed profile (cumulative) ===\n";
-        os << "  gluing data solves        : " << t_gluingData  << " s  (" << t_gluingData*pct << "%)  count=" << n_gluingData << "\n";
-        os << "  edge apply() [full 2D pass, per patch side] : " << t_edgeApply << " s  (" << t_edgeApply*pct << "%)  calls="
-           << n_edgeApplyCalls << "  total-elem-visits=" << n_edgeElemVisits
-           << (n_edgeApplyCalls>0 ? "  (" + util::to_string((double)n_edgeElemVisits/(double)n_edgeApplyCalls) + " elem/call)" : "") << "\n";
-        os << "  edge solve (compute+solve): " << t_edgeSolve << " s  (" << t_edgeSolve*pct << "%)  calls=" << n_edgeApplyCalls << "\n";
-        os << "  vertex apply() [1 full 2D pass, all 6 bf together] : " << t_vertexApply << " s  (" << t_vertexApply*pct << "%)  calls="
-           << n_vertexApplyCalls << "  total-elem-visits=" << n_vertexElemVisits << "\n";
-        os << "  vertex solve (compute+six-column solve) : " << t_vertexSolve << " s  (" << t_vertexSolve*pct << "%)  calls=" << n_vertexApplyCalls << "\n";
-        os << "  TOTAL (accounted)         : " << tot << " s\n";
-    }
-};
-
-inline gsC1SurfProfile & gsC1SurfGetProfile()
-{
-    static gsC1SurfProfile profile;
-    return profile;
-}
-
-/// Gate: profiling (accumulation + printing) is enabled iff GISMO_C1SURF_PROFILE
-/// is set in the environment. Checked once (function-local static).
-inline bool gsC1SurfProfilingEnabled()
-{
-    static const bool enabled = (std::getenv("GISMO_C1SURF_PROFILE") != nullptr);
-    return enabled;
-}
 
 template<class T, class Visitor = gsC1SurfGluingDataVisitor<T>>
 class gsC1SurfGluingData : public gsC1SurfGD<T>
@@ -107,10 +36,6 @@ public:
     gsMultiBasis<T> & mb)
     :  gsC1SurfGD<T>(mp, mb)
     {
-        const bool profile = gsC1SurfProfilingEnabled();
-        gsStopwatch clock;
-        if (profile) clock.restart();
-
         // Solve the system for alpha_L and alpha_R and beta
         refresh();
         assemble();
@@ -120,13 +45,6 @@ public:
         refreshBeta();
         assembleBeta();
         solveBeta();
-
-        if (profile)
-        {
-            gsC1SurfProfile & prof = gsC1SurfGetProfile();
-            prof.t_gluingData += clock.stop();
-            ++prof.n_gluingData;
-        }
     }
 
     gsMatrix<T> evalAlpha_R(gsMatrix<T> points)

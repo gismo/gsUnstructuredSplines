@@ -112,9 +112,6 @@ namespace gismo
     {
         result.clear();
 
-        const bool profile = gsC1SurfProfilingEnabled();
-        gsStopwatch clock;
-
         const index_t n_plus  = m_basis_plus.size();
         const index_t n_minus = m_basis_minus.size();
 
@@ -131,18 +128,13 @@ namespace gismo
             refresh();
             assemble(plus_lo, plus_lo + n_p, minus_lo, minus_lo + n_m);
 
-            if (profile) clock.restart();
             typename gsSparseSolver<T>::SimplicialLDLT solver;
             solver.compute(m_system.matrix());
             gsMatrix<T> sol = solver.solve(m_system.rhs());   // one column per basis function
-            if (profile) gsC1SurfGetProfile().t_edgeSolve += clock.stop();
 
             constructSolution(sol, g1EdgeBasis);
         }
         result = g1EdgeBasis;
-
-        if (profile)
-            gsC1SurfGetProfile().print(gsInfo); // cumulative report after this edge; the last edge/vertex to print reflects the run total
     } // setG1BasisEdge
 
     template <class T, class bhVisitor>
@@ -220,16 +212,7 @@ namespace gismo
     void gsC1SurfBasisEdge<T,bhVisitor>::apply(bhVisitor & visitor, index_t plus_lo, index_t plus_hi,
                                                index_t minus_lo, index_t minus_hi)
     {
-        const bool profile = gsC1SurfProfilingEnabled();
-        gsStopwatch applyClock;
-        if (profile) applyClock.restart();
-
-        // Actually-visited element count, accumulated across threads below (an
-        // OpenMP reduction on the parallel region itself, not on a work-sharing
-        // for -- the domain loop below is a manual strided partition).
-        index_t nVisited = 0;
-
-#pragma omp parallel reduction(+:nVisited)
+#pragma omp parallel
         {
 
             gsQuadRule<T> quRule ; // Quadrature rule
@@ -295,8 +278,6 @@ namespace gismo
                 // push() below, so skipping it changes no assembled value.
                 if (canSkip && domIt.lowerCorner()(transDir) >= cutoff - tol) continue;
 
-                ++nVisited;
-
                 // Map the Quadrature rule to the element
                 quRule.mapTo( domIt.lowerCorner(), domIt.upperCorner(), quNodes, quWeights );
 
@@ -311,21 +292,6 @@ namespace gismo
                 visitor_.localToGlobal(0, m_ddof, m_system); // omp_locks inside // patchIndex == 0
             }
         }//omp parallel
-
-        if (profile)
-        {
-            gsC1SurfProfile & prof = gsC1SurfGetProfile();
-            prof.t_edgeApply += applyClock.stop();
-            ++prof.n_edgeApplyCalls;
-            // Elements whose transverse index carries no free DoF contribute
-            // nothing to the assembled matrix or right-hand side (see the
-            // skip in the domain loop above), so only actually-visited
-            // elements are counted here. One call still covers a whole patch
-            // side, so the count scales with the number of patch sides times
-            // the visited fraction of that side's elements, not with the
-            // number of basis functions on a side.
-            prof.n_edgeElemVisits += nVisited;
-        }
     } // apply
 
 } // namespace gismo

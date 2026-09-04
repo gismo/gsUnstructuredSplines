@@ -361,9 +361,8 @@ SUITE(gsBiharmonic_test)          // The suite should have the same name as the 
     TEST(approxC1)               // Declares a test named "gsBiharmonic_test:approxC1"
     {
         // Single patch: no interfaces, so gsApproxC1Spline never enters the
-        // interface-vertex branches of gsApproxC1Vertex/gsApproxC1Utils, but
-        // this is the original, long-standing gate on the interior C1 space
-        // and its arguments must stay exactly as they were.
+        // interface-vertex branches of gsApproxC1Vertex/gsApproxC1Utils. This
+        // gates the interior C1 space only.
         BiharmonicTestParams prm;
         prm.method             = BiharmonicMethod::ApproxC1;
         prm.geoFile             = "planar/1p_square.xml";

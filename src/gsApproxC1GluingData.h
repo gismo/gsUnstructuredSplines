@@ -16,82 +16,9 @@
 #include <gsUnstructuredSplines/src/gsApproxC1Utils.h>
 
 #include <gsAssembler/gsDofMapperCreator.h>
-#include <gsUtils/gsStopwatch.h>
 
 namespace gismo
 {
-
-/** @brief Profiling accumulator for gsApproxC1Spline.
-
-    A single process-wide instance (Meyers singleton, see gsApproxC1GetProfile())
-    shared by gsApproxC1Spline, gsApproxC1Edge, gsApproxC1Vertex and
-    gsApproxC1GluingData. Every field is an accumulated total across all
-    edges/vertices/interfaces visited during one gsApproxC1Spline::update()
-    call. Printing (gsApproxC1Profile::print()) is only ever invoked when the
-    "info" gsOptionList switch is set, so the accumulation itself is gated
-    the same way to keep ordinary runs at zero overhead.
-*/
-struct gsApproxC1Profile
-{
-    real_t t_init            = 0; // gsApproxC1Spline::init()
-    real_t t_gluingData      = 0; // gsApproxC1GluingData::setGlobalGluingData
-    real_t t_edgeSetup       = 0; // one-off mass matrix assemble + factorize, per edge side
-    real_t t_edgeBfAssemble  = 0; // per-basis-function A.assemble(u*aa) (the RHS quadrature pass)
-    real_t t_edgeBfSolve     = 0; // per-basis-function solver.solve(...)
-    real_t t_vertex          = 0; // gsApproxC1Vertex construction (per patch-corner, plus the
-                                   // once-per-vertex computeKernel() step), excluding nested
-                                   // gluing-data time
-    real_t t_finalAssembly   = 0; // gsApproxC1Spline::compute() global matrix insertion
-
-    // Sub-buckets of t_vertex (already summed into it, so NOT added again in total()):
-    real_t t_vertexSetup      = 0; // one-off mass matrix assemble + factorize, per patch-corner
-    real_t t_vertexBfAssemble = 0; // batched A.initVector(6) + getCoeff + assemble(u * aa.tr())
-    real_t t_vertexBfSolve    = 0; // the multi-column solver.solve(...)
-    real_t t_vertexKernel     = 0; // computeKernel(), once per vertex (0 for internal vertices)
-
-    index_t n_gluingData = 0;
-    index_t n_edgeSides  = 0;
-    index_t n_edgeBf     = 0;
-    index_t n_vertex     = 0;
-
-    void reset() { *this = gsApproxC1Profile(); }
-
-    real_t total() const
-    {
-        return t_init + t_gluingData + t_edgeSetup + t_edgeBfAssemble
-             + t_edgeBfSolve + t_vertex + t_finalAssembly;
-    }
-
-    void print(std::ostream & os) const
-    {
-        const real_t tot = total();
-        const real_t pct = (tot > 0 ? (real_t)100.0/tot : (real_t)0.0);
-        os << "=== gsApproxC1Spline attributed profile ===\n";
-        os << "  init()                    : " << t_init           << " s  (" << t_init*pct           << "%)\n";
-        os << "  gluing data (solve)       : " << t_gluingData      << " s  (" << t_gluingData*pct      << "%)  count=" << n_gluingData << "\n";
-        os << "  edge mass assemble+factor : " << t_edgeSetup       << " s  (" << t_edgeSetup*pct       << "%)  count=" << n_edgeSides  << " sides\n";
-        os << "  edge per-bf RHS assemble  : " << t_edgeBfAssemble  << " s  (" << t_edgeBfAssemble*pct  << "%)  count=" << n_edgeBf     << " bf"
-           << (n_edgeBf>0 ? "  (" + util::to_string(t_edgeBfAssemble/n_edgeBf*1000) + " ms/bf)" : "") << "\n";
-        os << "  edge per-bf solve         : " << t_edgeBfSolve     << " s  (" << t_edgeBfSolve*pct     << "%)  count=" << n_edgeBf     << " bf\n";
-        os << "  vertex construction       : " << t_vertex          << " s  (" << t_vertex*pct          << "%)  count=" << n_vertex     << " corners\n";
-        os << "    of which mass setup     : " << t_vertexSetup      << " s\n";
-        os << "    of which bf RHS assemble: " << t_vertexBfAssemble << " s\n";
-        os << "    of which bf solve       : " << t_vertexBfSolve    << " s\n";
-        os << "    of which kernel         : " << t_vertexKernel     << " s  (0 for internal vertices)\n";
-        os << "    (breakdown is partial: reparametrisation, mapper/space setup and\n"
-              "     parametrizeBasisBack are not separately timed and make up the rest)\n";
-        os << "  final matrix assembly     : " << t_finalAssembly   << " s  (" << t_finalAssembly*pct   << "%)\n";
-        os << "  TOTAL (accounted)         : " << tot << " s\n";
-    }
-};
-
-/// Meyers singleton accessor: one gsApproxC1Profile shared by every TU that
-/// includes this header, regardless of how many object files instantiate it.
-inline gsApproxC1Profile & gsApproxC1GetProfile()
-{
-    static gsApproxC1Profile profile;
-    return profile;
-}
 
 template<short_t d, class T>
 class gsApproxC1GluingData
@@ -176,10 +103,6 @@ protected:
 template<short_t d, class T>
 void gsApproxC1GluingData<d, T>::setGlobalGluingData(index_t patchID, index_t dir)
 {
-    const bool profile = m_optionList.getSwitch("info");
-    gsStopwatch clock;
-    if (profile) clock.restart();
-
     // Interpolate boundary yes or no //
     bool interpolate_boundary = false;
     // Interpolate boundary yes or no //
@@ -266,12 +189,6 @@ void gsApproxC1GluingData<d, T>::setGlobalGluingData(index_t patchID, index_t di
     tilde_temp = bsp_gD.makeGeometry(sol);
     betaSContainer[dir] = dynamic_cast<gsBSpline<T> &> (*tilde_temp);
 
-    if (profile)
-    {
-        gsApproxC1Profile & prof = gsApproxC1GetProfile();
-        prof.t_gluingData += clock.stop();
-        ++prof.n_gluingData;
-    }
 } // setGlobalGluingData
 
 

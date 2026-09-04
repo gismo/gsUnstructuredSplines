@@ -36,8 +36,7 @@ namespace gismo
     single quadrature pass instead of M. `beta`, `N_0` and `N_1` (the u.row(1-uv)
     evaluations) are independent of bfID and are hoisted out of the per-row loop;
     only `m_basis_plus.evalSingle_into`/`derivSingle_into` (cheap 1-D evals) are
-    repeated per row. The arithmetic per row is identical to gsTraceBasis::eval_into,
-    so results are bit-identical, not merely close.
+    repeated per row. The arithmetic per row is identical to gsTraceBasis::eval_into.
 */
 template <class T>
 class gsTraceBasisBatch : public gismo::gsFunction<T>

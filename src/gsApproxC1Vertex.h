@@ -159,13 +159,8 @@ public:
         }
 
         // TODO fix the gluing Data stuff
-        const bool profile = m_optionList.getSwitch("info");
-        gsStopwatch vertexClock;
-        gsStopwatch subClock; // for the t_vertexSetup/t_vertexBfAssemble/t_vertexBfSolve/t_vertexKernel sub-buckets
         for(size_t i = 0; i < m_patchesAroundVertex.size(); i++)
         {
-            if (profile) vertexClock.restart();
-
             C1AuxPatchContainer auxPatchSingle;
             auxPatchSingle.push_back(m_auxPatches[i]);
 
@@ -230,11 +225,7 @@ public:
 
             // Compute Gluing data
             // Stored locally
-            // (gluing-data time is timed separately inside gsApproxC1GluingData and
-            // is subtracted from the vertex bucket below to avoid double-counting)
-            const real_t gdTimeBefore = profile ? gsApproxC1GetProfile().t_gluingData : 0;
             gsApproxC1GluingData<d, T> approxGluingData(auxPatchSingle, m_optionList, containingSides, isInterface, basis_pm);
-            const real_t gdTimeNested = profile ? (gsApproxC1GetProfile().t_gluingData - gdTimeBefore) : 0;
 
             //gsGeometry<T> & geo = auxPatchSingle[0].getPatchRotated();
             gsGeometry<T> & geo = rotPatch.patch(i);
@@ -305,12 +296,9 @@ public:
                 gsMatrix<T> &fixedDofs = const_cast<expr::gsFeSpace<T> &>(u).fixedPart();
                 fixedDofs.setZero(u.mapper().boundarySize(), 1);
 
-                if (profile) subClock.restart();
                 A.initSystem();
                 A.assemble(u * u.tr());
                 solver.compute(A.matrix());
-                if (profile)
-                    gsApproxC1GetProfile().t_vertexSetup += subClock.stop();
             }
 
             // Create Basis functions: one gsVertexBasis over the whole range [0, 6)
@@ -332,19 +320,11 @@ public:
             }
             else
             {
-                if (profile) subClock.restart();
                 A.initVector(6);
                 auto aa = A.getCoeff(vertexBasisBatch);
                 A.assemble(u * aa.tr());
-                if (profile)
-                {
-                    gsApproxC1GetProfile().t_vertexBfAssemble += subClock.stop();
-                    subClock.restart();
-                }
 
                 gsMatrix<T> solMat = solver.solve(A.rhs()); // (free dofs) x 6
-                if (profile)
-                    gsApproxC1GetProfile().t_vertexBfSolve += subClock.stop();
 
                 // Build coefficients per column directly from the mapper, instead of
                 // gsFeSpace::getCoeffs' multi-column path (which only fills the
@@ -365,13 +345,6 @@ public:
 
             // Store temporary
             basisVertexResult.push_back(result_1);
-
-            if (profile)
-            {
-                gsApproxC1Profile & prof = gsApproxC1GetProfile();
-                prof.t_vertex += vertexClock.stop() - gdTimeNested; // exclude nested gluing-data time
-                ++prof.n_vertex;
-            }
         }
 
         gsMultiPatch<T> temp_mp;
@@ -381,21 +354,7 @@ public:
 
         if (m_patchesAroundVertex.size() != temp_mp.interfaces().size()) // No internal vertex
         {
-            if (profile) subClock.restart();
             computeKernel();
-            if (profile)
-            {
-                const real_t tk = subClock.stop();
-                gsApproxC1Profile & prof = gsApproxC1GetProfile();
-                // computeKernel() runs once per vertex, outside any per-corner
-                // vertexClock span, so its time is added to t_vertex directly (not just
-                // exposed via t_vertexKernel) to keep total() -- the nested-time cut used
-                // by gsApproxC1Spline::compute() -- accounting for it as vertex
-                // construction. n_vertex is not incremented here: it counts patch-corners,
-                // and computeKernel() runs once per vertex, not once per corner.
-                prof.t_vertexKernel += tk;
-                prof.t_vertex += tk;
-            }
 
             for(size_t i = 0; i < m_patchesAroundVertex.size(); i++)
                 m_auxPatches[i].parametrizeBasisBack(basisVertexResult[i]); // parametrizeBasisBack
