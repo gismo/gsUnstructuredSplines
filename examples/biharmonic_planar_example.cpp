@@ -25,16 +25,18 @@
 #ifdef gsSpectra_ENABLED
 #include <gsSpectra/gsSpectra.h>
 #endif
+#include <gsAssembler/gsDofMapperCreator.h>
 #include <gsUtils/gsProjection.h>
 using namespace gismo;
 //! [Include namespace]
 
 /**
  * Smoothing method:
- * - m 0 == Approx C1 method
  * - m 1 == D-Patch method
- * - m 2 == Almost C1 method
- * - m 3 == Nitsche's method
+ * - m 2 == Approx C1 method
+ * - m 3 == AS-G1 method (analysis-suitable G1, requires degree p >= 3)
+ * - m 4 == Almost C1 method
+ * - m 5 == Nitsche's method
  */
 enum MethodFlags
 {
@@ -398,7 +400,7 @@ int main(int argc, char *argv[])
                 geom0 = geom = dpatch.exportToPatches(mp);
             else
             {
-                gsDofMapper mapper(localbasis);
+                gsDofMapper mapper = createMapper(localbasis, 1, false);
                 mapper.finalize();
                 gsMatrix<> coefs;
                 // First project the geometry geom0 onto bb2 and make a mapped spline
@@ -409,7 +411,7 @@ int main(int argc, char *argv[])
                 if (plot) gsWriteParaview( mspline, "mspline");
 
                 // Then project onto localbasis so that geom represents the mapped geometry
-                gsInfo<<"L2-Projection error of geom0 on dbasis = "<<gsL2Projection<real_t>::project(localbasis,mp,mspline,coefs)<<"\n";
+                gsInfo<<"L2-Projection error of geom0 on localbasis = "<<gsL2Projection<real_t>::project(localbasis,mspline,coefs)<<"\n";
                 coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
 
                 index_t offset = 0;
@@ -423,7 +425,7 @@ int main(int argc, char *argv[])
             if (plot) gsWriteParaview( geom, "geom",1000,true,false);
 
             // gsMatrix<> coefs;
-            // gsL2Projection<real_t>::projectGeometry(dbasis,bb2,geom0,coefs);
+            // gsL2Projection<real_t>::project(bb2,dbasis,geom0,coefs);
         }
         else if (method == MethodFlags::ALMOSTC1)
         {
@@ -482,7 +484,7 @@ int main(int argc, char *argv[])
                 gsL2Projection<real_t>::project(bb2,dbasis,geom0,targetCoefs);
                 targetCoefs.resize(targetCoefs.rows()/2,2);
                 bb2.getMapper().mapToSourceCoefs(targetCoefs,sourceCoefs);
-                gsDofMapper mapper(dbasis);
+                gsDofMapper mapper = createMapper(dbasis, 1, false);
                 index_t offset = 0;
                 for (size_t p = 0; p != geom0.nPatches(); p++)
                 {

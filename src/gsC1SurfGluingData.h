@@ -177,8 +177,8 @@ protected:
             visitor_.initialize(basis,quRule);
 
             // Initialize domain element iterator
-            typename gsBasis<T>::domainIter domIt    = basis.domain()->beginBdr(boundary::none);
-            typename gsBasis<T>::domainIter domItEnd = basis.domain()->endBdr(boundary::none);
+            typename gsBasis<T>::domainIter domIt    = basis.domain()->beginAll();
+            typename gsBasis<T>::domainIter domItEnd = basis.domain()->endAll();
 
 #           ifdef _OPENMP
             domIt += tid;
@@ -226,8 +226,8 @@ protected:
             visitor_Beta.initialize(basis,quRule);
 
             // Initialize domain element iterator
-            typename gsBasis<T>::domainIter domIt    = basis.domain()->beginBdr(boundary::none);
-            typename gsBasis<T>::domainIter domItEnd = basis.domain()->endBdr(boundary::none);
+            typename gsBasis<T>::domainIter domIt    = basis.domain()->beginAll();
+            typename gsBasis<T>::domainIter domItEnd = basis.domain()->endAll();
 
 #           ifdef _OPENMP
             domIt += tid;

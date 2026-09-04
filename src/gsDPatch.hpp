@@ -18,6 +18,7 @@
 #include <gsSolver/gsMatrixOp.h>
 
 #include <gsIO/gsWriteParaview.h>
+#include <gsAssembler/gsDofMapperCreator.h>
 
 // #define PI 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148086513282306647
 
@@ -174,6 +175,12 @@ namespace gismo
                     tbasis2.uniformRefine(1,tbasis2.degree(dim)-1,dim);
                 thbBasis.addLevel(tbasis2);
 
+                // Create level 3
+                gsTensorBSplineBasis<d,T> tbasis3 = tbasis2;
+                for (short_t dim = 0; dim!=d; dim++)
+                    tbasis3.uniformRefine(1,tbasis3.degree(dim)-1,dim);
+                thbBasis.addLevel(tbasis3);
+
                 m_bases0.addBasis(thbBasis.clone());
             }
             else
@@ -295,7 +302,7 @@ namespace gismo
         std::vector< std::vector<index_t> > elVec;
         this->_refBoxes(elVec);
 
-        gsSparseMatrix<T> tmp;
+        gsSparseMatrix<T,RowMajor> tmp;
         index_t rows = 0, cols = 0;
         std::vector<gsEigen::Triplet<T,index_t>> tripletList;
         for (size_t p=0; p!=m_bases0.nBases(); p++)
@@ -309,7 +316,7 @@ namespace gismo
             std::vector< gsSortedVector< index_t > > xmat = basis->getXmatrix();
             basis->refineElements_withTransfer(elVec[p],tmp);
             for (index_t i = 0; i<tmp.outerSize(); ++i)
-                for (typename gsSparseMatrix<T>::iterator it(tmp,i); it; ++it)
+                for (typename gsSparseMatrix<T,RowMajor>::iterator it(tmp,i); it; ++it)
                     tripletList.push_back(gsEigen::Triplet<T,index_t>(it.row()+rows,it.col()+cols,it.value()));
 
             rows += tmp.rows();
@@ -324,7 +331,7 @@ namespace gismo
 
         // redefine the mappers
         // m_mapModified = gsDofMapper(m_bases);
-        m_mapOriginal = gsDofMapper(m_bases);
+        m_mapOriginal = createMapper(m_bases, 1, false);
         m_mapOriginal.finalize();
     }
 

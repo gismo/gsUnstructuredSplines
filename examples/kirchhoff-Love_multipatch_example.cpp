@@ -24,6 +24,7 @@
 #include <gsKLShell/src/gsMaterialMatrixLinear.h>
 #include <gsKLShell/src/gsFunctionSum.h>
 #include <gsKLShell/src/gsThinShellAssembler.h>
+#include <gsAssembler/gsDofMapperCreator.h>
 #endif
 
 using namespace gismo;
@@ -320,7 +321,7 @@ int main(int argc, char *argv[])
                 geom0 = geom = dpatch.exportToPatches(mp);
             else
             {
-                gsDofMapper mapper(dbasis);
+                gsDofMapper mapper = createMapper(dbasis, 1, false);
                 mapper.finalize();
                 gsMatrix<> coefs;
                 // First project the geometry geom0 onto bb2 and make a mapped spline
@@ -331,7 +332,7 @@ int main(int argc, char *argv[])
                 if (plot) gsWriteParaview( mspline, "mspline");
 
                 // Then project onto dbasis so that geom represents the mapped geometry
-                gsInfo<<"L2-Projection error of geom0 on dbasis = "<<gsL2Projection<real_t>::project(dbasis,mp,mspline,coefs)<<"\n";
+                gsInfo<<"L2-Projection error of geom0 on dbasis = "<<gsL2Projection<real_t>::project(dbasis,mspline,coefs)<<"\n";
                 coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
 
                 index_t offset = 0;
@@ -417,7 +418,7 @@ int main(int argc, char *argv[])
             }
             else
             {
-                gsDofMapper mapper(dbasis);
+                gsDofMapper mapper = createMapper(dbasis, 1, false);
                 mapper.finalize();
                 gsMatrix<> coefs;
                 // First project the geometry geom0 onto bb2 and make a mapped spline
@@ -428,7 +429,7 @@ int main(int argc, char *argv[])
                 if (plot) gsWriteParaview( mspline, "mspline");
 
                 // Then project onto dbasis so that geom represents the mapped geometry
-                gsInfo<<"L2-Projection error of geom0 on dbasis = "<<gsL2Projection<real_t>::project(dbasis,geom,mspline,coefs)<<"\n";
+                gsInfo<<"L2-Projection error of geom0 on dbasis = "<<gsL2Projection<real_t>::project(dbasis,mspline,coefs)<<"\n";
                 coefs.resize(coefs.rows()/mp.geoDim(),mp.geoDim());
                 index_t offset = 0;
                 for (size_t p = 0; p != geom.nPatches(); p++)

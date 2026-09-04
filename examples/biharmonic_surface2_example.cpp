@@ -19,6 +19,7 @@
 #include <gsUnstructuredSplines/src/gsDPatch.h>
 #include <gsUnstructuredSplines/src/gsAlmostC1.h>
 #include <gsUnstructuredSplines/src/gsC1SurfSpline.h>
+#include <gsAssembler/gsDofMapperCreator.h>
 
 /**
  * Smoothing method:
@@ -817,7 +818,8 @@ void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & 
 
 void setMapperForBiharmonic(gsBoundaryConditions<> & bc, gsMultiBasis<> & dbasis, gsDofMapper & mapper)
 {
-    mapper.init(dbasis);
+    // Interfaces are matched explicitly below, hence conforming = false here
+    mapper = createMapper(dbasis, 1, /*conforming=*/false);
 
     for (gsBoxTopology::const_iiterator it = dbasis.topology().iBegin();
          it != dbasis.topology().iEnd(); ++it) // C^0 at the interface
@@ -845,7 +847,7 @@ void setMapperForBiharmonic(gsBoundaryConditions<> & bc, gsMultiBasis<> & dbasis
 void gsDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & dbasis, gsBoundaryConditions<> & bc, const expr::gsFeSpace<real_t> & u)
 {
     gsDofMapper mapper = u.mapper();
-    gsDofMapper mapperBdy(dbasis, u.dim());
+    gsDofMapper mapperBdy = createMapper(dbasis, u.dim(), false);
     for (gsBoxTopology::const_iiterator it = dbasis.topology().iBegin();
          it != dbasis.topology().iEnd(); ++it) // C^0 at the interface
     {
@@ -1136,6 +1138,7 @@ int main(int argc, char *argv[])
             mp = dpatch.exportToPatches();
             basis = dpatch.localBasis();
             bb2.init(basis,global2local);
+            A.setIntegrationElements(basis);
             gsInfo << "DPATCH basis created \n";
         }
         else if (method == MethodFlags::ALMOSTC1)
@@ -1156,6 +1159,7 @@ int main(int argc, char *argv[])
             mp = almostC1.exportToPatches();
             basis = almostC1.localBasis();
             bb2.init(basis,global2local);
+            A.setIntegrationElements(basis);
             gsInfo << "ALMOSTC1 basis created \n";
         }
         else if (method == MethodFlags::NITSCHE)

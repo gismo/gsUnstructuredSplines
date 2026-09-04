@@ -18,6 +18,7 @@
 #include <gsExpressions/gsExprHelper.h>
 #include <gsAssembler/gsExprEvaluator.h>
 #include <gsAssembler/gsAssembler.h>
+#include <gsAssembler/gsDofMapperCreator.h>
 
 namespace gismo
 {
@@ -384,7 +385,7 @@ namespace gismo
         GISMO_ENSURE(totalsize==coefs.rows(),"Sizes do not agree");
 
         gsMultiBasis<T> basis(mp);
-        gsDofMapper tmpMap(basis);
+        gsDofMapper tmpMap = createMapper(basis, 1, false);
         tmpMap.finalize();
 
         for (size_t p=0; p!=mp.nPatches(); p++) // patches
@@ -518,7 +519,7 @@ namespace gismo
             std::vector< std::vector<index_t> > elVec;
             this->_refBoxes(elVec);
 
-            gsSparseMatrix<T> tmp;
+            gsSparseMatrix<T,RowMajor> tmp;
             index_t rows = 0, cols = 0;
             std::vector<gsEigen::Triplet<T,index_t>> tripletList;
             for (size_t p=0; p!=m_RefPatches.nPatches(); p++)
@@ -535,7 +536,7 @@ namespace gismo
 
                 basis->transfer(xmat,tmp);
                 for (index_t i = 0; i<tmp.outerSize(); ++i)
-                    for (typename gsSparseMatrix<T>::iterator it(tmp,i); it; ++it)
+                    for (typename gsSparseMatrix<T,RowMajor>::iterator it(tmp,i); it; ++it)
                         tripletList.push_back(gsEigen::Triplet<T,index_t>(it.row()+rows,it.col()+cols,it.value()));
 
                 rows += tmp.rows();
@@ -550,7 +551,7 @@ namespace gismo
         }
 
         // redefine the mappers
-        m_mapOriginal = gsDofMapper(m_bases);
+        m_mapOriginal = createMapper(m_bases, 1, false);
         m_mapOriginal.finalize();
 
         // gsWriteParaview<T>(m_RefPatches,"mp_ref",100,true);

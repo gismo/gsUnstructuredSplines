@@ -18,6 +18,7 @@
 #include <gsExpressions/gsExprHelper.h>
 #include <gsAssembler/gsExprEvaluator.h>
 #include <gsAssembler/gsAssembler.h>
+#include <gsAssembler/gsDofMapperCreator.h>
 
 namespace gismo
 {
@@ -843,8 +844,8 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatchBase<d,T>::_initMappers()
     {
-        m_mapModified = gsDofMapper(m_bases);
-        m_mapOriginal = gsDofMapper(m_bases);
+        m_mapModified = createMapper(m_bases, /*dim=*/1, /*conforming=*/false);
+        m_mapOriginal = createMapper(m_bases, /*dim=*/1, /*conforming=*/false);
     }
 
     template<short_t d,class T>

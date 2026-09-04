@@ -25,6 +25,7 @@
 #include <gsKLShell/src/gsThinShellAssembler.h>
 #include <gsKLShell/src/gsMaterialMatrixLinear.h>
 #include <gsKLShell/src/gsFunctionSum.h>
+#include <gsAssembler/gsDofMapperCreator.h>
 #endif
 
 #ifdef gsStructuralAnalysis_ENABLED
@@ -556,7 +557,7 @@ int main(int argc, char *argv[])
         }
 
         gsMultiBasis<> geombasis(geom);
-        gsDofMapper mapper(geombasis);
+        gsDofMapper mapper = createMapper(geombasis, 1, false);
         mapper.finalize();
         for (std::vector<index_t>::const_iterator it = modevec.begin(); it!=modevec.end(); it++)
         {

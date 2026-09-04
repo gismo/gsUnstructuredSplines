@@ -19,6 +19,8 @@
 
 #include <gsUnstructuredSplines/src/gsApproxC1GluingData.h>
 
+#include <gsAssembler/gsDofMapperCreator.h>
+
 namespace gismo
 {
     template<short_t d,class T>
@@ -88,7 +90,7 @@ namespace gismo
             auto u = A.getSpace(edgeSpace);
 
             // Create Mapper
-            gsDofMapper map(edgeSpace);
+            gsDofMapper map = createMapper(edgeSpace, 1, false);
             if (!m_optionList.getSwitch("interpolation"))
             {
                 gsMatrix<index_t> act;

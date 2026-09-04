@@ -13,6 +13,7 @@
 */
 
 # include <gismo.h>
+#include <gsAssembler/gsDofMapperCreator.h>
 
 using namespace gismo;
 
@@ -35,7 +36,8 @@ void writeToCSVfile(std::string name, gsMatrix<> matrix)
 
 void setMapperForBiharmonic(gsBoundaryConditions<> & bc, gsMultiBasis<> & basis, gsDofMapper & mapper)
 {
-    mapper.init(basis);
+    // Interfaces are matched explicitly below, hence conforming = false here
+    mapper = createMapper(basis, 1, /*conforming=*/false);
 
     for (gsBoxTopology::const_iiterator it = basis.topology().iBegin();
          it != basis.topology().iEnd(); ++it) // C^0 at the interface
@@ -63,7 +65,7 @@ void setMapperForBiharmonic(gsBoundaryConditions<> & bc, gsMultiBasis<> & basis,
 void setDirichletNeumannValuesL2Projection(gsMultiPatch<> & mp, gsMultiBasis<> & basis, gsBoundaryConditions<> & bc, const expr::gsFeSpace<real_t> & u)
 {
     const gsDofMapper & mapper = u.mapper();
-    gsDofMapper mapperBdy(basis, u.dim());
+    gsDofMapper mapperBdy = createMapper(basis, u.dim(), false);
     for (gsBoxTopology::const_iiterator it = basis.topology().iBegin();
          it != basis.topology().iEnd(); ++it) // C^0 at the interface
     {
