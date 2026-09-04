@@ -23,6 +23,174 @@
 namespace gismo
 {
 
+/** @brief Batched sibling of gsTraceBasis (gsApproxC1Utils.h).
+
+    gsApproxC1Edge::compute() needs the RHS of `u * aa` for every trace-basis
+    function bfID in a range; the test space `u`, the quadrature nodes and the
+    mass-matrix factorization are the same for all of them, so a separate
+    quadrature pass per bfID is redundant work.
+
+    This class evaluates the WHOLE range [bfID_lo, bfID_hi) of trace-basis
+    functions in one call, one row per basis function, so gsExprAssembler can
+    assemble a multi-column RHS (`A.initVector(M); A.assemble(u * aa.tr())`) in a
+    single quadrature pass instead of M. `beta`, `N_0` and `N_1` (the u.row(1-uv)
+    evaluations) are independent of bfID and are hoisted out of the per-row loop;
+    only `m_basis_plus.evalSingle_into`/`derivSingle_into` (cheap 1-D evals) are
+    repeated per row. The arithmetic per row is identical to gsTraceBasis::eval_into,
+    so results are bit-identical, not merely close.
+*/
+template <class T>
+class gsTraceBasisBatch : public gismo::gsFunction<T>
+{
+protected:
+    gsGeometry<T> & _geo;
+
+    gsBSpline<T>       m_basis_beta;
+    gsBSplineBasis<T>  m_basis_plus;
+
+    gsBasis<T> & m_basis;
+
+    bool m_isboundary;
+    const index_t m_bfID_lo, m_bfID_hi, m_uv;
+
+public:
+    gsTraceBasisBatch(gsGeometry<T> & geo,
+                       gsBSpline<T> basis_beta,
+                       gsBSplineBasis<T> basis_plus,
+                       gsBasis<T> & basis,
+                       bool isboundary,
+                       index_t bfID_lo,
+                       index_t bfID_hi,
+                       index_t uv) :
+            _geo(geo), m_basis_beta(basis_beta), m_basis_plus(basis_plus), m_basis(basis),
+            m_isboundary(isboundary), m_bfID_lo(bfID_lo), m_bfID_hi(bfID_hi), m_uv(uv),
+            _piece(nullptr)
+    { }
+
+    ~gsTraceBasisBatch() { delete _piece; }
+
+    GISMO_CLONE_FUNCTION(gsTraceBasisBatch)
+
+    short_t domainDim() const {return 2;}
+
+    short_t targetDim() const {return m_bfID_hi - m_bfID_lo;}
+
+    mutable gsTraceBasisBatch<T> * _piece;
+
+    const gsFunction<T> & piece(const index_t k) const
+    {
+        GISMO_UNUSED(k);
+        _piece = new gsTraceBasisBatch(*this);
+        return *_piece;
+    }
+
+    // Input is parametric coordinates of 2-D \a mp; one output row per basis function
+    void eval_into(const gsMatrix<T>& u, gsMatrix<T>& result) const
+    {
+        result.resize( targetDim(), u.cols() );
+
+        // tau/p (bfID-independent)
+        gsBSplineBasis<T> bsp_temp = dynamic_cast<gsBSplineBasis<T> & >(m_basis.component(1-m_uv));
+        T p = bsp_temp.degree();
+        T tau_1 = bsp_temp.knots().at(p + 1); // p + 2
+
+        // beta, N_0, N_1: bfID-independent, hoisted out of the per-row loop
+        gsMatrix<T> beta, N_0, N_1;
+        if (!m_isboundary)
+            m_basis_beta.eval_into(u.row(m_uv),beta); // 1-dir == PatchID
+        else
+            beta.setZero(1, u.cols());
+
+        m_basis.component(1-m_uv).evalSingle_into(0,u.row(1-m_uv),N_0); // u
+        m_basis.component(1-m_uv).evalSingle_into(1,u.row(1-m_uv),N_1); // u
+
+        gsMatrix<T> N_i_plus, der_N_i_plus, temp;
+        for (index_t bfID = m_bfID_lo; bfID < m_bfID_hi; ++bfID)
+        {
+            m_basis_plus.evalSingle_into(bfID,u.row(m_uv),N_i_plus); // v
+            m_basis_plus.derivSingle_into(bfID,u.row(m_uv),der_N_i_plus);
+
+            temp = beta.cwiseProduct(der_N_i_plus);
+            result.row(bfID - m_bfID_lo) = (N_i_plus.cwiseProduct(N_0 + N_1) - temp.cwiseProduct(N_1) * tau_1 / p).row(0);
+        }
+    }
+}; // class gsTraceBasisBatch
+
+/// Batched sibling of gsNormalDerivBasis (gsApproxC1Utils.h) -- see gsTraceBasisBatch.
+template <class T>
+class gsNormalDerivBasisBatch : public gismo::gsFunction<T>
+{
+protected:
+    gsGeometry<T> & _geo;
+
+    gsBSpline<T>       m_basis_alpha;
+    gsBSplineBasis<T>  m_basis_minus;
+
+    gsBasis<T> & m_basis;
+
+    bool m_isboundary;
+    const index_t m_bfID_lo, m_bfID_hi, m_uv;
+
+public:
+    gsNormalDerivBasisBatch(gsGeometry<T> & geo,
+                             gsBSpline<T> basis_alpha,
+                             gsBSplineBasis<T> basis_minus,
+                             gsBasis<T> & basis,
+                             bool isboundary,
+                             index_t bfID_lo,
+                             index_t bfID_hi,
+                             index_t uv) :
+            _geo(geo), m_basis_alpha(basis_alpha), m_basis_minus(basis_minus), m_basis(basis),
+            m_isboundary(isboundary), m_bfID_lo(bfID_lo), m_bfID_hi(bfID_hi), m_uv(uv),
+            _piece(nullptr)
+    { }
+
+    ~gsNormalDerivBasisBatch() { delete _piece; }
+
+    GISMO_CLONE_FUNCTION(gsNormalDerivBasisBatch)
+
+    short_t domainDim() const {return 2;}
+
+    short_t targetDim() const {return m_bfID_hi - m_bfID_lo;}
+
+    mutable gsNormalDerivBasisBatch<T> * _piece;
+
+    const gsFunction<T> & piece(const index_t k) const
+    {
+        GISMO_UNUSED(k);
+        _piece = new gsNormalDerivBasisBatch(*this);
+        return *_piece;
+    }
+
+    void eval_into(const gsMatrix<T>& u, gsMatrix<T>& result) const
+    {
+        result.resize( targetDim(), u.cols() );
+
+        gsBSplineBasis<T> bsp_temp = dynamic_cast<gsBSplineBasis<T> & >(m_basis.component(1-m_uv));
+        T p = bsp_temp.degree();
+        T tau_1 = bsp_temp.knots().at(p + 1); // p + 2
+
+        gsMatrix<T> alpha, N_1;
+        if (!m_isboundary)
+            m_basis_alpha.eval_into(u.row(m_uv),alpha); // 1-dir == PatchID
+        else
+            alpha.setOnes(1, u.cols());
+
+        m_basis.component(1-m_uv).evalSingle_into(1,u.row(1-m_uv),N_1); // u
+
+        gsMatrix<T> N_j_minus;
+        for (index_t bfID = m_bfID_lo; bfID < m_bfID_hi; ++bfID)
+        {
+            m_basis_minus.evalSingle_into(bfID,u.row(m_uv),N_j_minus); // v
+
+            if (!m_isboundary)
+                result.row(bfID - m_bfID_lo) = ((m_uv == 0 ? T(-1.0) : T(1.0)) * alpha.cwiseProduct(N_j_minus.cwiseProduct(N_1)) * tau_1 / p).row(0);
+            else
+                result.row(bfID - m_bfID_lo) = ((m_uv == 0 ? T(-1.0) : T(1.0)) * alpha.cwiseProduct(N_j_minus.cwiseProduct(N_1))).row(0);
+        }
+    }
+}; // class gsNormalDerivBasisBatch
+
 
 template<short_t d, class T>
 class gsApproxC1Edge

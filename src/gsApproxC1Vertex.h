@@ -159,8 +159,13 @@ public:
         }
 
         // TODO fix the gluing Data stuff
+        const bool profile = m_optionList.getSwitch("info");
+        gsStopwatch vertexClock;
+        gsStopwatch subClock; // for the t_vertexSetup/t_vertexBfAssemble/t_vertexBfSolve/t_vertexKernel sub-buckets
         for(size_t i = 0; i < m_patchesAroundVertex.size(); i++)
         {
+            if (profile) vertexClock.restart();
+
             C1AuxPatchContainer auxPatchSingle;
             auxPatchSingle.push_back(m_auxPatches[i]);
 
@@ -225,7 +230,11 @@ public:
 
             // Compute Gluing data
             // Stored locally
+            // (gluing-data time is timed separately inside gsApproxC1GluingData and
+            // is subtracted from the vertex bucket below to avoid double-counting)
+            const real_t gdTimeBefore = profile ? gsApproxC1GetProfile().t_gluingData : 0;
             gsApproxC1GluingData<d, T> approxGluingData(auxPatchSingle, m_optionList, containingSides, isInterface, basis_pm);
+            const real_t gdTimeNested = profile ? (gsApproxC1GetProfile().t_gluingData - gdTimeBefore) : 0;
 
             //gsGeometry<T> & geo = auxPatchSingle[0].getPatchRotated();
             gsGeometry<T> & geo = rotPatch.patch(i);
@@ -277,8 +286,9 @@ public:
             auto u = A.getSpace(vertexSpace);
 
             // Create Mapper
+            const bool interpolation = m_optionList.getSwitch("interpolation");
             gsDofMapper map = createMapper(vertexSpace, 1, false);
-            if (!m_optionList.getSwitch("interpolation"))
+            if (!interpolation)
             {
                 gsMatrix<index_t> act;
                 for (index_t dir = 0; dir < vertexSpace.basis(0).domainDim(); dir++)
@@ -295,45 +305,73 @@ public:
                 gsMatrix<T> &fixedDofs = const_cast<expr::gsFeSpace<T> &>(u).fixedPart();
                 fixedDofs.setZero(u.mapper().boundarySize(), 1);
 
+                if (profile) subClock.restart();
                 A.initSystem();
                 A.assemble(u * u.tr());
                 solver.compute(A.matrix());
+                if (profile)
+                    gsApproxC1GetProfile().t_vertexSetup += subClock.stop();
             }
 
-            // Create Basis functions
+            // Create Basis functions: one gsVertexBasis over the whole range [0, 6)
+            // so the bfID-independent prelude of eval_into (c_0/c_1, c_*_plus/minus,
+            // alpha/beta, geo_jac, geo_der2, dd_ik_*, d_ik, d_ilik_*) runs once per
+            // quadrature pass instead of six times.
             gsMultiPatch<T> result_1;
-            for (index_t bfID = 0; bfID < 6; bfID++)
+            gsVertexBasis<T> vertexBasisBatch(geo, basis_pm, alpha, beta, basis_plus, basis_minus, Phi,
+                                               kindOfEdge, 0, 6);
+            if (interpolation)
             {
-                gsVertexBasis<T> vertexBasis(geo, basis_pm, alpha, beta, basis_plus, basis_minus, Phi,
-                                             kindOfEdge, bfID);
-                if (m_optionList.getSwitch("interpolation"))
+                gsMatrix<T> anchors = vertexSpace.basis(0).anchors();
+                gsMatrix<T> values = vertexBasisBatch.eval(anchors); // 6 x nAnchors
+                for (index_t col = 0; col < 6; ++col)
                 {
-                    //gsQuasiInterpolate<T>::Schoenberg(edgeSpace.basis(0), traceBasis, sol);
-                    //result.addPatch(edgeSpace.basis(0).interpolateAtAnchors(give(values)));
-                    gsMatrix<T> anchors = vertexSpace.basis(0).anchors();
-                    gsMatrix<T> values = vertexBasis.eval(anchors);
-                    result_1.addPatch(vertexSpace.basis(0).interpolateAtAnchors(give(values)));
+                    gsMatrix<T> row = values.row(col);
+                    result_1.addPatch(vertexSpace.basis(0).interpolateAtAnchors(give(row)));
                 }
-                else
+            }
+            else
+            {
+                if (profile) subClock.restart();
+                A.initVector(6);
+                auto aa = A.getCoeff(vertexBasisBatch);
+                A.assemble(u * aa.tr());
+                if (profile)
                 {
-                    A.initVector();
+                    gsApproxC1GetProfile().t_vertexBfAssemble += subClock.stop();
+                    subClock.restart();
+                }
 
-                    auto aa = A.getCoeff(vertexBasis);
-                    A.assemble(u * aa);
+                gsMatrix<T> solMat = solver.solve(A.rhs()); // (free dofs) x 6
+                if (profile)
+                    gsApproxC1GetProfile().t_vertexBfSolve += subClock.stop();
 
-                    gsMatrix<T> solVector = solver.solve(A.rhs());
-
-                    auto u_sol = A.getSolution(u, solVector);
-                    gsMatrix<T> sol;
-                    u_sol.extract(sol);
-
-                    result_1.addPatch(vertexSpace.basis(0).makeGeometry(give(sol)));
+                // Build coefficients per column directly from the mapper, instead of
+                // gsFeSpace::getCoeffs' multi-column path (which only fills the
+                // eliminated-DoF value into column 0 of a multi-column result).
+                const gsDofMapper & mapper = u.mapper();
+                const gsMatrix<T> & fixedDofsRHS = u.fixedPart();
+                const index_t sz = vertexSpace.basis(0).size();
+                for (index_t col = 0; col < 6; ++col)
+                {
+                    gsMatrix<T> coefs(sz, 1);
+                    for (index_t k = 0; k < sz; ++k)
+                        coefs(k, 0) = mapper.is_free(k, 0) ? solMat(mapper.index(k, 0), col)
+                                                           : fixedDofsRHS(mapper.bindex(k, 0), 0);
+                    result_1.addPatch(vertexSpace.basis(0).makeGeometry(give(coefs)));
                 }
             }
             //Problem setup end
 
             // Store temporary
             basisVertexResult.push_back(result_1);
+
+            if (profile)
+            {
+                gsApproxC1Profile & prof = gsApproxC1GetProfile();
+                prof.t_vertex += vertexClock.stop() - gdTimeNested; // exclude nested gluing-data time
+                ++prof.n_vertex;
+            }
         }
 
         gsMultiPatch<T> temp_mp;
@@ -343,7 +381,21 @@ public:
 
         if (m_patchesAroundVertex.size() != temp_mp.interfaces().size()) // No internal vertex
         {
+            if (profile) subClock.restart();
             computeKernel();
+            if (profile)
+            {
+                const real_t tk = subClock.stop();
+                gsApproxC1Profile & prof = gsApproxC1GetProfile();
+                // computeKernel() runs once per vertex, outside any per-corner
+                // vertexClock span, so its time is added to t_vertex directly (not just
+                // exposed via t_vertexKernel) to keep total() -- the nested-time cut used
+                // by gsApproxC1Spline::compute() -- accounting for it as vertex
+                // construction. n_vertex is not incremented here: it counts patch-corners,
+                // and computeKernel() runs once per vertex, not once per corner.
+                prof.t_vertexKernel += tk;
+                prof.t_vertex += tk;
+            }
 
             for(size_t i = 0; i < m_patchesAroundVertex.size(); i++)
                 m_auxPatches[i].parametrizeBasisBack(basisVertexResult[i]); // parametrizeBasisBack

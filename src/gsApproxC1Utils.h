@@ -424,7 +424,7 @@ protected:
     const gsMatrix<T> m_Phi;
     const std::vector<bool> m_kindOfEdge;
 
-    const index_t m_bfID;
+    const index_t m_bfID_lo, m_bfID_hi;
 
     mutable gsMapData<T> _tmp;
 
@@ -435,6 +435,7 @@ public:
     /// Unique pointer for gsVertexBasis
     typedef memory::unique_ptr< gsVertexBasis > uPtr;
 
+    // Single basis function bfID; delegates to the range constructor below.
     gsVertexBasis(const gsGeometry<T> &   geo,
                   gsBasis<T> & basis,
                   std::vector<gsBSpline<T>> alpha,
@@ -444,8 +445,27 @@ public:
                   const gsMatrix<T> Phi,
                   const std::vector<bool> kindOfEdge,
                   const index_t bfID
+            ) : gsVertexBasis(geo, basis, alpha, beta, basis_plus, basis_minus, Phi, kindOfEdge, bfID, bfID + 1)
+    {
+
+    }
+
+    // Range [bfID_lo, bfID_hi) of vertex basis functions, evaluated together in
+    // eval_into so the prelude that does not depend on bfID -- c_0/c_1, c_*_plus/minus
+    // and their derivatives, alpha/beta, geo_jac, geo_der2, dd_ik_*, d_ik, d_ilik_* --
+    // is computed once per quadrature call instead of once per bf.
+    gsVertexBasis(const gsGeometry<T> &   geo,
+                  gsBasis<T> & basis,
+                  std::vector<gsBSpline<T>> alpha,
+                  std::vector<gsBSpline<T>> beta,
+                  std::vector<gsBSplineBasis<T>> basis_plus,
+                  std::vector<gsBSplineBasis<T>> basis_minus,
+                  const gsMatrix<T> Phi,
+                  const std::vector<bool> kindOfEdge,
+                  const index_t bfID_lo,
+                  const index_t bfID_hi
             ) : m_geo(geo), m_basis(basis), m_alpha(alpha), m_beta(beta), m_basis_plus(basis_plus), m_basis_minus(basis_minus),
-            m_Phi(Phi), m_kindOfEdge(kindOfEdge), m_bfID(bfID),
+            m_Phi(Phi), m_kindOfEdge(kindOfEdge), m_bfID_lo(bfID_lo), m_bfID_hi(bfID_hi),
             _vertexBasis_piece(nullptr)
     {
 
@@ -457,7 +477,7 @@ public:
 
     short_t domainDim() const {return 2;}
 
-    short_t targetDim() const {return 1;}
+    short_t targetDim() const {return m_bfID_hi - m_bfID_lo;}
 
     mutable gsVertexBasis<T> * _vertexBasis_piece; // why do we need this?
 
@@ -775,32 +795,35 @@ public:
         }
 
 
-        result = d_ilik_minus.at(0)(m_bfID,0) * (c_0_plus.at(0).cwiseProduct(c_0.at(1)) -
-                                                   beta[0].cwiseProduct(c_0_plus_deriv.at(0).cwiseProduct(c_1.at(1)))) +
-                        d_ilik_minus.at(1)(m_bfID,0) * (c_1_plus.at(0).cwiseProduct(c_0.at(1)) -
-                                                   beta[0].cwiseProduct(c_1_plus_deriv.at(0).cwiseProduct(c_1.at(1)))) +
-                        d_ilik_minus.at(2)(m_bfID,0) * (c_2_plus.at(0).cwiseProduct(c_0.at(1)) -
-                                                   beta[0].cwiseProduct(c_2_plus_deriv.at(0).cwiseProduct(c_1.at(1)))) -
-                        d_ilik_minus.at(3)(m_bfID,0) * alpha[0].cwiseProduct(c_0_minus.at(0).cwiseProduct(c_1.at(1))) -
-                        d_ilik_minus.at(4)(m_bfID,0) * alpha[0].cwiseProduct(c_1_minus.at(0).cwiseProduct(c_1.at(1))); // f*_(ik-1,ik)
+        for (index_t bfID = m_bfID_lo; bfID < m_bfID_hi; ++bfID)
+        {
+            const index_t row = bfID - m_bfID_lo;
 
-        //if (kindOfEdge[0])
-        //rhsVals.at(i).setZero();
+            result.row(row) = d_ilik_minus.at(0)(bfID,0) * (c_0_plus.at(0).cwiseProduct(c_0.at(1)) -
+                                                       beta[0].cwiseProduct(c_0_plus_deriv.at(0).cwiseProduct(c_1.at(1)))) +
+                            d_ilik_minus.at(1)(bfID,0) * (c_1_plus.at(0).cwiseProduct(c_0.at(1)) -
+                                                       beta[0].cwiseProduct(c_1_plus_deriv.at(0).cwiseProduct(c_1.at(1)))) +
+                            d_ilik_minus.at(2)(bfID,0) * (c_2_plus.at(0).cwiseProduct(c_0.at(1)) -
+                                                       beta[0].cwiseProduct(c_2_plus_deriv.at(0).cwiseProduct(c_1.at(1)))) -
+                            d_ilik_minus.at(3)(bfID,0) * alpha[0].cwiseProduct(c_0_minus.at(0).cwiseProduct(c_1.at(1))) -
+                            d_ilik_minus.at(4)(bfID,0) * alpha[0].cwiseProduct(c_1_minus.at(0).cwiseProduct(c_1.at(1))); // f*_(ik-1,ik)
 
-        //if (!kindOfEdge[1])
-        result += d_ilik_plus.at(0)(m_bfID,0) * (c_0_plus.at(1).cwiseProduct(c_0.at(0)) -
-                                                   beta[1].cwiseProduct(c_0_plus_deriv.at(1).cwiseProduct(c_1.at(0)))) +
-                         d_ilik_plus.at(1)(m_bfID,0) * (c_1_plus.at(1).cwiseProduct(c_0.at(0)) -
-                                                   beta[1].cwiseProduct(c_1_plus_deriv.at(1).cwiseProduct(c_1.at(0)))) +
-                         d_ilik_plus.at(2)(m_bfID,0) * (c_2_plus.at(1).cwiseProduct(c_0.at(0)) -
-                                                   beta[1].cwiseProduct(c_2_plus_deriv.at(1).cwiseProduct(c_1.at(0)))) +
-                         d_ilik_plus.at(3)(m_bfID,0) * alpha[1].cwiseProduct(c_0_minus.at(1).cwiseProduct(c_1.at(0))) +
-                         d_ilik_plus.at(4)(m_bfID,0) * alpha[1].cwiseProduct(c_1_minus.at(1).cwiseProduct(c_1.at(0))); // f*_(ik+1,ik)
+            //if (kindOfEdge[0])
+            //rhsVals.at(i).setZero();
 
-        result -= d_ik.at(0)(m_bfID,0) * c_0.at(0).cwiseProduct(c_0.at(1)) + d_ik.at(2)(m_bfID,0) * c_0.at(0).cwiseProduct(c_1.at(1)) +
-                         d_ik.at(1)(m_bfID,0) * c_1.at(0).cwiseProduct(c_0.at(1)) + d_ik.at(3)(m_bfID,0) * c_1.at(0).cwiseProduct(c_1.at(1)); // f*_(ik)
+            //if (!kindOfEdge[1])
+            result.row(row) += d_ilik_plus.at(0)(bfID,0) * (c_0_plus.at(1).cwiseProduct(c_0.at(0)) -
+                                                       beta[1].cwiseProduct(c_0_plus_deriv.at(1).cwiseProduct(c_1.at(0)))) +
+                             d_ilik_plus.at(1)(bfID,0) * (c_1_plus.at(1).cwiseProduct(c_0.at(0)) -
+                                                       beta[1].cwiseProduct(c_1_plus_deriv.at(1).cwiseProduct(c_1.at(0)))) +
+                             d_ilik_plus.at(2)(bfID,0) * (c_2_plus.at(1).cwiseProduct(c_0.at(0)) -
+                                                       beta[1].cwiseProduct(c_2_plus_deriv.at(1).cwiseProduct(c_1.at(0)))) +
+                             d_ilik_plus.at(3)(bfID,0) * alpha[1].cwiseProduct(c_0_minus.at(1).cwiseProduct(c_1.at(0))) +
+                             d_ilik_plus.at(4)(bfID,0) * alpha[1].cwiseProduct(c_1_minus.at(1).cwiseProduct(c_1.at(0))); // f*_(ik+1,ik)
 
-
+            result.row(row) -= d_ik.at(0)(bfID,0) * c_0.at(0).cwiseProduct(c_0.at(1)) + d_ik.at(2)(bfID,0) * c_0.at(0).cwiseProduct(c_1.at(1)) +
+                             d_ik.at(1)(bfID,0) * c_1.at(0).cwiseProduct(c_0.at(1)) + d_ik.at(3)(bfID,0) * c_1.at(0).cwiseProduct(c_1.at(1)); // f*_(ik)
+        }
     }
 
 };

@@ -61,8 +61,9 @@ namespace gismo
         void setG1BasisEdge(gsMultiPatch<T> & result);
 
         void refresh();
-        void assemble(index_t i, std::string typeBf); // i == number of bf
-        inline void apply(bhVisitor & visitor, index_t i, std::string typeBf); // i == number of bf
+        void assemble(index_t plus_lo, index_t plus_hi, index_t minus_lo, index_t minus_hi);
+        inline void apply(bhVisitor & visitor, index_t plus_lo, index_t plus_hi,
+                          index_t minus_lo, index_t minus_hi);
         void solve();
 
         using Base::constructSolution;
@@ -111,49 +112,37 @@ namespace gismo
     {
         result.clear();
 
-        index_t n_plus = m_basis_plus.size();
-        index_t n_minus = m_basis_minus.size();
+        const bool profile = gsC1SurfProfilingEnabled();
+        gsStopwatch clock;
+
+        const index_t n_plus  = m_basis_plus.size();
+        const index_t n_minus = m_basis_minus.size();
+
+        // first 3 and last 3 "plus", first 2 and last 2 "minus" basis functions are eliminated
+        const index_t plus_lo = 3, plus_hi = n_plus - 3;
+        const index_t minus_lo = 2, minus_hi = n_minus - 2;
+        const index_t n_p = math::max(plus_hi  - plus_lo,  (index_t)0);
+        const index_t n_m = math::max(minus_hi - minus_lo, (index_t)0);
 
         gsMultiPatch<T> g1EdgeBasis;
-        index_t bfID_init = 3;
-
-        for (index_t bfID = bfID_init; bfID < n_plus - bfID_init; bfID++) // first 3 and last 3 bf are eliminated
+        if (n_p + n_m > 0)
         {
             m_geo = m_basis_g1; // Basis for Integration
-
             refresh();
+            assemble(plus_lo, plus_lo + n_p, minus_lo, minus_lo + n_m);
 
-            assemble(bfID,"plus"); // i == number of bf
-
+            if (profile) clock.restart();
             typename gsSparseSolver<T>::SimplicialLDLT solver;
-//        typename gsSparseSolver<T>::LU solver;
-            gsMatrix<T> sol;
             solver.compute(m_system.matrix());
-            sol = solver.solve(m_system.rhs());
+            gsMatrix<T> sol = solver.solve(m_system.rhs());   // one column per basis function
+            if (profile) gsC1SurfGetProfile().t_edgeSolve += clock.stop();
 
-            constructSolution(sol,g1EdgeBasis);
+            constructSolution(sol, g1EdgeBasis);
         }
-        bfID_init = 2;
-        for (index_t bfID = bfID_init; bfID < n_minus-bfID_init; bfID++)  // first 2 and last 2 bf are eliminated
-        {
-
-
-            m_geo = m_basis_g1; // Basis for Integration
-
-            refresh();
-
-            assemble(bfID,"minus"); // i == number of bf
-
-            typename gsSparseSolver<T>::SimplicialLDLT solver;
-//        typename gsSparseSolver<T>::LU solver;
-            gsMatrix<T> sol;
-            solver.compute(m_system.matrix());
-            sol = solver.solve(m_system.rhs());
-
-            constructSolution(sol,g1EdgeBasis);
-        }
-
         result = g1EdgeBasis;
+
+        if (profile)
+            gsC1SurfGetProfile().print(gsInfo); // cumulative report after this edge; the last edge/vertex to print reflects the run total
     } // setG1BasisEdge
 
     template <class T, class bhVisitor>
@@ -161,32 +150,25 @@ namespace gismo
     {
         GISMO_UNUSED(unk);
 
-        // Dim is the same for all basis functions
-        const index_t dim = ( 0!=solVector.cols() ? solVector.cols() :  m_ddof[0].cols() );
-
-        gsMatrix<T> coeffs;
+        // solVector holds one column per basis function of this patch side; each
+        // column becomes its own single-coefficient-column patch, appended in
+        // column order (all "plus" ascending, then all "minus" ascending) --
+        // gsC1SurfSpline::compute() consumes these patches by that fixed index.
         const gsDofMapper & mapper = m_system.colMapper(0); // unknown = 0
+        const index_t sz = m_basis.basis(0).size();
 
-        // Reconstruct solution coefficients on patch p
-        index_t sz;
-        sz = m_basis.basis(0).size();
-
-        coeffs.resize(sz, dim);
-
-        for (index_t i = 0; i < sz; ++i)
+        for (index_t col = 0; col != solVector.cols(); ++col)
         {
-            if (mapper.is_free(i, 0)) // DoF value is in the solVector // 0 = unitPatch
+            gsMatrix<T> coeffs(sz, 1);
+            for (index_t i = 0; i < sz; ++i)
             {
-                coeffs.row(i) = solVector.row(mapper.index(i, 0));
+                if (mapper.is_free(i, 0)) // DoF value is in the solVector // 0 = unitPatch
+                    coeffs(i, 0) = solVector(mapper.index(i, 0), col);
+                else // eliminated DoF: fill with Dirichlet data
+                    coeffs(i, 0) = m_ddof[0](mapper.bindex(i, 0), col); // = 0
             }
-            else // eliminated DoF: fill with Dirichlet data
-            {
-                //gsInfo << "mapper index dirichlet: " << m_ddof[unk].row( mapper.bindex(i, p) ).head(dim) << "\n";
-                coeffs.row(i) = m_ddof[0].row( mapper.bindex(i, 0) ).head(dim); // = 0
-            }
+            result.addPatch(m_basis_g1.basis(0).makeGeometry(give(coeffs)));
         }
-        result.addPatch(m_basis_g1.basis(0).makeGeometry(give(coeffs)));
-
     }
 
     template <class T, class bhVisitor>
@@ -211,31 +193,43 @@ namespace gismo
     } // refresh()
 
     template <class T, class bhVisitor>
-    void gsC1SurfBasisEdge<T,bhVisitor>::assemble(index_t bfID, std::string typeBf)
+    void gsC1SurfBasisEdge<T,bhVisitor>::assemble(index_t plus_lo, index_t plus_hi, index_t minus_lo, index_t minus_hi)
     {
+        const index_t M = (plus_hi - plus_lo) + (minus_hi - minus_lo);
+
         // Reserve sparse system
         const index_t nz = gsAssemblerOptions::numColNz(m_basis[0],2,1,0.333333);
-        m_system.reserve(nz, 1);
+        m_system.reserve(nz, M);
 
         if(m_ddof.size()==0)
             m_ddof.resize(1); // 0,1
 
         const gsDofMapper & map = m_system.colMapper(0); // Map same for every functions
 
-        m_ddof[0].setZero(map.boundarySize(), 1 );
+        m_ddof[0].setZero(map.boundarySize(), M );
 
         // Assemble volume integrals
         bhVisitor visitor;
-        apply(visitor, bfID, typeBf); // basis function i
+        apply(visitor, plus_lo, plus_hi, minus_lo, minus_hi);
 
         m_system.matrix().makeCompressed();
 
     } // assemble()
 
     template <class T, class bhVisitor>
-    void gsC1SurfBasisEdge<T,bhVisitor>::apply(bhVisitor & visitor, index_t bf_index, std::string typeBf)
+    void gsC1SurfBasisEdge<T,bhVisitor>::apply(bhVisitor & visitor, index_t plus_lo, index_t plus_hi,
+                                               index_t minus_lo, index_t minus_hi)
     {
-#pragma omp parallel
+        const bool profile = gsC1SurfProfilingEnabled();
+        gsStopwatch applyClock;
+        if (profile) applyClock.restart();
+
+        // Actually-visited element count, accumulated across threads below (an
+        // OpenMP reduction on the parallel region itself, not on a work-sharing
+        // for -- the domain loop below is a manual strided partition).
+        index_t nVisited = 0;
+
+#pragma omp parallel reduction(+:nVisited)
         {
 
             gsQuadRule<T> quRule ; // Quadrature rule
@@ -264,6 +258,27 @@ namespace gismo
 
             const gsGeometry<T> & patch = m_mp.patch(0);
 
+            // refresh() eliminates every DoF whose transverse (1-m_uv) tensor
+            // index is >= 2, so the only free DoFs are transverse functions 0
+            // and 1. A 2-D tensor basis function is active on an element only
+            // if both its 1-D factors are, so a free DoF is active on an
+            // element only if the element's transverse index is within
+            // function 1's support -- a condition on the transverse element
+            // coordinate alone. basis_geo and the domain iterator below both
+            // come from m_basis.basis(0) (m_geo == m_basis_g1 ==
+            // m_basis.basis(0)), so cutoff and element boundaries are values
+            // from the same knot vector.
+            const index_t transDir = 1 - m_uv;
+            const bool canSkip = basis_geo.size() > 1;
+            const T cutoff = basis_geo.support(canSkip ? 1 : 0)(0, 1);
+            // Element boundaries and cutoff are both knot values; the
+            // tolerance only has to absorb floating-point roundoff at exact
+            // equality. A 1e-12 relative fraction of the parameter-domain
+            // width stays orders of magnitude below the smallest element
+            // width at any refinement level.
+            const gsMatrix<T> domainSupport = basis_geo.support();
+            const T tol = (domainSupport(0, 1) - domainSupport(0, 0)) * (T)1e-12;
+
             // Initialize domain element iterator
             typename gsBasis<T>::domainIter domIt    = m_geo.basis(0).domain()->beginAll();
             typename gsBasis<T>::domainIter domItEnd = m_geo.basis(0).domain()->endAll();
@@ -275,11 +290,18 @@ namespace gismo
             for (; domIt<domItEnd; ++domIt )
 #           endif
             {
+                // No free DoF is active on this element: rhsVals and every
+                // localMat(i,j) contribution for it are already discarded by
+                // push() below, so skipping it changes no assembled value.
+                if (canSkip && domIt.lowerCorner()(transDir) >= cutoff - tol) continue;
+
+                ++nVisited;
+
                 // Map the Quadrature rule to the element
                 quRule.mapTo( domIt.lowerCorner(), domIt.upperCorner(), quNodes, quWeights );
 
                 // Perform required evaluations on the quadrature nodes
-                visitor_.evaluate(bf_index, typeBf, basis_g1, basis_geo, basis_plus, basis_minus, patch, quNodes, m_uv, m_gD, m_isBoundary);
+                visitor_.evaluate(plus_lo, plus_hi, minus_lo, minus_hi, basis_g1, basis_geo, basis_plus, basis_minus, patch, quNodes, m_uv, m_gD, m_isBoundary);
 
                 // Assemble on element
                 visitor_.assemble(domIt, quWeights);
@@ -289,6 +311,21 @@ namespace gismo
                 visitor_.localToGlobal(0, m_ddof, m_system); // omp_locks inside // patchIndex == 0
             }
         }//omp parallel
+
+        if (profile)
+        {
+            gsC1SurfProfile & prof = gsC1SurfGetProfile();
+            prof.t_edgeApply += applyClock.stop();
+            ++prof.n_edgeApplyCalls;
+            // Elements whose transverse index carries no free DoF contribute
+            // nothing to the assembled matrix or right-hand side (see the
+            // skip in the domain loop above), so only actually-visited
+            // elements are counted here. One call still covers a whole patch
+            // side, so the count scales with the number of patch sides times
+            // the visited fraction of that side's elements, not with the
+            // number of basis functions on a side.
+            prof.n_edgeElemVisits += nVisited;
+        }
     } // apply
 
 } // namespace gismo
