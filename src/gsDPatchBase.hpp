@@ -844,8 +844,8 @@ namespace gismo
     template<short_t d,class T>
     void gsDPatchBase<d,T>::_initMappers()
     {
-        m_mapModified = createMapper(m_bases, 1, false);
-        m_mapOriginal = createMapper(m_bases, 1, false);
+        m_mapModified = createMapper(m_bases, /*dim=*/1, /*conforming=*/false);
+        m_mapOriginal = createMapper(m_bases, /*dim=*/1, /*conforming=*/false);
     }
 
     template<short_t d,class T>
