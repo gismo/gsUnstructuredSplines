@@ -16,7 +16,7 @@
 #include <gsUnstructuredSplines/src/gsMPBESSpline.h>
 #include <gsUnstructuredSplines/src/gsMPBESUtils.h>
 
-#define TO_INCRSMOOTHNESS(x) static_cast<gsMPBESBasis<d,T> *>(x)
+#define TO_INCRSMOOTHNESS(x) static_cast<gsMPBESBasis<d,T> *>((x).get())
 
 namespace gismo
 {
@@ -35,7 +35,7 @@ gsMPBESSpline<d,T>::gsMPBESSpline( gsMultiPatch<T> const & mp,index_t incrSmooth
     std::vector<gsMatrix<T> * > coefs;
     for(size_t i = 0;i<mp.nPatches();++i)
         coefs.push_back( new gsMatrix<T>(mp.patch(i).coefs()) );
-    m_mbases=getCompBasisFromMultiPatch_withCoefs<d>(mp,coefs,incrSmoothness,minEVDistance);
+    m_mbases.reset(getCompBasisFromMultiPatch_withCoefs<d>(mp,coefs,incrSmoothness,minEVDistance));
     if(m_mbases==NULL)
         GISMO_ERROR("no known basis for gsMappedGeom");
     index_t start = 0, end = -1;
@@ -62,7 +62,7 @@ gsMPBESSpline<d,T>::gsMPBESSpline(gsMultiPatch<T> const  & mp,
     std::vector<gsMatrix<T> * > coefs;
     for(size_t i = 0;i<mp.nPatches();++i)
         coefs.push_back(new gsMatrix<T>(mp.patch(i).coefs()) );
-    m_mbases=getCompBasisFromMultiPatch<d,T>(mp);
+    m_mbases.reset(getCompBasisFromMultiPatch<d,T>(mp));
     if(m_mbases==NULL)
         GISMO_ERROR("no known basis for gsMappedGeom");
     for(unsigned i=0;i<C0List.size();i++)
