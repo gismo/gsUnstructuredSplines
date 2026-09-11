@@ -22,11 +22,13 @@
 #include <gsAssembler/gsDofMapperCreator.h>
 
 /**
- * Smoothing method:
- * - m 0 == Approx C1 method
- * - m 1 == D-Patch method
- * - m 2 == Almost C1 method
- * - m 3 == Nitsche's method
+ * Smoothing method: the values of -m are the MethodFlags enum below.
+ * - m 1 == D-Patch
+ * - m 2 == Approx C1
+ * - m 3 == AS-G1 (surface)
+ * - m 4 == Almost C1
+ * - m 5 == Nitsche
+ * - m 6 == plain spline (single patch only)
  */
 enum MethodFlags
 {
@@ -1078,8 +1080,14 @@ int main(int argc, char *argv[])
     //! [Solver loop]
     gsSparseSolver<real_t>::SimplicialLDLT solver;
 
-    gsVector<real_t> l2err(numRefine+1), h1err(numRefine+1), h2err(numRefine+1), IFaceErr(numRefine+1),
-            dofs(numRefine+1), meshsize(numRefine+1);
+    // Zeroed because not every branch below fills every column (h2err is only computed in
+    // residual mode); an unfilled column must print as 0, not as uninitialised memory.
+    gsVector<real_t> l2err = gsVector<real_t>::Zero(numRefine+1),
+            h1err = gsVector<real_t>::Zero(numRefine+1),
+            h2err = gsVector<real_t>::Zero(numRefine+1),
+            IFaceErr = gsVector<real_t>::Zero(numRefine+1),
+            dofs = gsVector<real_t>::Zero(numRefine+1),
+            meshsize = gsVector<real_t>::Zero(numRefine+1);
     gsMatrix<real_t> penalty(numRefine+1, mp.nInterfaces());
     gsInfo<< "(dot1=assembled, dot2=solved, dot3=got_error)\n"
              "\nDoFs: ";
@@ -1398,8 +1406,6 @@ int main(int argc, char *argv[])
             //          math::sqrt(ev.integral( ( ihess(u_ex) - 1.0/gg * (deriv2(u_sol,G0inv)).tr() ).sqNorm() * meas(G) )); // /ev.integral( ihess(ff).sqNorm()*meas(G) )
         }
 
-        // Jump error
-        if (residual)
         {
             if (method != MethodFlags::NITSCHE)
             {
@@ -1413,7 +1419,7 @@ int main(int argc, char *argv[])
                           (jac(G.right()) * fform(G.right()).inv() * igrad(ms_sol.right()).tr()).tr()) *
                          nv(G).normalized()).sqNorm() * gg));
             }
-            else if (method == MethodFlags::NITSCHE)
+            else if (residual)
             {
                 auto ms_sol = A.getCoeff(sol_nitsche_coarse);
                 IFaceErr[r] = math::sqrt(ev.integralInterface(

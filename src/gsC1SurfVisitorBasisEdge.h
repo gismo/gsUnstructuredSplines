@@ -41,8 +41,13 @@ namespace gismo
         }
 
         // Evaluate on element.
-        inline void evaluate(const index_t bfID,
-                             std::string typeBf,
+        // Batched over all "plus" (rows 0..plus_hi-plus_lo-1) and "minus" basis
+        // functions of this patch side (the remaining rows), in that fixed
+        // order: only rhsVals depends on the basis function, everything else
+        // computed here (alpha/beta/N_0/N_1, and localMat in assemble()) is the
+        // same mass matrix / gluing data for every bf on this side.
+        inline void evaluate(const index_t plus_lo, const index_t plus_hi,
+                             const index_t minus_lo, const index_t minus_hi,
                              gsBasis<T>       & basis, //
                              gsBasis<T>       & basis_geo,
                              gsBasis<T>       & basis_plus,
@@ -68,7 +73,7 @@ namespace gismo
             numActive = actives.rows();
 
             // tau/p
-            gsBSplineBasis<T> bsp_temp = dynamic_cast<gsBSplineBasis<T> & >(basis_geo);
+            const gsBSplineBasis<T> & bsp_temp = dynamic_cast<const gsBSplineBasis<T> & >(basis_geo);
 
             T p = basis_geo.maxDegree();
             T tau_1 = bsp_temp.knots().at(p + 2);
@@ -76,87 +81,72 @@ namespace gismo
             gsMatrix<T> alpha, beta,
                     N_0, N_1,
                     N_j_minus, N_i_plus,
-                    der_N_i_plus;
+                    der_N_i_plus, temp;
 
+            gsMatrix<T> pts1d;
 
             if (uv == 1) // edge is in v-direction
             {
-
                 alpha = gluingData.evalAlpha_R(md.points.bottomRows(1));
                 beta = gluingData.evalBeta_R(md.points.bottomRows(1));
 
                 basis_geo.evalSingle_into(0,md.points.topRows(1),N_0); // u
                 basis_geo.evalSingle_into(1,md.points.topRows(1),N_1); // u
 
-                // Initialize local matrix/rhs
-                if (typeBf == "plus")
-                {
-                    basis_plus.evalSingle_into(bfID,md.points.bottomRows(1),N_i_plus); // v
-                    basis_plus.derivSingle_into(bfID,md.points.bottomRows(1),der_N_i_plus);
-
-
-                    beta = isBoundary ? beta.setZero() : beta; // For the boundary, only on Patch 0
-
-                    gsMatrix<T> temp = beta.cwiseProduct(N_1);
-                    rhsVals = N_i_plus.cwiseProduct(N_0 + N_1) - temp.cwiseProduct(der_N_i_plus) * tau_1 / p;
-
-                    localMat.setZero(numActive, numActive);
-                    localRhs.setZero(numActive, rhsVals.rows());//multiple right-hand sides
-
-                } // n_plus
-                else if (typeBf == "minus")
-                {
-                    basis_minus.evalSingle_into(bfID,md.points.bottomRows(1),N_j_minus); // v
-
-
-                    alpha = isBoundary ? alpha.setOnes() : alpha; // For the boundary, only on Patch 0
-
-                    rhsVals = alpha.cwiseProduct(N_j_minus.cwiseProduct(N_1));
-
-                    localMat.setZero(numActive, numActive);
-                    localRhs.setZero(numActive, rhsVals.rows());//multiple right-hand sides
-                } // n_minus
-
+                pts1d = md.points.bottomRows(1);
             } // Patch 0
-            else if (uv == 0) // edge is in u-direction
+            else // uv == 0, edge is in u-direction
             {
-
                 alpha = gluingData.evalAlpha_L(md.points.topRows(1));
                 beta = gluingData.evalBeta_L(md.points.topRows(1));
 
                 basis_geo.evalSingle_into(0,md.points.bottomRows(1),N_0); // v
                 basis_geo.evalSingle_into(1,md.points.bottomRows(1),N_1); // v
 
-                // Initialize local matrix/rhs
-                if (typeBf == "plus")
-                {
-                    basis_plus.evalSingle_into(bfID,md.points.topRows(1),N_i_plus); // u
-                    basis_plus.derivSingle_into(bfID,md.points.topRows(1),der_N_i_plus);
-
-                    beta = isBoundary ? beta.setZero() : beta; // For the boundary, only on Patch 0
-
-                    gsMatrix<T> temp = beta.cwiseProduct(N_1);
-                    rhsVals = N_i_plus.cwiseProduct(N_0 + N_1) - temp.cwiseProduct(der_N_i_plus) * tau_1 / p;
-
-                    localMat.setZero(numActive, numActive);
-                    localRhs.setZero(numActive, rhsVals.rows());//multiple right-hand sides
-
-                } // n_tilde
-                else if (typeBf == "minus")
-                {
-                    basis_minus.evalSingle_into(bfID,md.points.topRows(1),N_j_minus); // u
-
-
-                    alpha = isBoundary ? alpha.setOnes() : alpha; // For the boundary, only on Patch 0
-
-                    rhsVals = - alpha.cwiseProduct(N_j_minus.cwiseProduct(N_1));
-
-                    localMat.setZero(numActive, numActive);
-                    localRhs.setZero(numActive, rhsVals.rows());//multiple right-hand sides
-                } // n_bar
-
+                pts1d = md.points.topRows(1);
             } // Patch 1
-        } // evaluate1
+
+            if (isBoundary) beta.setZero();   // only the "plus" rows read beta
+            if (isBoundary) alpha.setOnes();  // only the "minus" rows read alpha
+
+            const index_t n_p = plus_hi  - plus_lo;
+            const index_t n_m = minus_hi - minus_lo;
+
+            rhsVals.resize(n_p + n_m, md.points.cols());
+
+            // Neither operand depends on bfID: both are the same for every "plus" row.
+            temp = beta.cwiseProduct(N_1);
+            const gsMatrix<T> N_0_plus_N_1 = N_0 + N_1;
+
+            index_t row = 0;
+            for (index_t bfID = plus_lo; bfID < plus_hi; ++bfID, ++row)
+            {
+                basis_plus.evalSingle_into(bfID, pts1d, N_i_plus);
+                basis_plus.derivSingle_into(bfID, pts1d, der_N_i_plus);
+
+                rhsVals.row(row) = (N_i_plus.cwiseProduct(N_0_plus_N_1) - temp.cwiseProduct(der_N_i_plus) * tau_1 / p).row(0);
+            } // n_plus
+
+            if (uv == 1)
+            {
+                for (index_t bfID = minus_lo; bfID < minus_hi; ++bfID, ++row)
+                {
+                    basis_minus.evalSingle_into(bfID, pts1d, N_j_minus);
+                    rhsVals.row(row) = (alpha.cwiseProduct(N_j_minus.cwiseProduct(N_1))).row(0);
+                } // n_minus
+            }
+            else // uv == 0
+            {
+                for (index_t bfID = minus_lo; bfID < minus_hi; ++bfID, ++row)
+                {
+                    basis_minus.evalSingle_into(bfID, pts1d, N_j_minus);
+                    rhsVals.row(row) = (- alpha.cwiseProduct(N_j_minus.cwiseProduct(N_1))).row(0);
+                } // n_bar
+            }
+
+            localMat.setZero(numActive, numActive);
+            localRhs.setZero(numActive, rhsVals.rows()); // multiple right-hand sides
+        } // evaluate
 
         inline void assemble(gsDomainIteratorWrapper<T>    & element,
                              const gsVector<T>      & quWeights)
