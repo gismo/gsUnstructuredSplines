@@ -16,7 +16,7 @@
 #include <gsUnstructuredSplines/src/gsMPBESSpline.h>
 #include <gsUnstructuredSplines/src/gsMPBESUtils.h>
 
-#define TO_INCRSMOOTHNESS(x) static_cast<gsMPBESBasis<d,T> *>(x)
+#define TO_INCRSMOOTHNESS(x) static_cast<gsMPBESBasis<d,T> *>((x).get())
 
 namespace gismo
 {
@@ -35,8 +35,8 @@ gsMPBESSpline<d,T>::gsMPBESSpline( gsMultiPatch<T> const & mp,index_t incrSmooth
     std::vector<gsMatrix<T> * > coefs;
     for(size_t i = 0;i<mp.nPatches();++i)
         coefs.push_back( new gsMatrix<T>(mp.patch(i).coefs()) );
-    m_mbases=getCompBasisFromMultiPatch_withCoefs<d>(mp,coefs,incrSmoothness,minEVDistance);
-    if(m_mbases==NULL)
+    m_mbases.reset(getCompBasisFromMultiPatch_withCoefs<d>(mp,coefs,incrSmoothness,minEVDistance));
+    if(!m_mbases)
         GISMO_ERROR("no known basis for gsMappedGeom");
     index_t start = 0, end = -1;
     gsMatrix<T> localCoefs;
@@ -49,21 +49,22 @@ gsMPBESSpline<d,T>::gsMPBESSpline( gsMultiPatch<T> const & mp,index_t incrSmooth
     }
     m_mbases->local_coef_to_global_coef(localCoefs,m_global);
     freeAll(coefs);
+    this->init(*m_mbases);
 }
 
 template<short_t d,class T>
 gsMPBESSpline<d,T>::gsMPBESSpline(gsMultiPatch<T> const  & mp,
                                                                   std::vector<patchCorner> C0List,
-                                                                  index_t                      /*incrSmoothness*/,
-                                                                  index_t                      /*minEVDistance*/)
+                                                                  index_t                      incrSmoothness,
+                                                                  index_t                      minEVDistance)
                                                                   : Base()
 {
     short_t geoDim = mp.geoDim();
     std::vector<gsMatrix<T> * > coefs;
     for(size_t i = 0;i<mp.nPatches();++i)
         coefs.push_back(new gsMatrix<T>(mp.patch(i).coefs()) );
-    m_mbases=getCompBasisFromMultiPatch<d,T>(mp);
-    if(m_mbases==NULL)
+    m_mbases.reset(getCompBasisFromMultiPatch<d,T>(mp,incrSmoothness,minEVDistance));
+    if(!m_mbases)
         GISMO_ERROR("no known basis for gsMappedGeom");
     for(unsigned i=0;i<C0List.size();i++)
     {
@@ -80,6 +81,7 @@ gsMPBESSpline<d,T>::gsMPBESSpline(gsMultiPatch<T> const  & mp,
         localCoefs.block(start,0,end-start+1,geoDim) << *(coefs[i]);
     }
     m_mbases->local_coef_to_global_coef(localCoefs,m_global);
+    this->init(*m_mbases);
 }
 
 template<short_t d,class T>
